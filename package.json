@@ -1,0 +1,28 @@
+{
+  "name": "ronin",
+  "version": "0.2.0",
+  "description": "Agent inventory and management tool for AI-assisted development",
+  "type": "module",
+  "bin": {
+    "ronin": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "scan": "node dist/index.js scan",
+    "start": "node dist/index.js",
+    "dashboard": "cd dashboard && npm run dev"
+  },
+  "keywords": ["claude-code", "agents", "inventory", "cli"],
+  "license": "MIT",
+  "dependencies": {
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "glob": "^11.0.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
