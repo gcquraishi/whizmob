@@ -16,45 +16,47 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - **Distribution**: npm package (`npx ronin scan`)
 
 ## Architecture
-- **Scanner** discovers: subagents (`~/.claude/agents/*.md`), skills (`~/.claude/skills/*/SKILL.md`), project configs, CLAUDE.md files, MCP servers (`.mcp.json`), settings
+- **Scanner** discovers: subagents, skills, project configs, CLAUDE.md files, MCP servers, settings across Claude Code (`~/.claude/`), Codex (`~/.codex/`), Cursor (`~/.cursor/`), and more
 - **Proto-Passport schema**: Extensible JSON format for agent identity with `metadata` JSONB escape hatch
 - **Zero manual entry**: If the user has to type agent details, we've failed
 - **Local-first**: No accounts, no server, no API keys for v1
 
 **Key files:**
 - `PRD.md` — Product requirements document (v0.1 draft)
-- `seed-inventory.json` — George's actual agent inventory (36 agents across 7 projects)
+- `seed-inventory.json` — George's initial agent inventory export (36 agents)
 
 ## Current State
 _Last updated: 2026-02-17_
 
-Early build phase. PRD is written. Seed inventory exported (36 agents). No milestones completed yet — all four milestones (M1-M4) are pending.
+Scanner is functional with multi-platform support. 50 passports in the database across 3 platforms (Claude Code, Cursor, Codex). M1 and M2.5 complete. Dashboard exists with Yard view and SQLite persistence.
 
 ### Recent Completions
-- PRD v0.1 drafted
-- Seed inventory exported (36 agents from George's setup)
-- Architecture decisions locked (local-first, SQLite, Proto-Passport schema)
+- M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
+- M2.5: Multi-platform scanner — Cursor support, platform filter, Codex parser added
+- First cross-platform import: Codex "Big Heavy Bookkeeper" skill imported into Ronin DB
+- Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
+- 50 passports: 43 Claude Code, 6 Cursor, 1 Codex
 
 ### Active Work
-- M1: Scanner — parse agents, skills, CLAUDE.md, .mcp.json into Proto-Passport JSON
+- M3: Dog-food & polish — cataloging full agent library, testing cross-platform workflows
 
 ### Known Issues
-- Nothing built yet beyond planning artifacts
+- Node 25 + `brace-expansion` (via `glob`) compat issue prevents `ronin scan` from running; needs `npm update glob` or Node version pin
+- Cross-platform scan (M2.5) is code-complete but blocked by the Node 25 issue above
 
 ## Roadmap
 ### Immediate (This Sprint)
-- M1: Scanner CLI that discovers and catalogs all agent types
+- Fix Node 25 compat issue (glob/brace-expansion)
+- M3: Dog-food & polish (catalog full library, README, demo video)
 
 ### Next (2-4 weeks)
-- M2: Dashboard (Next.js app with Yard view, search/filter, Dossier detail, SQLite persistence)
+- M4: Distribution (npm publish, community outreach)
 
 ### Future (Backlog)
-- M3: Dog-food & polish (George catalogs full library, README, demo video)
-- M4: Distribution (npm publish, community outreach)
 - Cloud sync + accounts
 - Team Yards with role-based access
-- Cross-platform scan (beyond Claude Code)
 - Gallery (public agent marketplace)
+- Codex agents parser (beyond skills — if Codex adds agent-like configs)
 
 ## Conventions
 - Local-first: privacy by default, no network calls in v1
