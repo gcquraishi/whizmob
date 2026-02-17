@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import SummaryStats from '@/components/SummaryStats';
 import SearchBar from '@/components/SearchBar';
 import TypeFilter from '@/components/TypeFilter';
@@ -19,6 +19,7 @@ interface Passport {
   model_hint: string | null;
   tags: string[];
   scope: string;
+  metadata_json: string;
 }
 
 interface ScanDiff {
@@ -90,6 +91,18 @@ export default function YardPage() {
   });
   const platforms = Object.keys(platformCounts).sort();
 
+  // Find most recently active project
+  const mostRecentProject = useMemo(() => allPassports
+    .filter(p => p.type === 'project')
+    .reduce<{ name: string; date: string } | null>((best, p) => {
+      let meta: Record<string, unknown> = {};
+      try { meta = JSON.parse(p.metadata_json || '{}'); } catch { /* skip */ }
+      const lastActive = meta.last_active as string | undefined;
+      if (!lastActive) return best;
+      if (!best || lastActive > best.date) return { name: p.name, date: lastActive };
+      return best;
+    }, null), [allPassports]);
+
   const isEmpty = !loading && allPassports.length === 0 && !search && !typeFilter && !platformFilter;
   const noResults = !loading && passports.length === 0 && (search || typeFilter || platformFilter);
 
@@ -113,7 +126,7 @@ export default function YardPage() {
       {!isEmpty && (
         <div className="space-y-4 mb-6">
           {!typeFilter && !search && !platformFilter && (
-            <SummaryStats counts={counts} platformCounts={platformCounts} />
+            <SummaryStats counts={counts} platformCounts={platformCounts} mostRecentProject={mostRecentProject} />
           )}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1 w-full sm:w-auto">

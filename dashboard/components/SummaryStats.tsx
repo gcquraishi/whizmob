@@ -6,6 +6,7 @@ import { PLATFORM_LABELS, PLATFORM_COLORS } from '@/lib/platforms';
 interface SummaryStatsProps {
   counts: Record<string, number>;
   platformCounts?: Record<string, number>;
+  mostRecentProject?: { name: string; date: string } | null;
 }
 
 const typeConfig: Record<string, { label: string; icon: typeof Bot; color: string }> = {
@@ -16,7 +17,7 @@ const typeConfig: Record<string, { label: string; icon: typeof Bot; color: strin
   settings: { label: 'Settings', icon: Settings, color: 'text-gray-600 bg-gray-100' },
 };
 
-export default function SummaryStats({ counts, platformCounts }: SummaryStatsProps) {
+export default function SummaryStats({ counts, platformCounts, mostRecentProject }: SummaryStatsProps) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const hasMultiplePlatforms = platformCounts && Object.keys(platformCounts).length > 1;
 
@@ -41,6 +42,16 @@ export default function SummaryStats({ counts, platformCounts }: SummaryStatsPro
             </div>
           );
         })}
+        {mostRecentProject && (
+          <>
+            <div className="w-px h-5 bg-gray-200" />
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span>Most active:</span>
+              <span className="font-medium text-gray-700">{mostRecentProject.name}</span>
+              <span className="text-gray-400">({new Date(mostRecentProject.date).toLocaleDateString()})</span>
+            </div>
+          </>
+        )}
       </div>
       {hasMultiplePlatforms && (
         <div className="flex items-center gap-2 flex-wrap">

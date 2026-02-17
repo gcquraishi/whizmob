@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { glob } from 'glob';
 import type { ProtoPassport } from '../types.js';
@@ -33,18 +33,42 @@ function extractFirstParagraph(content: string): string {
   return paragraphLines.join(' ').slice(0, 300);
 }
 
-async function countSessions(claudeDir: string): Promise<Map<string, number>> {
+interface SessionStats {
+  count: number;
+  last_active: string | null;
+  total_session_bytes: number;
+}
+
+async function countSessions(claudeDir: string): Promise<Map<string, SessionStats>> {
   const projectsDir = join(claudeDir, 'projects');
-  const counts = new Map<string, number>();
+  const stats = new Map<string, SessionStats>();
 
   try {
     const dirs = await readdir(projectsDir);
     for (const dir of dirs) {
       try {
-        const entries = await readdir(join(projectsDir, dir));
-        const sessions = entries.filter(e => e.endsWith('.jsonl')).length;
-        // Store the raw dir name (e.g. "-Users-gcquraishi-Documents-big-heavy-fictotum")
-        counts.set(dir, sessions);
+        const dirPath = join(projectsDir, dir);
+        const entries = await readdir(dirPath);
+        const jsonlFiles = entries.filter(e => e.endsWith('.jsonl'));
+
+        let latestMtime = 0;
+        let totalBytes = 0;
+
+        // Stat all session files to get mtime and size
+        const fileStats = await Promise.all(
+          jsonlFiles.map(f => stat(join(dirPath, f)).catch(() => null))
+        );
+        for (const fileStat of fileStats) {
+          if (!fileStat) continue;
+          totalBytes += fileStat.size;
+          if (fileStat.mtimeMs > latestMtime) latestMtime = fileStat.mtimeMs;
+        }
+
+        stats.set(dir, {
+          count: jsonlFiles.length,
+          last_active: latestMtime > 0 ? new Date(latestMtime).toISOString() : null,
+          total_session_bytes: totalBytes,
+        });
       } catch {
         // skip unreadable dirs
       }
@@ -53,7 +77,7 @@ async function countSessions(claudeDir: string): Promise<Map<string, number>> {
     // projects dir might not exist
   }
 
-  return counts;
+  return stats;
 }
 
 export async function parseProjects(scanRoots: string[], claudeDir: string): Promise<ProtoPassport[]> {
@@ -81,13 +105,15 @@ export async function parseProjects(scanRoots: string[], claudeDir: string): Pro
         const purpose = extractFirstParagraph(raw);
         const kebab = toKebab(dirName);
 
-        // Find matching session count by encoding the project dir
+        // Find matching session stats by encoding the project dir
         // the same way Claude does: /Users/foo/bar -> -Users-foo-bar
         const encoded = projectDir.replace(/\//g, '-');
-        let sessions = 0;
-        for (const [key, count] of sessionCounts) {
+        let sessionStats: SessionStats = { count: 0, last_active: null, total_session_bytes: 0 };
+        for (const [key, stats] of sessionCounts) {
           if (key === encoded || key.startsWith(encoded)) {
-            sessions = Math.max(sessions, count);
+            if (stats.count > sessionStats.count) {
+              sessionStats = stats;
+            }
           }
         }
 
@@ -105,7 +131,9 @@ export async function parseProjects(scanRoots: string[], claudeDir: string): Pro
           source_file: file.replace(process.env.HOME || '~', '~'),
           metadata: {
             directory: projectDir.replace(process.env.HOME || '~', '~'),
-            session_count: sessions,
+            session_count: sessionStats.count,
+            last_active: sessionStats.last_active,
+            total_session_bytes: sessionStats.total_session_bytes,
           },
         });
       } catch (err) {

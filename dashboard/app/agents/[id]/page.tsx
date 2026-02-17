@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink, Plus } from 'lucide-react';
+import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink, Plus, ChevronDown, ChevronRight, Activity, Clock, HardDrive } from 'lucide-react';
 import TagPill from '@/components/TagPill';
 import clsx from 'clsx';
 import { PLATFORM_LABELS } from '@/lib/platforms';
@@ -41,6 +41,12 @@ export default function DossierPage() {
   const [loading, setLoading] = useState(true);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [sourceContent, setSourceContent] = useState<string | null>(null);
+  const [sourceExtension, setSourceExtension] = useState('');
+  const [sourceMtime, setSourceMtime] = useState<string | null>(null);
+  const [sourceExpanded, setSourceExpanded] = useState(false);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [sourceError, setSourceError] = useState<string | null>(null);
 
   const fetchPassport = useCallback(async () => {
     const res = await fetch(`/api/inventory/${encodeURIComponent(id)}`);
@@ -50,9 +56,36 @@ export default function DossierPage() {
     setLoading(false);
   }, [id]);
 
+  const fetchSource = useCallback(async () => {
+    setSourceLoading(true);
+    setSourceError(null);
+    try {
+      const res = await fetch(`/api/inventory/${encodeURIComponent(id)}/source`);
+      if (res.ok) {
+        const data = await res.json();
+        setSourceContent(data.content);
+        setSourceExtension(data.extension);
+        setSourceMtime(data.mtime);
+      } else {
+        const err = await res.json();
+        setSourceError(err.error || 'Failed to load source');
+      }
+    } catch {
+      setSourceError('Failed to load source');
+    }
+    setSourceLoading(false);
+  }, [id]);
+
   useEffect(() => {
     fetchPassport();
   }, [fetchPassport]);
+
+  // Fetch source lazily when expanded for the first time
+  useEffect(() => {
+    if (sourceExpanded && sourceContent === null && !sourceLoading && !sourceError) {
+      fetchSource();
+    }
+  }, [sourceExpanded, sourceContent, sourceLoading, sourceError, fetchSource]);
 
   async function addTag() {
     if (!passport || !tagInput.trim()) return;
@@ -104,8 +137,9 @@ export default function DossierPage() {
 
   const cfg = typeIcons[passport.type] || typeIcons.subagent;
   const Icon = cfg.icon;
-  const metadata = JSON.parse(passport.metadata_json || '{}');
-  const vscodeUrl = `vscode://file${passport.source_file}`;
+  let metadata: Record<string, unknown> = {};
+  try { metadata = JSON.parse(passport.metadata_json || '{}'); } catch { /* corrupted metadata */ }
+  const editorUrl = `cursor://file${passport.source_file.replace(/^~/, '')}`;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
@@ -189,14 +223,96 @@ export default function DossierPage() {
               {passport.source_file}
             </code>
             <a
-              href={vscodeUrl}
+              href={editorUrl}
               className="flex-shrink-0 text-blue-600 hover:text-blue-700"
-              title="Open in VS Code"
+              title="Open in Cursor"
             >
               <ExternalLink size={14} />
             </a>
           </div>
         </Section>
+
+        {/* Source Content (collapsible) */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setSourceExpanded(!sourceExpanded)}
+            className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 hover:bg-gray-100 transition-colors"
+          >
+            {sourceExpanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Source Content</h2>
+            {sourceLoading && <span className="text-xs text-gray-400 ml-auto">Loading...</span>}
+          </button>
+          {sourceExpanded && (
+            <div className="px-4 py-3">
+              {sourceError && (
+                <p className="text-xs text-red-500">{sourceError}</p>
+              )}
+              {sourceContent !== null && (
+                <>
+                  {sourceMtime && (
+                    <p className="text-[11px] text-gray-400 mb-2">
+                      Last modified: {new Date(sourceMtime).toLocaleDateString()}
+                    </p>
+                  )}
+                  <pre className="text-xs font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto max-h-96 overflow-y-auto">
+                    {sourceExtension === 'json'
+                      ? (() => { try { return JSON.stringify(JSON.parse(sourceContent), null, 2); } catch { return sourceContent; } })()
+                      : sourceContent}
+                  </pre>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Usage Stats (for project passports) */}
+        {passport.type === 'project' && metadata.session_count != null && (
+          <Section title="Usage">
+            <div className="flex flex-wrap gap-6">
+              <div className="flex items-center gap-2">
+                <Activity size={14} className="text-green-500" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{String(metadata.session_count)}</div>
+                  <div className="text-[11px] text-gray-400">Sessions</div>
+                </div>
+              </div>
+              {!!metadata.last_active && (
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-blue-500" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {new Date(metadata.last_active as string).toLocaleDateString()}
+                    </div>
+                    <div className="text-[11px] text-gray-400">Last Active</div>
+                  </div>
+                </div>
+              )}
+              {Number(metadata.total_session_bytes) > 0 && (
+                <div className="flex items-center gap-2">
+                  <HardDrive size={14} className="text-purple-500" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatBytes(metadata.total_session_bytes as number)}
+                    </div>
+                    <div className="text-[11px] text-gray-400">Session Data</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {/* Last Modified (for non-project passports, shown after source is fetched) */}
+        {passport.type !== 'project' && sourceMtime && (
+          <Section title="Activity">
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-blue-500" />
+              <span className="text-sm text-gray-600">
+                Source last modified: {new Date(sourceMtime).toLocaleDateString()}
+              </span>
+            </div>
+          </Section>
+        )}
 
         {/* Metadata */}
         {Object.keys(metadata).length > 0 && (
@@ -209,6 +325,12 @@ export default function DossierPage() {
       </div>
     </div>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
