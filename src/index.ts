@@ -28,6 +28,7 @@ program
   .option('-o, --output <file>', 'Write output to file instead of stdout')
   .option('--scan-root <path>', 'Root directory to scan for projects', join(homedir(), 'Documents'))
   .option('--claude-dir <path>', 'Claude config directory', join(homedir(), '.claude'))
+  .option('--codex-dir <path>', 'Codex config directory', join(homedir(), '.codex'))
   .option('--cursor-dir <path>', 'Cursor config directory', join(homedir(), '.cursor'))
   .action(async (opts) => {
     try {
@@ -36,6 +37,7 @@ program
       const inventory = await scan({
         scanRoot: opts.scanRoot,
         claudeDir: opts.claudeDir,
+        codexDir: opts.codexDir,
         cursorDir: opts.cursorDir,
         format,
       });

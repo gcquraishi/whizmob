@@ -4,6 +4,7 @@ import { parseSkills } from './parsers/skills.js';
 import { parseMcp } from './parsers/mcp.js';
 import { parseProjects } from './parsers/projects.js';
 import { parseSettings } from './parsers/settings.js';
+import { parseCodex } from './parsers/codex.js';
 import { parseCursor } from './parsers/cursor.js';
 import { parseWindsurf } from './parsers/windsurf.js';
 import { parseCopilot } from './parsers/copilot.js';
@@ -12,7 +13,7 @@ import { join } from 'node:path';
 
 export async function scan(options: ScanOptions): Promise<RoninInventory> {
   const start = Date.now();
-  const { scanRoot, claudeDir, cursorDir } = options;
+  const { scanRoot, claudeDir, codexDir, cursorDir } = options;
   const scanRoots = [scanRoot];
 
   // Extra MCP files from non-Claude platforms
@@ -21,12 +22,13 @@ export async function scan(options: ScanOptions): Promise<RoninInventory> {
   ];
 
   // Run all parsers in parallel
-  const [agents, skills, mcp, projects, settings, cursorSkills, windsurf, copilot, aider] = await Promise.all([
+  const [agents, skills, mcp, projects, settings, codexSkills, cursorSkills, windsurf, copilot, aider] = await Promise.all([
     parseAgents(claudeDir),
     parseSkills(join(claudeDir, 'skills')),
     parseMcp(scanRoots, extraMcpFiles),
     parseProjects(scanRoots, claudeDir),
     parseSettings(claudeDir),
+    parseCodex(codexDir),
     parseCursor(cursorDir),
     parseWindsurf(),
     parseCopilot(scanRoot),
@@ -35,7 +37,7 @@ export async function scan(options: ScanOptions): Promise<RoninInventory> {
 
   const passports: ProtoPassport[] = [
     ...agents, ...skills, ...mcp, ...projects, ...settings,
-    ...cursorSkills, ...windsurf, ...copilot, ...aider,
+    ...codexSkills, ...cursorSkills, ...windsurf, ...copilot, ...aider,
   ];
 
   // Build by_type summary

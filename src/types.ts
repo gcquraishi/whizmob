@@ -1,4 +1,4 @@
-export type Platform = 'claude-code' | 'cursor' | 'windsurf' | 'copilot' | 'aider' | 'continue';
+export type Platform = 'claude-code' | 'codex' | 'cursor' | 'windsurf' | 'copilot' | 'aider' | 'continue';
 export type AgentType = 'subagent' | 'skill' | 'mcp' | 'project' | 'settings' | 'extension';
 export type AgentScope = 'user' | 'project';
 export type AgentStatus = 'active' | 'draft' | 'archived';
@@ -37,6 +37,7 @@ export interface RoninInventory {
 export interface ScanOptions {
   scanRoot: string;
   claudeDir: string;
+  codexDir: string;
   cursorDir: string;
   format: OutputFormat;
   output?: string;
