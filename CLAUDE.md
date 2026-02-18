@@ -26,15 +26,18 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `seed-inventory.json` — George's initial agent inventory export (36 agents)
 
 ## Current State
-_Last updated: 2026-02-17_
+_Last updated: 2026-02-18_
 
-Scanner is functional with multi-platform support. 50 passports in the database across 3 platforms (Claude Code, Cursor, Codex). M1 and M2.5 complete. Dashboard exists with Yard view and SQLite persistence.
+Scanner is functional with multi-platform support. 50 passports in the database across 3 platforms (Claude Code, Cursor, Codex). M1 and M2.5 complete. Dashboard has Yard view with portfolio stats and Dossier detail with source viewer, usage stats, and Cursor editor integration.
 
 ### Recent Completions
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
 - M2.5: Multi-platform scanner — Cursor support, platform filter, Codex parser added
 - First cross-platform import: Codex "Big Heavy Bookkeeper" skill imported into Ronin DB
 - Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
+- Dossier enhancements: collapsible source viewer, Cursor editor link, per-project usage stats (session count, last active, session data size), portfolio "most active" in Yard header
+- Secret redaction in source viewer for `.mcp.json` and `settings.json` files
+- Security notes documenting multi-user migration blockers
 - 50 passports: 43 Claude Code, 6 Cursor, 1 Codex
 
 ### Active Work
@@ -43,6 +46,7 @@ Scanner is functional with multi-platform support. 50 passports in the database 
 ### Known Issues
 - Node 25 + `brace-expansion` (via `glob`) compat issue prevents `ronin scan` from running; needs `npm update glob` or Node version pin
 - Cross-platform scan (M2.5) is code-complete but blocked by the Node 25 issue above
+- Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
 
 ## Roadmap
 ### Immediate (This Sprint)
