@@ -1,0 +1,172 @@
+import Database from 'better-sqlite3';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
+
+const DB_PATH = join(homedir(), '.ronin', 'ronin.db');
+
+interface PassportRow {
+  id: string;
+  name: string;
+  type: string;
+  platform: string;
+  scope: string;
+  purpose: string;
+  model_hint: string | null;
+  invocation: string | null;
+  source_file: string;
+}
+
+function openDb(): Database.Database | null {
+  if (!existsSync(DB_PATH)) return null;
+  return new Database(DB_PATH, { readonly: true });
+}
+
+/**
+ * Compact roster for SessionStart hook injection.
+ * One line per agent, minimal tokens.
+ */
+export function compactRoster(opts?: { type?: string; platform?: string }): string {
+  const db = openDb();
+  if (!db) return '# Ronin: No agent database found. Run `ronin scan` first.';
+
+  try {
+    let sql = 'SELECT name, type, platform, purpose FROM passports WHERE 1=1';
+    const params: (string | number)[] = [];
+
+    if (opts?.type) {
+      sql += ' AND type = ?';
+      params.push(opts.type);
+    }
+    if (opts?.platform) {
+      sql += ' AND platform = ?';
+      params.push(opts.platform);
+    }
+
+    sql += ' ORDER BY type, name';
+    const rows = db.prepare(sql).all(...params) as PassportRow[];
+
+    if (rows.length === 0) return '# Ronin: No agents found.';
+
+    // Group by type
+    const grouped = new Map<string, PassportRow[]>();
+    for (const row of rows) {
+      const list = grouped.get(row.type) || [];
+      list.push(row);
+      grouped.set(row.type, list);
+    }
+
+    const lines: string[] = [
+      `# Ronin Agent Roster (${rows.length} agents)`,
+    ];
+
+    for (const [type, agents] of grouped) {
+      const plural = type.endsWith('s') ? type : type + 's';
+      lines.push(`## ${plural} (${agents.length})`);
+      for (const a of agents) {
+        const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
+        // Truncate purpose to keep tokens low
+        const purpose = a.purpose.length > 80 ? a.purpose.slice(0, 77) + '...' : a.purpose;
+        lines.push(`- **${a.name}**${platform}: ${purpose}`);
+      }
+    }
+
+    return lines.join('\n');
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Hook-optimized roster for SessionStart injection.
+ * Shows only invocable agents (subagents + skills), ultra-compact.
+ */
+export function hookRoster(): string {
+  const db = openDb();
+  if (!db) return '';
+
+  try {
+    const rows = db.prepare(
+      `SELECT name, type, platform, purpose, invocation
+       FROM passports
+       WHERE type IN ('subagent', 'skill')
+       ORDER BY type, name`
+    ).all() as PassportRow[];
+
+    if (rows.length === 0) return '';
+
+    const subagents = rows.filter(r => r.type === 'subagent');
+    const skills = rows.filter(r => r.type === 'skill');
+
+    const lines: string[] = [
+      `<ronin-roster agents="${rows.length}">`,
+    ];
+
+    if (subagents.length > 0) {
+      lines.push('Agents:');
+      for (const a of subagents) {
+        const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
+        const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
+        lines.push(`  ${a.name}${platform} — ${purpose}`);
+      }
+    }
+
+    if (skills.length > 0) {
+      lines.push('Skills:');
+      for (const a of skills) {
+        const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
+        const invoke = a.invocation ? ` (${a.invocation})` : '';
+        const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
+        lines.push(`  ${a.name}${platform}${invoke} — ${purpose}`);
+      }
+    }
+
+    lines.push('Use `ronin roster --search <name>` or /roster for details.');
+    lines.push('</ronin-roster>');
+
+    return lines.join('\n');
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Search roster by name, type, or purpose.
+ * Returns detailed results for /roster skill.
+ */
+export function searchRoster(query: string): string {
+  const db = openDb();
+  if (!db) return '# Ronin: No agent database found. Run `ronin scan` first.';
+
+  try {
+    const term = `%${query}%`;
+    const rows = db.prepare(
+      `SELECT id, name, type, platform, scope, purpose, model_hint, invocation, source_file
+       FROM passports
+       WHERE name LIKE ? OR purpose LIKE ? OR type LIKE ? OR id LIKE ?
+       ORDER BY
+         CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
+         type, name`
+    ).all(term, term, term, term, term) as PassportRow[];
+
+    if (rows.length === 0) return `# Ronin: No agents matching "${query}"`;
+
+    const lines: string[] = [`# Ronin: ${rows.length} agent(s) matching "${query}"\n`];
+
+    for (const a of rows) {
+      lines.push(`### ${a.name}`);
+      lines.push(`- **Type**: ${a.type}`);
+      lines.push(`- **Platform**: ${a.platform}`);
+      lines.push(`- **Scope**: ${a.scope}`);
+      lines.push(`- **Purpose**: ${a.purpose}`);
+      if (a.model_hint) lines.push(`- **Model**: ${a.model_hint}`);
+      if (a.invocation) lines.push(`- **Invocation**: ${a.invocation}`);
+      lines.push(`- **Source**: ${a.source_file}`);
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  } finally {
+    db.close();
+  }
+}

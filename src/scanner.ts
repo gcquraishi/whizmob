@@ -23,7 +23,7 @@ export async function scan(options: ScanOptions): Promise<RoninInventory> {
 
   // Run all parsers in parallel
   const [agents, skills, mcp, projects, settings, codexSkills, cursorSkills, windsurf, copilot, aider] = await Promise.all([
-    parseAgents(claudeDir),
+    parseAgents(claudeDir, scanRoots),
     parseSkills(join(claudeDir, 'skills')),
     parseMcp(scanRoots, extraMcpFiles),
     parseProjects(scanRoots, claudeDir),
