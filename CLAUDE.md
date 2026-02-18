@@ -24,34 +24,43 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 **Key files:**
 - `PRD.md` — Product requirements document (v0.1 draft)
 - `seed-inventory.json` — George's initial agent inventory export (36 agents)
+- `src/roster.ts` — Roster query engine (compact, hook, search modes)
+- `src/db.ts` — CLI-side SQLite import (better-sqlite3)
+- `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
 _Last updated: 2026-02-18_
 
-Scanner is functional with multi-platform support. 50 passports in the database across 3 platforms (Claude Code, Cursor, Codex). M1 and M2.5 complete. Dashboard has Yard view with portfolio stats and Dossier detail with source viewer, usage stats, and Cursor editor integration.
+Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook, solving the "I don't see that agent" discoverability problem. `ronin scan` now auto-imports into the SQLite DB.
 
 ### Recent Completions
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
 - M2.5: Multi-platform scanner — Cursor support, platform filter, Codex parser added
-- First cross-platform import: Codex "Big Heavy Bookkeeper" skill imported into Ronin DB
 - Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
-- Dossier enhancements: collapsible source viewer, Cursor editor link, per-project usage stats (session count, last active, session data size), portfolio "most active" in Yard header
+- Dossier enhancements: collapsible source viewer, Cursor editor link, per-project usage stats
 - Secret redaction in source viewer for `.mcp.json` and `settings.json` files
-- Security notes documenting multi-user migration blockers
-- 50 passports: 43 Claude Code, 6 Cursor, 1 Codex
+- **`ronin roster` CLI** — queries SQLite DB for agent lookups (`--search`, `--type`, `--platform`, `--hook`)
+- **SessionStart hook** — injects compact agent roster into every Claude Code session (startup + compact)
+- **`/roster` skill** — on-demand agent search from within Claude Code sessions
+- **Project-level agent scanning** — discovers `.claude/agents/` within project directories (not just `~/.claude/agents/`)
+- **Auto-import on scan** — `ronin scan` writes directly to `~/.ronin/ronin.db` via `better-sqlite3` (skip with `--no-import`)
+- Fixed Node 25 compat issue (updated commander to v14)
+- 91 passports: 57 subagents (21 user + 36 project), 20 skills, 3 MCP, 10 projects, 1 settings
 
 ### Active Work
 - M3: Dog-food & polish — cataloging full agent library, testing cross-platform workflows
 
 ### Known Issues
-- Node 25 + `brace-expansion` (via `glob`) compat issue prevents `ronin scan` from running; needs `npm update glob` or Node version pin
-- Cross-platform scan (M2.5) is code-complete but blocked by the Node 25 issue above
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
+- Schema duplication between `src/db.ts` (CLI, better-sqlite3) and `dashboard/lib/db.ts` (dashboard, sql.js) — needs shared schema extraction
+- Hardcoded paths in hook script and `/roster` skill — will resolve when published to npm (`npx ronin roster`)
+- Roster search matches too broadly on purpose text (LIKE `%query%`) — needs relevance scoring improvement
 
 ## Roadmap
 ### Immediate (This Sprint)
-- Fix Node 25 compat issue (glob/brace-expansion)
 - M3: Dog-food & polish (catalog full library, README, demo video)
+- Extract shared SQLite schema between CLI and dashboard
+- Improve roster search relevance scoring
 
 ### Next (2-4 weeks)
 - M4: Distribution (npm publish, community outreach)
