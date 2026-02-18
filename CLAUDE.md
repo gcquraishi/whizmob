@@ -58,6 +58,13 @@ Scanner is functional with multi-platform support. 50 passports in the database 
 - Gallery (public agent marketplace)
 - Codex agents parser (beyond skills — if Codex adds agent-like configs)
 
+## Security Notes
+- **Source viewer reads files at request time** from the local filesystem. This is safe for local-only use but **must not ship to multi-user without rearchitecting**. When cloud sync / Team Yards are built:
+  1. Snapshot source content at scan time instead of reading live files on demand
+  2. Add auth to all API routes (currently zero auth — acceptable local-only, fatal multi-user)
+  3. Sandbox file reads to known scan roots, not arbitrary paths under homedir
+- **Secret redaction** (`source/route.ts`) redacts `env` blocks in `.mcp.json` and `settings.json`, plus any key matching `password|secret|token|key|credential`. This is defense-in-depth for the local dashboard; it is not sufficient as a security boundary for a hosted service.
+
 ## Conventions
 - Local-first: privacy by default, no network calls in v1
 - Proto-Passport schema for all agent identity data
