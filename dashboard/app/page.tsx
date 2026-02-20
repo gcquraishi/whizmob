@@ -32,7 +32,6 @@ interface ScanDiff {
 }
 
 export default function YardPage() {
-  const [passports, setPassports] = useState<Passport[]>([]);
   const [allPassports, setAllPassports] = useState<Passport[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -40,41 +39,40 @@ export default function YardPage() {
   const [platformFilter, setPlatformFilter] = useState('');
   const [diff, setDiff] = useState<ScanDiff | null>(null);
 
-  const fetchPassports = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (typeFilter) params.set('type', typeFilter);
-    if (platformFilter) params.set('platform', platformFilter);
-    if (search) params.set('search', search);
-
-    const res = await fetch(`/api/inventory?${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setPassports(data);
-    }
-    setLoading(false);
-  }, [typeFilter, platformFilter, search]);
-
-  // Fetch all passports (unfiltered) to compute platform list and counts
+  // Fetch all passports once on mount (and after scans)
   const fetchAll = useCallback(async () => {
     const res = await fetch('/api/inventory');
     if (res.ok) {
       setAllPassports(await res.json());
     }
+    setLoading(false);
   }, []);
 
-  // Fetch unfiltered data once on mount (and after scans)
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  // Fetch filtered data when filters change
-  useEffect(() => {
-    fetchPassports();
-  }, [fetchPassports]);
+  // Client-side filtering — instant, no network round-trip
+  const passports = useMemo(() => {
+    let result = allPassports;
+    if (typeFilter) {
+      result = result.filter(p => p.type === typeFilter);
+    }
+    if (platformFilter) {
+      result = result.filter(p => p.platform === platformFilter);
+    }
+    if (search) {
+      const term = search.toLowerCase();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        p.purpose.toLowerCase().includes(term)
+      );
+    }
+    return result;
+  }, [allPassports, typeFilter, platformFilter, search]);
 
   function handleScanComplete(scanDiff: ScanDiff) {
     setDiff(scanDiff);
-    fetchPassports();
     fetchAll();
   }
 

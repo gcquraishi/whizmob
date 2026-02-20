@@ -58,7 +58,9 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - M3: Dog-food & polish — cataloging full agent library, testing cross-platform workflows
 - **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
 - **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
-- **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram), `landing-comparison.html` (product page mockup — needs redesign, lighter/less salesy)
+- **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram)
+- **Dashboard translation page** live at `/translation` — ported from `landing-comparison.html` into proper React/Tailwind page with nav bar (Yard + Translation links). Includes flow diagram, "what changes" table, image comparison grid with toggle. Awaiting generated images.
+- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` command recommended before call. Linear: BIG-6 for image generation.
 
 ### Known Issues
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
