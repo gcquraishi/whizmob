@@ -10,8 +10,10 @@ import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
 import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
-import { importInventory } from './db.js';
+import { importInventory, getStats } from './db.js';
 import type { OutputFormat } from './types.js';
+import { CATEGORY_LABELS } from './types.js';
+import type { AgentType } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -89,6 +91,53 @@ program
       }
     } catch (err) {
       console.error(`[ronin] Roster failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('stats')
+  .description('Show inventory summary from the Ronin database')
+  .option('-v, --verbose', 'Show per-platform breakdown')
+  .action((opts) => {
+    try {
+      const stats = getStats();
+      if (!stats) {
+        console.log('No Ronin database found. Run `ronin scan` first.');
+        return;
+      }
+
+      // Build category breakdown string
+      const parts: string[] = [];
+      const typeOrder: AgentType[] = ['subagent', 'skill', 'mcp', 'project', 'settings', 'extension'];
+      for (const t of typeOrder) {
+        const count = stats.byType[t];
+        if (count && count > 0) {
+          parts.push(`${count} ${CATEGORY_LABELS[t]}`);
+        }
+      }
+
+      // Last scan relative time
+      let lastScanStr = '';
+      if (stats.lastScan) {
+        const ago = Date.now() - new Date(stats.lastScan.scanned_at).getTime();
+        if (ago < 60_000) lastScanStr = 'just now';
+        else if (ago < 3_600_000) lastScanStr = `${Math.floor(ago / 60_000)} min ago`;
+        else if (ago < 86_400_000) lastScanStr = `${Math.floor(ago / 3_600_000)} hr ago`;
+        else lastScanStr = `${Math.floor(ago / 86_400_000)} day(s) ago`;
+      }
+
+      console.log(`${stats.total} items across ${stats.platformCount} platform${stats.platformCount !== 1 ? 's' : ''}: ${parts.join(', ')}.${lastScanStr ? ` Last scan: ${lastScanStr}.` : ''}`);
+
+      if (opts.verbose) {
+        console.log('');
+        const platforms = Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]);
+        for (const [platform, count] of platforms) {
+          console.log(`  ${platform}: ${count}`);
+        }
+      }
+    } catch (err) {
+      console.error(`[ronin] Stats failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });

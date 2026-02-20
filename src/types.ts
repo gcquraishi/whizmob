@@ -4,6 +4,16 @@ export type AgentScope = 'user' | 'project';
 export type AgentStatus = 'active' | 'draft' | 'archived';
 export type OutputFormat = 'json' | 'table';
 
+/** Canonical display labels for each AgentType. Use these in all user-facing output. */
+export const CATEGORY_LABELS: Record<AgentType, string> = {
+  subagent: 'agents',
+  skill: 'skills',
+  mcp: 'mcp servers',
+  project: 'project configs',
+  settings: 'settings',
+  extension: 'extensions',
+};
+
 export interface ProtoPassport {
   id: string;
   name: string;

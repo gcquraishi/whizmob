@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
-import type { RoninInventory } from './types.js';
+import type { RoninInventory, AgentType } from './types.js';
 
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
@@ -133,4 +133,44 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
     added_names: addedNames,
     removed_names: removedNames,
   };
+}
+
+export interface RoninStats {
+  total: number;
+  byType: Record<string, number>;
+  byPlatform: Record<string, number>;
+  platformCount: number;
+  lastScan: { scanned_at: string; duration_ms: number; total: number } | null;
+}
+
+export function getStats(): RoninStats | null {
+  if (!existsSync(DB_PATH)) return null;
+  const db = new Database(DB_PATH, { readonly: true });
+
+  try {
+    const byType: Record<string, number> = {};
+    for (const row of db.prepare('SELECT type, COUNT(*) as cnt FROM passports GROUP BY type').all() as { type: string; cnt: number }[]) {
+      byType[row.type] = row.cnt;
+    }
+
+    const byPlatform: Record<string, number> = {};
+    for (const row of db.prepare('SELECT platform, COUNT(*) as cnt FROM passports GROUP BY platform').all() as { platform: string; cnt: number }[]) {
+      byPlatform[row.platform] = row.cnt;
+    }
+
+    const total = Object.values(byType).reduce((a, b) => a + b, 0);
+    const platformCount = Object.keys(byPlatform).length;
+
+    const lastScanRow = db.prepare('SELECT scanned_at, duration_ms, total FROM scans ORDER BY id DESC LIMIT 1').get() as { scanned_at: string; duration_ms: number; total: number } | undefined;
+
+    return {
+      total,
+      byType,
+      byPlatform,
+      platformCount,
+      lastScan: lastScanRow || null,
+    };
+  } finally {
+    db.close();
+  }
 }

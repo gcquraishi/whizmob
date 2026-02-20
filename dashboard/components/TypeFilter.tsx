@@ -6,8 +6,8 @@ const TYPES = [
   { value: '', label: 'All' },
   { value: 'subagent', label: 'Agents' },
   { value: 'skill', label: 'Skills' },
-  { value: 'mcp', label: 'MCP' },
-  { value: 'project', label: 'Projects' },
+  { value: 'mcp', label: 'MCP Servers' },
+  { value: 'project', label: 'Project Configs' },
   { value: 'settings', label: 'Settings' },
 ];
 

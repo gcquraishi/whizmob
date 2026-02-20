@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
+import { CATEGORY_LABELS } from './types.js';
+import type { AgentType } from './types.js';
 
 const DB_PATH = join(homedir(), '.ronin', 'ronin.db');
 
@@ -61,8 +63,10 @@ export function compactRoster(opts?: { type?: string; platform?: string }): stri
     ];
 
     for (const [type, agents] of grouped) {
-      const plural = type.endsWith('s') ? type : type + 's';
-      lines.push(`## ${plural} (${agents.length})`);
+      const label = CATEGORY_LABELS[type as AgentType] || type;
+      // Capitalize first letter for heading
+      const heading = label.charAt(0).toUpperCase() + label.slice(1);
+      lines.push(`## ${heading} (${agents.length})`);
       for (const a of agents) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         // Truncate purpose to keep tokens low

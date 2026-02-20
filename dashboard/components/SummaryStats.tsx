@@ -12,8 +12,8 @@ interface SummaryStatsProps {
 const typeConfig: Record<string, { label: string; icon: typeof Bot; color: string }> = {
   subagent: { label: 'Agents', icon: Bot, color: 'text-blue-600 bg-blue-50' },
   skill: { label: 'Skills', icon: Zap, color: 'text-amber-600 bg-amber-50' },
-  mcp: { label: 'MCP', icon: Plug, color: 'text-purple-600 bg-purple-50' },
-  project: { label: 'Projects', icon: FolderOpen, color: 'text-green-600 bg-green-50' },
+  mcp: { label: 'MCP Servers', icon: Plug, color: 'text-purple-600 bg-purple-50' },
+  project: { label: 'Project Configs', icon: FolderOpen, color: 'text-green-600 bg-green-50' },
   settings: { label: 'Settings', icon: Settings, color: 'text-gray-600 bg-gray-100' },
 };
 
