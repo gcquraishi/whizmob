@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Skill Translation Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SF Pro Display', -apple-system, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    padding: 48px 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  .flow {
+    display: grid;
+    grid-template-columns: 220px 40px 260px 40px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  /* SOURCE COLUMN */
+  .source {
+    position: relative;
+  }
+  .source-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #ff6b6b; margin-bottom: 12px;
+  }
+  .source-box {
+    background: #1a1215;
+    border: 1px solid #3d1f2a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .source-box .label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; color: #ff6b6b; opacity: 0.7; margin-bottom: 6px;
+  }
+  .source-box code {
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-size: 12px; color: #ffaaaa; line-height: 1.6; display: block;
+  }
+  .source-box .comment {
+    font-size: 11px; color: #886; margin-top: 6px; font-style: italic;
+  }
+
+  /* ARROWS */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    padding-top: 30px;
+  }
+  .arrow-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 64px;
+    color: #555;
+    font-size: 18px;
+  }
+
+  /* CANONICAL COLUMN */
+  .canonical {
+    position: relative;
+  }
+  .canonical-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #aaa; margin-bottom: 12px;
+  }
+  .canonical-box {
+    background: #161616;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .canonical-box .label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; color: #aaa; opacity: 0.7; margin-bottom: 6px;
+  }
+  .canonical-box code {
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-size: 12px; color: #ccc; line-height: 1.6; display: block;
+  }
+  .rule-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 3px;
+    margin-top: 8px;
+  }
+  .rule-strip { background: #3d1f2a; color: #ff6b6b; }
+  .rule-generalize { background: #2a2a1f; color: #c8b83e; }
+  .rule-preserve { background: #1f2a1f; color: #6bc56b; }
+
+  /* TARGETS COLUMN */
+  .targets {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .target-col { min-width: 0; }
+  .target-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; margin-bottom: 12px; text-align: center;
+  }
+  .label-dalle { color: #4ecdc4; }
+  .label-mj { color: #c084fc; }
+  .label-nano { color: #fb923c; }
+
+  .target-box {
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    min-height: 54px;
+  }
+  .target-box .label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; opacity: 0.7; margin-bottom: 6px;
+  }
+  .target-box code {
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-size: 11px; line-height: 1.6; display: block;
+  }
+  .target-box .note {
+    font-size: 10px; margin-top: 6px; opacity: 0.7; line-height: 1.4;
+  }
+
+  /* DALL-E boxes */
+  .box-dalle {
+    background: #0f1f1d;
+    border: 1px solid #1a3d38;
+  }
+  .box-dalle .label { color: #4ecdc4; }
+  .box-dalle code { color: #7eddd6; }
+  .box-dalle .note { color: #4ecdc4; }
+
+  /* Midjourney boxes */
+  .box-mj {
+    background: #1a1028;
+    border: 1px solid #2d1f4a;
+  }
+  .box-mj .label { color: #c084fc; }
+  .box-mj code { color: #d4a8ff; }
+  .box-mj .note { color: #c084fc; }
+
+  /* Nanobanana boxes */
+  .box-nano {
+    background: #1f1608;
+    border: 1px solid #3d2e14;
+  }
+  .box-nano .label { color: #fb923c; }
+  .box-nano code { color: #fdb974; }
+  .box-nano .note { color: #fb923c; }
+
+  /* Same-as-canonical indicator */
+  .same {
+    font-size: 11px; color: #555; font-style: italic;
+    padding: 8px 0;
+  }
+
+  /* Changed indicator */
+  .changed {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .changed-dalle { background: #4ecdc4; }
+  .changed-mj { background: #c084fc; }
+  .changed-nano { background: #fb923c; }
+
+  /* Connector lines (CSS-drawn) */
+  .branch-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 30px;
+  }
+  .branch-lines {
+    width: 100%;
+    height: 40px;
+    position: relative;
+  }
+
+  /* Row separator */
+  .row-divider {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid #1a1a1a;
+    margin: 4px 0;
+  }
+
+  /* Section headers spanning full width */
+  .section-header {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+    padding: 20px 0 8px 0;
+    border-top: 1px solid #1f1f1f;
+    margin-top: 8px;
+  }
+  .section-header:first-of-type { border-top: none; margin-top: 0; }
+
+  /* Aspect row layout */
+  .aspect-row {
+    display: grid;
+    grid-template-columns: 220px 260px 1fr;
+    gap: 16px;
+    margin-bottom: 2px;
+    align-items: start;
+  }
+  .aspect-row .source-box,
+  .aspect-row .canonical-box { margin-bottom: 0; }
+
+  .targets-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .targets-inline .target-box { margin-bottom: 0; }
+
+  /* Header row */
+  .header-row {
+    display: grid;
+    grid-template-columns: 220px 260px 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: end;
+  }
+  .header-row .targets-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .fork-indicator {
+    font-size: 20px;
+    color: #333;
+    text-align: center;
+    padding: 0 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ronin &middot; Skill Translation Flow</h1>
+
+<!-- Column headers -->
+<div class="header-row">
+  <div>
+    <div class="source-label">Source &middot; Claude Code</div>
+    <div style="font-size:11px;color:#555;">Platform-specific skill file</div>
+  </div>
+  <div>
+    <div class="canonical-label">Canonical &middot; Neutral</div>
+    <div style="font-size:11px;color:#555;">Platform-agnostic representation</div>
+  </div>
+  <div class="targets-inline" style="align-items:end;">
+    <div class="target-label label-dalle">DALL-E</div>
+    <div class="target-label label-mj">Midjourney</div>
+    <div class="target-label label-nano">Nanobanana</div>
+  </div>
+</div>
+
+<div style="border-top:1px solid #222;margin-bottom:24px;"></div>
+
+<!-- ======================== ROW: IDENTITY ======================== -->
+<div class="section-header">Identity &amp; Role</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Frontmatter</div>
+    <code>---<br>name: illustrator<br>description: "...Craft Gemini<br>image prompts..."<br>---</code>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Cleaned</div>
+    <code style="color:#777;text-decoration:line-through;">frontmatter removed</code>
+    <code><br>You are an expert illustration<br>art director for Fictotum.</code>
+    <span class="rule-tag rule-strip">STRIP_FRONTMATTER</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">System prompt</div>
+      <code>You are an expert illustration art director. You create images using <span style="color:#4ecdc4;font-weight:600;">DALL-E</span> when the user requests illustrations.</code>
+      <div class="note"><span class="changed changed-dalle"></span>Tool-call awareness added</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">Reference doc header</div>
+      <code style="color:#c084fc;font-weight:600;">This is a prompt construction reference</code><code>, not a system instruction. Consult when building /imagine commands.</code>
+      <div class="note"><span class="changed changed-mj"></span>Structural paradigm shift</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">System prompt</div>
+      <code>You are an expert illustration art director. <span style="color:#fb923c;font-weight:600;">Generate images inline</span> when the user describes a figure.</code>
+      <div class="note"><span class="changed changed-nano"></span>Capability TBD &mdash; assume native gen</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: PROMPT SYNTAX ======================== -->
+<div class="section-header">Prompt Construction</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Prompt template</div>
+    <code>Illustration of [figure]...<br>NO shading, NO shadows,<br>NO gradients...<br>Die-cut sticker...</code>
+    <div class="comment">Full sentences, inline negatives</div>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Cleaned</div>
+    <code>Illustration of [figure]...<br>NO shading, NO shadows,<br>NO gradients...<br>Die-cut sticker...</code>
+    <span class="rule-tag rule-preserve">PRESERVE &mdash; no change</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">Rephrased</div>
+      <code><span style="color:#4ecdc4;font-weight:600;">Flat solid color fills only,<br>hard edges only.</span><br>Single flat color per shape.<br>Die-cut sticker...</code>
+      <div class="note"><span class="changed changed-dalle"></span>Negatives &rarr; positives. DALL-E handles positive framing better.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">Rewritten</div>
+      <code>simplified graphic<br>illustration ::2<br>rubber stamp, bold flat<br>shapes ::1.5<br><span style="color:#c084fc;font-weight:600;">--no shading shadows<br>gradients texture</span></code>
+      <div class="note"><span class="changed changed-mj"></span>Keywords + ::N weights + --no param. Full structural rewrite.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">Adapted</div>
+      <code>Illustration of [figure]...<br><span style="color:#fb923c;font-weight:600;">Exclude: shading, shadows,<br>gradients, texture.</span><br>Die-cut sticker...</code>
+      <div class="note"><span class="changed changed-nano"></span>Negative prompt syntax TBD &mdash; format depends on API spec</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: COLOR ======================== -->
+<div class="section-header">Color Specification</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Palette #1</div>
+    <code>Skin: <span style="color:#6B7F5E;">#6B7F5E</span> (muted<br>yellow-green olive)<br>Accent: <span style="color:#8B2635;">#8B2635</span> (dark<br>red-brown burgundy)</code>
+    <div class="comment">Hex + English description</div>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Both preserved</div>
+    <code>Skin: #6B7F5E<br>(muted yellow-green olive)<br>Accent: #8B2635<br>(dark red-brown burgundy)</code>
+    <span class="rule-tag rule-preserve">PRESERVE</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">Hex included</div>
+      <code>muted yellow-green olive<br><span style="color:#4ecdc4;font-weight:600;">(#6B7F5E)</span></code>
+      <div class="note"><span class="changed changed-dalle"></span>DALL-E respects hex reasonably well. Keep both.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">English only</div>
+      <code><span style="color:#c084fc;font-weight:600;">muted olive green<br>skin tone</span></code>
+      <div class="note"><span class="changed changed-mj"></span>Hex stripped. MJ ignores hex codes. Use --sref for palette lock.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">TBD</div>
+      <code>muted yellow-green olive<br><span style="color:#fb923c;font-weight:600;">#6B7F5E</span></code>
+      <div class="note"><span class="changed changed-nano"></span>Color fidelity unknown. Include both, test empirically.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: MOOD ======================== -->
+<div class="section-header">Mood / Expression</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Mood system</div>
+    <code>commanding (rulers)<br>defiant (warriors)<br>scheming (politicians)<br>roguish (adventurers)</code>
+    <div class="comment">Single-word mood descriptors</div>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Unchanged</div>
+    <code>commanding<br>defiant<br>scheming<br>roguish</code>
+    <span class="rule-tag rule-preserve">PRESERVE</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">Unchanged</div>
+      <code>commanding<br>defiant<br>scheming<br>roguish</code>
+      <div class="note">DALL-E interprets single adjectives well via system prompt.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">Expanded to phrases</div>
+      <code><span style="color:#c084fc;font-weight:600;">authoritative gaze,<br>commanding presence</span><br><span style="color:#c084fc;font-weight:600;">fierce defiance,<br>unwavering stare</span><br><span style="color:#c084fc;font-weight:600;">sly expression,<br>knowing smirk</span><br><span style="color:#c084fc;font-weight:600;">mischievous grin,<br>rakish charm</span></code>
+      <div class="note"><span class="changed changed-mj"></span>MJ needs descriptive phrases, not single words. Two descriptors per mood for redundancy.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">Unchanged</div>
+      <code>commanding<br>defiant<br>scheming<br>roguish</code>
+      <div class="note">Assume conversational model interprets adjectives. Test and adapt.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: SAFETY ======================== -->
+<div class="section-header">Safety / Content Policy</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Figure naming</div>
+    <code>Avoid naming specific<br>historical figures directly.<br>Gemini may block prompts<br>with named figures.</code>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Generalized</div>
+    <code>Avoid naming specific<br>historical figures directly.<br><span style="color:#c8b83e;">Image generation may block</span><br>prompts with named figures.</code>
+    <span class="rule-tag rule-generalize">GENERALIZE_TOOL_REFS</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">Strictest</div>
+      <code><span style="color:#4ecdc4;font-weight:600;">Never use proper names.</span><br>Always use descriptive<br>titles: "18th-century French<br>military commander"</code>
+      <div class="note"><span class="changed changed-dalle"></span>OpenAI is strictest on historical figures. Absolute rule, not guideline.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">Most permissive</div>
+      <code><span style="color:#c084fc;font-weight:600;">Names generally OK.</span><br>"Julius Caesar" and<br>"Cleopatra" work fine<br>for stylized illustration.</code>
+      <div class="note"><span class="changed changed-mj"></span>MJ rarely blocks historical figure names. Avoid combining with violent language.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">Unknown</div>
+      <code><span style="color:#fb923c;font-weight:600;">Test with descriptive<br>titles first.</span> Escalate<br>to proper names if<br>model allows.</code>
+      <div class="note"><span class="changed changed-nano"></span>New platform = unknown policy. Conservative default + empirical testing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: INTERACTION MODEL ======================== -->
+<div class="section-header">Interaction Model</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Workflow</div>
+    <code>Phase 1: Discovery<br>Phase 2: Exploration<br>Phase 3: Refinement<br>Phase 4: Lock-in</code>
+    <div class="comment">Multi-turn conversation</div>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Preserved</div>
+    <code>Phase 1: Discovery<br>Phase 2: Exploration<br>Phase 3: Refinement<br>Phase 4: Lock-in</code>
+    <span class="rule-tag rule-preserve">PRESERVE</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">Conversational</div>
+      <code>Phases 1&ndash;4 preserved.<br><br><span style="color:#4ecdc4;font-weight:600;">+ "Create a variation"<br>for iteration</span></code>
+      <div class="note">ChatGPT is conversational. Workflow maps naturally. Added DALL-E variation feature.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label" style="color:#c084fc;font-weight:700;">Replaced entirely</div>
+      <code><span style="color:#c084fc;font-weight:600;">1. Build from template<br>2. /imagine<br>3. U1-U4 upscale<br>4. V1-V4 variations<br>5. --sref for series</span></code>
+      <div class="note"><span class="changed changed-mj"></span>No conversation state. Transactional: prompt in &rarr; image out &rarr; iterate via buttons.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">Conversational</div>
+      <code>Phases 1&ndash;4 preserved.<br><br><span style="color:#fb923c;font-weight:600;">Iteration mechanism<br>TBD per platform.</span></code>
+      <div class="note">Assume conversational until proven otherwise. Adapt iteration once API is known.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ROW: UNIQUE CAPABILITIES ======================== -->
+<div class="section-header">Platform-Specific Upgrades</div>
+
+<div class="aspect-row">
+  <div class="source-box">
+    <div class="label">Generation method</div>
+    <code>Run shell script:<br>npx tsx style-test.ts<br>"YOUR PROMPT"<br>--name "test-name"</code>
+    <div class="comment">Indirect: Claude calls script that calls Gemini API</div>
+  </div>
+  <div class="canonical-box">
+    <div class="label">Removed</div>
+    <code style="color:#777;text-decoration:line-through;">script reference removed</code>
+    <code><br>Generate images directly<br>when asked.</code>
+    <span class="rule-tag rule-generalize">GENERALIZE_PATHS</span>
+  </div>
+  <div class="targets-inline">
+    <div class="target-box box-dalle">
+      <div class="label">DALL-E native</div>
+      <code>Generate via DALL-E tool.<br><br><span style="color:#4ecdc4;font-weight:600;">Fixed sizes only:<br>1024x1792 for portraits<br>(closest to 3:4)</span></code>
+      <div class="note"><span class="changed changed-dalle"></span>Must specify resolution. No arbitrary aspect ratios.</div>
+    </div>
+    <div class="target-box box-mj">
+      <div class="label">MJ-exclusive features</div>
+      <code><span style="color:#c084fc;font-weight:600;">--ar 3:4</span> aspect ratio<br><span style="color:#c084fc;font-weight:600;">--style raw</span> less "MJ look"<br><span style="color:#c084fc;font-weight:600;">--sref [url]</span> style anchor<br><span style="color:#c084fc;font-weight:600;">--stylize 200</span> literalness</code>
+      <div class="note"><span class="changed changed-mj"></span>Unique parameter system. --sref is a capability upgrade: palette consistency across a series that no other platform offers.</div>
+    </div>
+    <div class="target-box box-nano">
+      <div class="label">Unknown</div>
+      <code><span style="color:#fb923c;font-weight:600;">Capabilities, parameters,<br>and constraints TBD.</span><br><br>Scaffold with canonical,<br>adapt after testing.</code>
+      <div class="note"><span class="changed changed-nano"></span>New platform playbook: start canonical, add platform-specific tuning empirically.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== SUMMARY ======================== -->
+<div style="border-top:1px solid #222;margin-top:32px;padding-top:24px;">
+
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px;">
+  <div style="text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#ff6b6b;">100%</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Source<br>knowledge</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#aaa;">95%</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Canonical<br>preserved</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#4ecdc4;">~60%</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">DALL-E<br>automatable</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#c084fc;">~30%</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Midjourney<br>automatable</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#fb923c;">?</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Nanobanana<br>to be tested</div>
+  </div>
+</div>
+
+<p style="color:#555;font-size:12px;margin-top:24px;text-align:center;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.6;">
+  The art direction knowledge &mdash; palettes, moods, style references, composition rules &mdash; transfers at near-100% fidelity.
+  What changes per target is the <em>delivery mechanism</em>: how you express that knowledge in a form the target can act on.
+  For conversational models, it's a system prompt. For Midjourney, it's a prompt construction reference.
+  For unknown platforms, you start with canonical and adapt empirically.
+</p>
+
+</div>
+
+<p style="color:#333;font-size:11px;margin-top:40px;text-align:center;">ronin &middot; skill translation flow &middot; 2026-02-19</p>
+
+</body>
+</html>

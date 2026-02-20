@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ronin — Skill Translation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #fafaf9;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+
+  /* ===== HEADER ===== */
+  .section-header {
+    margin-bottom: 56px;
+  }
+  .section-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    color: #1c1917;
+  }
+  .section-header p {
+    font-size: 16px;
+    color: #78716c;
+    max-width: 640px;
+    line-height: 1.6;
+  }
+
+  /* ===== FLOW DIAGRAM ===== */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 56px;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+  }
+  .flow-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .dot-source { background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; }
+  .dot-canonical { background: #f5f5f4; color: #78716c; border: 1.5px solid #d6d3d1; }
+  .dot-dalle { background: #f0fdfa; color: #0d9488; border: 1.5px solid #99f6e4; }
+  .dot-mj { background: #faf5ff; color: #9333ea; border: 1.5px solid #e9d5ff; }
+  .dot-gemini { background: #fff7ed; color: #ea580c; border: 1.5px solid #fed7aa; }
+  .flow-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #57534e;
+    text-align: center;
+  }
+  .flow-sublabel {
+    font-size: 11px;
+    color: #a8a29e;
+    text-align: center;
+  }
+  .flow-arrow {
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+    color: #d6d3d1;
+    font-size: 18px;
+  }
+  .flow-branch {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    padding-left: 20px;
+  }
+  .flow-branch::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 1.5px;
+    background: #e7e5e4;
+  }
+  .flow-branch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+  .flow-branch-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    width: 20px;
+    height: 1.5px;
+    background: #e7e5e4;
+  }
+
+  /* ===== EXPLANATION GRID ===== */
+  .explanation {
+    margin-bottom: 48px;
+  }
+  .explanation h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #44403c;
+    margin-bottom: 20px;
+  }
+
+  .step-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: #e7e5e4;
+    border: 1px solid #e7e5e4;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .step-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 1fr;
+    gap: 1px;
+    background: #e7e5e4;
+  }
+  .step-row.header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+  .step-cell {
+    background: #fafaf9;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .step-cell.header-cell {
+    background: #f5f5f4;
+    padding: 10px 16px;
+  }
+  .step-cell.aspect-label {
+    background: #f5f5f4;
+    font-weight: 600;
+    color: #57534e;
+    font-size: 12px;
+  }
+  .step-cell code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #44403c;
+  }
+  .step-cell .before {
+    color: #dc2626;
+    text-decoration: line-through;
+    text-decoration-color: #fca5a5;
+  }
+  .step-cell .after {
+    color: #16a34a;
+  }
+  .step-cell .unchanged {
+    color: #a8a29e;
+    font-style: italic;
+  }
+  .step-cell .rule {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    background: #f5f5f4;
+    border: 1px solid #e7e5e4;
+    color: #78716c;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-top: 4px;
+  }
+
+  /* ===== COMPARISON GRID ===== */
+  .comparison-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .comparison-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #44403c;
+  }
+  .toggle-pills {
+    display: flex;
+    gap: 2px;
+    background: #f5f5f4;
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid #e7e5e4;
+  }
+  .pill {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: #78716c;
+    transition: all 0.15s ease;
+  }
+  .pill:hover { color: #44403c; }
+  .pill.active { background: white; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 640px) {
+    .image-grid { grid-template-columns: 1fr; }
+    .step-row { grid-template-columns: 1fr; }
+  }
+
+  .image-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+  }
+  .image-frame {
+    aspect-ratio: 3/4;
+    background: #FEFEFE;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .image-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: #d6d3d1;
+    font-size: 12px;
+  }
+  .image-placeholder .ph-icon {
+    width: 32px;
+    height: 32px;
+    border: 1.5px dashed #d6d3d1;
+    border-radius: 6px;
+  }
+
+  .card-meta {
+    padding: 12px 14px;
+    border-top: 1px solid #f5f5f4;
+  }
+  .card-meta .platform {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .color-dalle { color: #0d9488; }
+  .color-mj { color: #9333ea; }
+  .color-gemini { color: #ea580c; }
+  .card-meta .prompt-snippet {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #a8a29e;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-meta .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .tag-raw { background: #fef2f2; color: #dc2626; }
+  .tag-translated { background: #f0fdf4; color: #16a34a; }
+
+  .row-label-line {
+    font-size: 11px;
+    font-weight: 500;
+    color: #a8a29e;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ===== FOOTER NOTE ===== */
+  .footer-note {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #e7e5e4;
+    font-size: 13px;
+    color: #a8a29e;
+    line-height: 1.6;
+  }
+  .footer-note code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: #f5f5f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #78716c;
+  }
+</style>
+</head>
+<body>
+
+<div class="section">
+
+  <!-- HEADER -->
+  <div class="section-header">
+    <h2>How skill translation works</h2>
+    <p>A skill definition written for one platform carries art direction, domain knowledge, and behavioral instructions. Ronin extracts the platform-neutral knowledge, then adapts the delivery for each target.</p>
+  </div>
+
+  <!-- FLOW -->
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot dot-source">1</div>
+      <div class="flow-label">Claude Code</div>
+      <div class="flow-sublabel">Source skill</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="flow-dot dot-canonical">2</div>
+      <div class="flow-label">Canonical</div>
+      <div class="flow-sublabel">Platform-neutral</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-branch">
+      <div class="flow-branch-item">
+        <div class="flow-dot dot-dalle" style="width:32px;height:32px;font-size:13px;">3a</div>
+        <div>
+          <div class="flow-label" style="text-align:left;">DALL-E</div>
+          <div class="flow-sublabel" style="text-align:left;">Positive framing, hex colors</div>
+        </div>
+      </div>
+      <div class="flow-branch-item">
+        <div class="flow-dot dot-mj" style="width:32px;height:32px;font-size:13px;">3b</div>
+        <div>
+          <div class="flow-label" style="text-align:left;">Midjourney</div>
+          <div class="flow-sublabel" style="text-align:left;">Weighted keywords, --params</div>
+        </div>
+      </div>
+      <div class="flow-branch-item">
+        <div class="flow-dot dot-gemini" style="width:32px;height:32px;font-size:13px;">3c</div>
+        <div>
+          <div class="flow-label" style="text-align:left;">Gemini</div>
+          <div class="flow-sublabel" style="text-align:left;">Native image gen, inline negatives</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT CHANGES -->
+  <div class="explanation">
+    <h3>What changes at each stage</h3>
+    <div class="step-grid">
+      <div class="step-row header">
+        <div class="step-cell header-cell">Aspect</div>
+        <div class="step-cell header-cell">Source &rarr; Canonical</div>
+        <div class="step-cell header-cell">Canonical &rarr; Targets</div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Negative prompts</div>
+        <div class="step-cell">
+          <code>"NO shading, NO shadows"</code><br>
+          <span class="unchanged">Kept as-is &mdash; platform-neutral</span><br>
+          <span class="rule">PRESERVE</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> <code class="after">"Flat solid fills only, hard edges only"</code><br>
+          <span style="font-size:11px;color:#78716c;">Rephrased as positive &mdash; DALL-E handles positive framing better</span><br><br>
+          <strong>Midjourney:</strong> <code class="after">--no shading shadows gradients</code><br>
+          <span style="font-size:11px;color:#78716c;">Moved to --no parameter &mdash; MJ's native negative syntax</span><br><br>
+          <strong>Gemini:</strong> <span class="unchanged">No change &mdash; inline negatives work</span>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Color values</div>
+        <div class="step-cell">
+          <code><span class="before">getPaletteForFigure(id)</span></code><br>
+          <code class="after">#6B7F5E (muted yellow-green olive)</code><br>
+          <span class="rule">GENERALIZE_PATHS</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> Both hex + English &mdash; DALL-E respects hex reasonably<br><br>
+          <strong>Midjourney:</strong> <code class="after">muted olive green</code> &mdash; English only, hex ignored. Use <code>--sref</code> for palette lock<br><br>
+          <strong>Gemini:</strong> Both hex + English &mdash; hex unreliable, English helps
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Prompt structure</div>
+        <div class="step-cell">
+          <span class="unchanged">Full sentences preserved</span><br>
+          <span class="rule">PRESERVE</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> Full sentences, style keyword moved to front<br><br>
+          <strong>Midjourney:</strong> <code class="after">keywords ::2 more keywords ::1.5</code><br>
+          <span style="font-size:11px;color:#78716c;">Complete structural rewrite &mdash; weighted multi-prompt syntax</span><br><br>
+          <strong>Gemini:</strong> Full sentences, no change
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Safety policy</div>
+        <div class="step-cell">
+          <code><span class="before">Gemini may block</span></code><br>
+          <code class="after">Image generation may block</code><br>
+          <span class="rule">GENERALIZE_TOOL_REFS</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> Strictest &mdash; never use proper names for historical figures<br><br>
+          <strong>Midjourney:</strong> Most permissive &mdash; names generally fine<br><br>
+          <strong>Gemini:</strong> Use descriptive titles, avoid caricature language
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Mood vocabulary</div>
+        <div class="step-cell">
+          <span class="unchanged">Single words preserved</span><br>
+          <code>commanding, defiant, roguish</code><br>
+          <span class="rule">PRESERVE</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> Single words work fine<br><br>
+          <strong>Midjourney:</strong> <code class="after">authoritative gaze, commanding presence</code><br>
+          <span style="font-size:11px;color:#78716c;">Expanded to descriptive phrases &mdash; MJ needs redundancy</span><br><br>
+          <strong>Gemini:</strong> Single words work fine
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-cell aspect-label">Tool references</div>
+        <div class="step-cell">
+          <code><span class="before">Run: npx tsx style-test.ts</span></code><br>
+          <code class="after">Generate images directly</code><br>
+          <span class="rule">GENERALIZE_PATHS</span>
+        </div>
+        <div class="step-cell">
+          <strong>DALL-E:</strong> "Create images using DALL-E" &mdash; tool-call awareness<br><br>
+          <strong>Midjourney:</strong> Becomes a reference doc, not an instruction<br><br>
+          <strong>Gemini:</strong> "Use native image generation capability"
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="comparison-header">
+    <h3>Same subject, three models</h3>
+    <div class="toggle-pills">
+      <button class="pill" onclick="showView('raw')">Without Ronin</button>
+      <button class="pill" onclick="showView('translated')">With Ronin</button>
+      <button class="pill active" onclick="showView('both')">Side by side</button>
+    </div>
+  </div>
+
+  <div id="view-raw">
+    <div class="row-label-line">Same raw prompt sent to all three &mdash; each model interprets differently</div>
+    <div class="image-grid">
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-raw">raw prompt</span>
+          <div class="platform color-dalle">DALL-E</div>
+          <div class="prompt-snippet">Illustration of an ancient Roman statesman, simplified graphic sticker style, flat colors, chunky outlines...</div>
+        </div>
+      </div>
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-raw">raw prompt</span>
+          <div class="platform color-mj">Midjourney</div>
+          <div class="prompt-snippet">Illustration of an ancient Roman statesman, simplified graphic sticker style, flat colors, chunky outlines...</div>
+        </div>
+      </div>
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-raw">raw prompt</span>
+          <div class="platform color-gemini">Gemini</div>
+          <div class="prompt-snippet">Illustration of an ancient Roman statesman, simplified graphic sticker style, flat colors, chunky outlines...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-translated">
+    <div class="row-label-line">Platform-optimized from one skill definition &mdash; consistent output</div>
+    <div class="image-grid">
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-translated">ronin-translated</span>
+          <div class="platform color-dalle">DALL-E</div>
+          <div class="prompt-snippet">Simplified graphic illustration of an ancient Roman statesman. Flat solid color fills only, hard edges only. Skin: muted yellow-green olive (#6B7F5E)...</div>
+        </div>
+      </div>
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-translated">ronin-translated</span>
+          <div class="platform color-mj">Midjourney</div>
+          <div class="prompt-snippet">simplified graphic illustration of ancient Roman statesman ::2 rubber stamp screen print aesthetic ::1.5 --no shading shadows --ar 3:4 --style raw...</div>
+        </div>
+      </div>
+      <div class="image-card">
+        <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
+        <div class="card-meta">
+          <span class="tag tag-translated">ronin-translated</span>
+          <div class="platform color-gemini">Gemini</div>
+          <div class="prompt-snippet">Illustration of an ancient Roman statesman. NO realistic skin tones. Skin filled with muted yellow-green olive (#6B7F5E). Simplified graphic illustration...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-note">
+    The art direction knowledge &mdash; palettes, moods, style references, composition &mdash; transfers at near-100% fidelity across all platforms. What changes is the delivery: how that knowledge is expressed in a form each model can act on. The translation rules are codified and mostly mechanical; the knowledge itself is written once.
+    <br><br>
+    <code>ronin translate illustrator --to dalle midjourney gemini</code>
+  </div>
+
+</div>
+
+<script>
+function showView(mode) {
+  const raw = document.getElementById('view-raw');
+  const translated = document.getElementById('view-translated');
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+
+  if (mode === 'raw') {
+    raw.style.display = 'block';
+    translated.style.display = 'none';
+    document.querySelectorAll('.pill')[0].classList.add('active');
+  } else if (mode === 'translated') {
+    raw.style.display = 'none';
+    translated.style.display = 'block';
+    document.querySelectorAll('.pill')[1].classList.add('active');
+  } else {
+    raw.style.display = 'block';
+    translated.style.display = 'block';
+    document.querySelectorAll('.pill')[2].classList.add('active');
+  }
+}
+showView('both');
+</script>
+
+</body>
+</html>

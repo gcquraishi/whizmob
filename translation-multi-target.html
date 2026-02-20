@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Illustrator Skill — Multi-Target Translation</title>
+<style>
+  body {
+    font-family: 'Google Sans', Arial, sans-serif;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.7;
+    color: #202124;
+    background: #fff;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #5f6368; font-size: 14px; margin-bottom: 32px; }
+  h2 { font-size: 17px; margin-top: 32px; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; }
+  h3 { font-size: 15px; margin-top: 20px; }
+  pre, code { font-family: 'Roboto Mono', monospace; font-size: 13px; }
+  pre { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; overflow-x: auto; white-space: pre-wrap; }
+
+  del { background: #fce8e6; color: #c5221f; text-decoration: line-through; border-radius: 2px; padding: 0 2px; }
+  ins { background: #e6f4ea; color: #137333; text-decoration: none; border-radius: 2px; padding: 0 2px; }
+  .ins-sora { background: #e8f0fe; color: #1a73e8; text-decoration: none; border-radius: 2px; padding: 0 2px; }
+  .ins-mj { background: #fce8f4; color: #9334a8; text-decoration: none; border-radius: 2px; padding: 0 2px; }
+
+  .comment { background: #fef7e0; border-left: 3px solid #f9ab00; padding: 8px 12px; margin: 8px 0; font-size: 13px; color: #5f6368; border-radius: 0 4px 4px 0; }
+  .comment strong { color: #e37400; }
+
+  .phase-label {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px;
+  }
+  .phase-canonical { background: #e8eaed; color: #5f6368; }
+  .phase-sora { background: #e8f0fe; color: #1a73e8; }
+  .phase-mj { background: #fce8f4; color: #9334a8; }
+
+  .pipeline {
+    display: flex; align-items: center; gap: 12px;
+    background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 16px 20px; margin: 20px 0; flex-wrap: wrap;
+  }
+  .pipeline .box {
+    padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-align: center;
+  }
+  .pipeline .arrow { color: #9aa0a6; font-size: 20px; }
+  .box-source { background: #fce8e6; color: #c5221f; border: 1px solid #e8a3a0; }
+  .box-canonical { background: #e8eaed; color: #5f6368; border: 1px solid #dadce0; }
+  .box-gemini { background: #e6f4ea; color: #137333; border: 1px solid #a8dab5; }
+  .box-sora { background: #e8f0fe; color: #1a73e8; border: 1px solid #aecbfa; }
+  .box-mj { background: #fce8f4; color: #9334a8; border: 1px solid #e8a3d0; }
+
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+  .col { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; }
+  .col h3 { margin-top: 0; }
+
+  .section-new { border-left: 3px solid #1a73e8; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; background: #f0f4ff; }
+  .section-new-mj { border-left: 3px solid #9334a8; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; background: #fdf0f8; }
+  .section-deleted { background: #fce8e6; border-left: 3px solid #c5221f; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; color: #c5221f; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; }
+  th, td { padding: 8px 12px; border: 1px solid #e0e0e0; text-align: left; }
+  th { background: #f8f9fa; }
+
+  .legend { display: flex; gap: 20px; margin-bottom: 24px; font-size: 13px; color: #5f6368; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 14px; height: 14px; border-radius: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<h1>Illustrator Skill &mdash; Multi-Target Translation</h1>
+<p class="subtitle">One source skill &rarr; platform-neutral canonical &rarr; three optimized targets</p>
+
+<div class="pipeline">
+  <div class="box box-source">Claude Code<br><small>SKILL.md</small></div>
+  <span class="arrow">&rarr;</span>
+  <div class="box box-canonical">Canonical<br><small>platform-neutral</small></div>
+  <span class="arrow">&rarr;</span>
+  <div class="box box-gemini">Gemini<br><small>system instruction</small></div>
+  <span class="arrow">&rarr;</span>
+  <div class="box box-sora">Sora / ChatGPT<br><small>system prompt + API</small></div>
+  <span class="arrow">&rarr;</span>
+  <div class="box box-mj">Midjourney<br><small>prompt template + params</small></div>
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:#e8eaed;border:1px solid #dadce0;"></span> Canonical (shared base)</span>
+  <span><span class="swatch" style="background:#e8f0fe;border:1px solid #aecbfa;"></span> Sora-specific additions</span>
+  <span><span class="swatch" style="background:#fce8f4;border:1px solid #e8a3d0;"></span> Midjourney-specific additions</span>
+  <span><span class="swatch" style="background:#fce8e6;border:1px solid #e8a3a0;"></span> Removed / doesn't apply</span>
+</div>
+
+<hr>
+
+<!-- ============================================ -->
+<h2>Step 1: Canonical (you already saw this)</h2>
+<!-- ============================================ -->
+
+<p>Strip Claude Code-isms: frontmatter, tool refs, script paths, code function names. What remains is pure art direction knowledge. This is the <strong>source of truth</strong> that all targets derive from.</p>
+
+<hr>
+
+<!-- ============================================ -->
+<h2>Step 2: Platform-Specific Adaptations</h2>
+<!-- ============================================ -->
+
+<p>Each target platform has different capabilities, limitations, prompt syntax, and interaction models. Here's what changes for each &mdash; section by section.</p>
+
+<!-- TITLE / IDENTITY -->
+<h2>Title &amp; Identity</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p><span class="ins-sora">You are an expert illustration art director. You create images using DALL-E when the user requests illustrations. You specialize in the Fictotum house style: simplified graphic stickers with non-realistic palettes.</span></p>
+    <div class="comment"><strong>MAP_CAPABILITY</strong> &mdash; Sora (via ChatGPT) generates images through DALL-E tool calls. The model needs to know it has this tool, and OpenAI's system prompt convention expects a concise role statement upfront.</div>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <p><span class="ins-mj">This is not a system instruction &mdash; Midjourney has no system prompt. This document is a <strong>prompt construction reference</strong> the user (or an orchestrating agent) consults when building /imagine commands.</span></p>
+    <div class="comment"><strong>REFORMAT_AS_REFERENCE</strong> &mdash; Midjourney is not a chat model. It's a prompt-in/image-out tool with no persistent context. The entire skill becomes a lookup table, not an instruction set. This is the biggest structural change.</div>
+  </div>
+</div>
+
+<!-- CAPABILITIES -->
+<h2>Image Generation Capabilities</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <div class="section-new">
+      <strong>Added: Platform constraints</strong>
+      <ul>
+        <li>DALL-E generates at fixed resolutions (1024x1024, 1024x1792, 1792x1024). <span class="ins-sora">Use 1024x1792 for 3:4 portrait orientation (closest match).</span></li>
+        <li><span class="ins-sora">DALL-E does not support negative prompts ("NO shading"). Rephrase as positive instructions: "flat solid color fills only, hard edges only."</span></li>
+        <li><span class="ins-sora">DALL-E tends toward photorealism by default. Explicitly lead with "simplified graphic illustration" to override.</span></li>
+        <li><span class="ins-sora">DALL-E handles hex colors better than Gemini. Include hex codes confidently.</span></li>
+      </ul>
+    </div>
+    <div class="comment"><strong>ADD_PLATFORM_CONSTRAINTS</strong> &mdash; DALL-E's fixed aspect ratios, lack of negative prompts, and photorealism bias are critical to getting the right output. Without these notes, the model would generate wrong-ratio photorealistic images.</div>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <div class="section-new-mj">
+      <strong>Added: Parameter syntax</strong>
+      <ul>
+        <li><span class="ins-mj">Aspect ratio: <code>--ar 3:4</code></span></li>
+        <li><span class="ins-mj">Style raw (less "Midjourney look"): <code>--style raw</code></span></li>
+        <li><span class="ins-mj">No text in image: <code>--no text labels watermarks</code></span></li>
+        <li><span class="ins-mj">Stylization (lower = more literal): <code>--stylize 200</code></span></li>
+        <li><span class="ins-mj">Version: <code>--v 7</code></span></li>
+      </ul>
+    </div>
+    <div class="comment"><strong>ADD_PLATFORM_SYNTAX</strong> &mdash; Midjourney uses CLI-style parameters appended to prompts. These don't exist on any other platform. A user unfamiliar with MJ would never know to add <code>--style raw</code>.</div>
+  </div>
+</div>
+
+<!-- SAFETY NOTES -->
+<h2>Safety / Content Policy</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p>Canonical: "Avoid naming specific historical figures directly"</p>
+    <p><span class="ins-sora">OpenAI's content policy is stricter than Gemini's for historical figures. DALL-E will refuse prompts depicting real historical figures in stylized/caricatured form. Always use descriptive titles ("18th-century French military commander") and never proper names. If the user requests a specific figure, generate the description without the name.</span></p>
+    <div class="comment"><strong>ADAPT_SAFETY_POLICY</strong> &mdash; Each platform has different content policy boundaries. The canonical note is generic; each target needs platform-specific guidance on what will and won't be blocked.</div>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <p><span class="ins-mj">Midjourney is more permissive with historical figure names but will block prompts it interprets as depicting real people in harmful contexts. Generally safe to use names like "Julius Caesar" or "Cleopatra" for stylized illustration. Avoid combining names with violent or sexual language.</span></p>
+    <div class="comment"><strong>ADAPT_SAFETY_POLICY</strong> &mdash; Midjourney's content policy differs substantially from OpenAI/Google. What gets blocked on one platform sails through on another.</div>
+  </div>
+</div>
+
+<!-- COLOR HANDLING -->
+<h2>Color Accuracy</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p>Canonical: "Image generation does NOT reliably reproduce specific hex colors"</p>
+    <p><span class="ins-sora">DALL-E has better hex color fidelity than Gemini. Include hex codes directly in prompts: "skin filled with muted yellow-green olive (#6B7F5E)". Results will be approximate but closer than Gemini. For exact colors, apply post-processing.</span></p>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <p><span class="ins-mj">Midjourney does not interpret hex codes in prompts. Use only English color descriptions: "muted yellow-green olive skin" not "#6B7F5E". For palette control, use <code>--sref</code> (style reference) with a previously generated on-palette image as anchor.</span></p>
+    <div class="comment"><strong>ADAPT_COLOR_HANDLING</strong> &mdash; Midjourney's <code>--sref</code> parameter is a unique capability for style consistency that doesn't exist on other platforms. This is an example of a platform-specific <em>upgrade</em>, like Gemini's native image gen.</div>
+  </div>
+</div>
+
+<!-- PROMPT TEMPLATE -->
+<h2>Canonical Prompt Template</h2>
+
+<p><span class="phase-label phase-canonical">CANONICAL</span> (shared base):</p>
+<pre>Illustration of [figure description], a historical figure from [era].
+Head and upper body. [Mood expression]. Period-appropriate details.
+NO realistic skin tones. Skin filled with [skin color]. Clothing filled with [accent color]. Charcoal outlines.
+Simplified graphic illustration style. Bold flat color shapes with thick chunky dark charcoal outlines,
+like a rubber stamp or screen print. Minimal facial detail. NO shading, NO shadows, NO gradients.
+Every shape is a single flat color with hard edges. Die-cut sticker with thick white border.
+Plain solid cream background. No text, no labels, no watermarks.</pre>
+
+<p><span class="phase-label phase-sora">SORA / CHATGPT</span> &mdash; adapted:</p>
+<pre><span class="ins-sora">Simplified graphic illustration of [figure description], a historical figure from [era].
+Head and upper body portrait. [Mood expression]. Period-appropriate hair, headwear, attire at neckline.
+Flat solid color fills only, hard edges only. Skin and face: [skin color English] ([skin hex]).
+Clothing and accessories: [accent color English] ([accent hex]). Thick dark charcoal (#2A2A2A) outlines.
+Rubber stamp / screen print aesthetic. Single flat color per shape.
+Die-cut sticker with thick white border following silhouette on plain cream (#FEFEFE) background.
+Sticker floats freely, never touches edges. No drop shadow.</span></pre>
+<div class="comment"><strong>REPHRASE_NEGATIVES</strong> &mdash; "NO shading, NO shadows, NO gradients" rephrased as positive instructions ("flat solid color fills only, hard edges only") because DALL-E handles positive framing better than negative. Hex codes included since DALL-E respects them. "Simplified graphic illustration" moved to the very start to anchor the style before DALL-E defaults to photorealism.</div>
+
+<p><span class="phase-label phase-mj">MIDJOURNEY</span> &mdash; adapted:</p>
+<pre><span class="ins-mj">simplified graphic illustration of [figure description], historical figure, [era] ::2
+rubber stamp screen print aesthetic, bold flat color shapes, thick chunky dark charcoal outlines ::1.5
+[mood] expression, head and upper body, period-appropriate details ::1
+skin and face [skin color English], clothing [accent color English] ::1
+die-cut vinyl sticker, thick white border, plain cream background ::1
+minimal facial detail, simple lines for features ::0.5
+--no shading shadows gradients texture realistic-skin photorealistic text labels watermarks
+--ar 3:4 --style raw --stylize 200 --v 7</span></pre>
+<div class="comment"><strong>REFORMAT_PROMPT_SYNTAX</strong> &mdash; Midjourney uses a fundamentally different prompt grammar:
+<ul style="margin:4px 0;">
+<li><strong>Multi-prompt weighting</strong> with <code>::N</code> syntax to prioritize elements (style anchored at ::2, subject at ::1)</li>
+<li><strong>Comma-separated keywords</strong> instead of full sentences (MJ responds better to keywords)</li>
+<li><strong><code>--no</code> parameter</strong> for negative prompts instead of inline "NO shading"</li>
+<li><strong>No hex codes</strong> &mdash; English color names only</li>
+<li><strong>Lowercase convention</strong> &mdash; MJ is not case-sensitive; lowercase is community convention</li>
+</ul>
+This is not a find-and-replace. It's a structural rewrite driven by how the model interprets input.</div>
+
+<!-- MOOD SYSTEM -->
+<h2>Mood System</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p><em>Transfers unchanged from canonical.</em> ChatGPT's system prompt can hold the full mood lookup table. DALL-E interprets mood words well.</p>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <p><span class="ins-mj">Moods map to Midjourney keywords differently:</span></p>
+    <table>
+      <tr><th>Canonical Mood</th><th>MJ Keyword</th></tr>
+      <tr><td>commanding</td><td><span class="ins-mj">authoritative gaze, commanding presence</span></td></tr>
+      <tr><td>defiant</td><td><span class="ins-mj">fierce defiance, unwavering stare</span></td></tr>
+      <tr><td>scheming</td><td><span class="ins-mj">sly expression, knowing smirk</span></td></tr>
+      <tr><td>solemn</td><td><span class="ins-mj">somber gaze, quiet gravity</span></td></tr>
+      <tr><td>dignified</td><td><span class="ins-mj">regal composure, dignified bearing</span></td></tr>
+      <tr><td>wise</td><td><span class="ins-mj">contemplative expression, sage-like calm</span></td></tr>
+      <tr><td>roguish</td><td><span class="ins-mj">mischievous grin, rakish charm</span></td></tr>
+    </table>
+    <div class="comment"><strong>TRANSLATE_VOCABULARY</strong> &mdash; Midjourney interprets descriptive phrases more reliably than single adjectives. "commanding" alone might not land; "authoritative gaze, commanding presence" gives MJ two chances to capture the intent. This is the kind of platform-specific tuning that requires empirical testing.</div>
+  </div>
+</div>
+
+<!-- PALETTE -->
+<h2>Palette Specification</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p>Palettes transfer as-is with both English names and hex codes.</p>
+    <p><span class="ins-sora">Include hex in the DALL-E prompt: "muted yellow-green olive (#6B7F5E)"</span></p>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <p>Hex codes stripped. English descriptions only.</p>
+    <table>
+      <tr><th>Canonical</th><th>MJ Version</th></tr>
+      <tr><td>#6B7F5E (muted yellow-green olive)</td><td><span class="ins-mj">muted olive green skin tone</span></td></tr>
+      <tr><td>#8B2635 (dark red-brown burgundy)</td><td><span class="ins-mj">deep burgundy wine red</span></td></tr>
+      <tr><td>#C4922A (warm golden amber)</td><td><span class="ins-mj">warm golden amber</span></td></tr>
+    </table>
+    <p><span class="ins-mj">For palette consistency across a series, generate one strong reference image first, then use <code>--sref [url]</code> on subsequent generations to anchor the color palette.</span></p>
+    <div class="comment"><strong>ADAPT_COLOR_HANDLING</strong> + <strong>ADD_PLATFORM_CAPABILITY</strong> &mdash; The <code>--sref</code> workflow is Midjourney's unique answer to palette consistency. No other platform has this. It's arguably <em>better</em> than hex codes for maintaining a cohesive series.</div>
+  </div>
+</div>
+
+<!-- WORKFLOW -->
+<h2>Workflow</h2>
+<div class="columns">
+  <div class="col">
+    <h3><span class="phase-label phase-sora">SORA / CHATGPT</span></h3>
+    <p><em>Phases 1&ndash;4 transfer from canonical with minimal changes.</em> ChatGPT is conversational, so the discovery/iteration workflow maps naturally.</p>
+    <div class="section-new">
+      <span class="ins-sora"><strong>Added: Variation workflow</strong><br>
+      Use "Create a variation of this image" to iterate. DALL-E supports variations natively &mdash; you don't need to re-describe the full prompt each time.</span>
+    </div>
+  </div>
+  <div class="col">
+    <h3><span class="phase-label phase-mj">MIDJOURNEY</span></h3>
+    <div class="section-deleted">
+      <strong>Phases 1&ndash;4 do not apply.</strong> Midjourney has no conversation state. There is no "discovery" phase inside the tool.
+    </div>
+    <div class="section-new-mj">
+      <span class="ins-mj"><strong>Replaced with: Generation workflow</strong>
+      <ol>
+        <li>Build prompt from template + palette + mood lookup (above)</li>
+        <li>Generate with <code>/imagine</code></li>
+        <li>Use <strong>U1-U4</strong> to upscale preferred result</li>
+        <li>Use <strong>V1-V4</strong> to create variations of preferred result</li>
+        <li>Use <strong>--sref</strong> with upscaled image URL for subsequent figures in the series</li>
+        <li>Pan/zoom if composition needs adjustment</li>
+      </ol></span>
+    </div>
+    <div class="comment"><strong>REPLACE_INTERACTION_MODEL</strong> &mdash; The entire interaction paradigm is different. Gemini and ChatGPT are conversational (multi-turn, stateful). Midjourney is transactional (one prompt &rarr; one output, iterate via buttons). The "skill" becomes a construction guide, not a conversation partner.</div>
+  </div>
+</div>
+
+<!-- WHAT THIS TELLS US -->
+<hr>
+<h2>What This Reveals About Translation</h2>
+
+<table>
+  <tr>
+    <th>Translation Layer</th>
+    <th>Gemini</th>
+    <th>Sora / ChatGPT</th>
+    <th>Midjourney</th>
+  </tr>
+  <tr>
+    <td><strong>Format</strong></td>
+    <td>System instruction (plain md)</td>
+    <td>System prompt (plain text)</td>
+    <td>Reference document (not a prompt)</td>
+  </tr>
+  <tr>
+    <td><strong>Interaction model</strong></td>
+    <td>Conversational, multi-turn</td>
+    <td>Conversational, multi-turn</td>
+    <td>Transactional, single-shot</td>
+  </tr>
+  <tr>
+    <td><strong>Image generation</strong></td>
+    <td>Native (inline)</td>
+    <td>Via DALL-E tool call</td>
+    <td>Via /imagine command</td>
+  </tr>
+  <tr>
+    <td><strong>Negative prompts</strong></td>
+    <td>Inline "NO shading"</td>
+    <td>Rephrase as positive</td>
+    <td><code>--no</code> parameter</td>
+  </tr>
+  <tr>
+    <td><strong>Color specification</strong></td>
+    <td>English + hex (hex unreliable)</td>
+    <td>English + hex (hex decent)</td>
+    <td>English only + <code>--sref</code></td>
+  </tr>
+  <tr>
+    <td><strong>Prompt structure</strong></td>
+    <td>Full sentences</td>
+    <td>Full sentences</td>
+    <td>Weighted keywords <code>::N</code></td>
+  </tr>
+  <tr>
+    <td><strong>Safety boundaries</strong></td>
+    <td>Blocks named figures + caricature</td>
+    <td>Strictest &mdash; blocks named historical figures</td>
+    <td>Most permissive for historical figures</td>
+  </tr>
+  <tr>
+    <td><strong>Unique capability</strong></td>
+    <td>&mdash;</td>
+    <td>Variation generation</td>
+    <td><code>--sref</code> style anchoring</td>
+  </tr>
+  <tr>
+    <td><strong>Translation difficulty</strong></td>
+    <td>Easy (80% mechanical)</td>
+    <td>Medium (reframe negatives, add constraints)</td>
+    <td>Hard (structural rewrite, different paradigm)</td>
+  </tr>
+  <tr>
+    <td><strong>Automatable?</strong></td>
+    <td>~80%</td>
+    <td>~60%</td>
+    <td>~30%</td>
+  </tr>
+</table>
+
+<h3>The key insight</h3>
+<p>The <strong>art direction knowledge</strong> (palettes, moods, style references, composition rules) transfers at nearly 100% across all platforms. That's the valuable, hard-won intellectual property.</p>
+<p>What changes per platform is the <strong>delivery mechanism</strong>: how you express that knowledge in a way the target model/tool can act on. For conversational models (Gemini, ChatGPT), it's a system instruction. For Midjourney, it's a prompt construction reference with platform-specific syntax.</p>
+<p>This is exactly the value proposition for <code>ronin translate</code>: you invest in the knowledge once, and the tool handles the delivery adaptation.</p>
+
+<p style="color:#5f6368;font-size:13px;margin-top:32px;">Generated by ronin translation analysis &mdash; 2026-02-19</p>
+
+</body>
+</html>

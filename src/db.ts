@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS scans (
   removed INTEGER NOT NULL DEFAULT 0,
   summary_json TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS translations (
+  id TEXT PRIMARY KEY,
+  source_passport_id TEXT NOT NULL REFERENCES passports(id),
+  target_platform TEXT NOT NULL,
+  target_file TEXT NOT NULL,
+  canonical_file TEXT NOT NULL,
+  rules_applied TEXT NOT NULL,
+  manual_review_items TEXT NOT NULL DEFAULT '[]',
+  translated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source_passport_id, target_platform)
+);
 `;
 
 export interface ScanDiff {
@@ -141,6 +153,142 @@ export interface RoninStats {
   byPlatform: Record<string, number>;
   platformCount: number;
   lastScan: { scanned_at: string; duration_ms: number; total: number } | null;
+}
+
+export interface TranslationRecord {
+  id: string;
+  sourcePassportId: string;
+  targetPlatform: string;
+  targetFile: string;
+  canonicalFile: string;
+  rulesApplied: string[];
+  manualReviewItems: string[];
+  translatedAt: string;
+}
+
+export function recordTranslation(record: TranslationRecord): void {
+  mkdirSync(DB_DIR, { recursive: true });
+  const db = new Database(DB_PATH);
+  db.exec(SCHEMA);
+
+  try {
+    db.prepare(`
+      INSERT INTO translations (id, source_passport_id, target_platform, target_file, canonical_file, rules_applied, manual_review_items, translated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source_passport_id, target_platform) DO UPDATE SET
+        id = excluded.id,
+        target_file = excluded.target_file,
+        canonical_file = excluded.canonical_file,
+        rules_applied = excluded.rules_applied,
+        manual_review_items = excluded.manual_review_items,
+        translated_at = excluded.translated_at
+    `).run(
+      record.id,
+      record.sourcePassportId,
+      record.targetPlatform,
+      record.targetFile,
+      record.canonicalFile,
+      JSON.stringify(record.rulesApplied),
+      JSON.stringify(record.manualReviewItems),
+      record.translatedAt,
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export function getTranslations(passportId?: string): TranslationRecord[] {
+  if (!existsSync(DB_PATH)) return [];
+  const db = new Database(DB_PATH, { readonly: true });
+
+  try {
+    let sql = 'SELECT * FROM translations';
+    const params: string[] = [];
+    if (passportId) {
+      sql += ' WHERE source_passport_id = ?';
+      params.push(passportId);
+    }
+    sql += ' ORDER BY translated_at DESC';
+
+    const rows = db.prepare(sql).all(...params) as {
+      id: string;
+      source_passport_id: string;
+      target_platform: string;
+      target_file: string;
+      canonical_file: string;
+      rules_applied: string;
+      manual_review_items: string;
+      translated_at: string;
+    }[];
+
+    return rows.map(r => ({
+      id: r.id,
+      sourcePassportId: r.source_passport_id,
+      targetPlatform: r.target_platform,
+      targetFile: r.target_file,
+      canonicalFile: r.canonical_file,
+      rulesApplied: JSON.parse(r.rules_applied),
+      manualReviewItems: JSON.parse(r.manual_review_items),
+      translatedAt: r.translated_at,
+    }));
+  } finally {
+    db.close();
+  }
+}
+
+export interface PassportRow {
+  id: string;
+  name: string;
+  type: string;
+  platform: string;
+  purpose: string;
+  source_file: string;
+}
+
+export function resolveSkill(nameOrId: string): PassportRow | null {
+  if (!existsSync(DB_PATH)) return null;
+  const db = new Database(DB_PATH, { readonly: true });
+
+  try {
+    // Try exact ID match first
+    const byId = db.prepare(
+      `SELECT id, name, type, platform, purpose, source_file FROM passports
+       WHERE id = ? AND type IN ('skill', 'subagent')`
+    ).get(nameOrId) as PassportRow | undefined;
+    if (byId) return byId;
+
+    // Case-insensitive name match
+    const byName = db.prepare(
+      `SELECT id, name, type, platform, purpose, source_file FROM passports
+       WHERE LOWER(name) = LOWER(?) AND type IN ('skill', 'subagent')`
+    ).get(nameOrId) as PassportRow | undefined;
+    if (byName) return byName;
+
+    // Partial name match
+    const byPartial = db.prepare(
+      `SELECT id, name, type, platform, purpose, source_file FROM passports
+       WHERE LOWER(name) LIKE LOWER(?) AND type IN ('skill', 'subagent')
+       ORDER BY LENGTH(name) ASC LIMIT 1`
+    ).get(`%${nameOrId}%`) as PassportRow | undefined;
+    return byPartial || null;
+  } finally {
+    db.close();
+  }
+}
+
+export function listTranslatableSkills(): PassportRow[] {
+  if (!existsSync(DB_PATH)) return [];
+  const db = new Database(DB_PATH, { readonly: true });
+
+  try {
+    return db.prepare(
+      `SELECT id, name, type, platform, purpose, source_file FROM passports
+       WHERE type IN ('skill', 'subagent')
+       ORDER BY type, name`
+    ).all() as PassportRow[];
+  } finally {
+    db.close();
+  }
 }
 
 export function getStats(): RoninStats | null {

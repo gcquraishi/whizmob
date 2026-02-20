@@ -11,6 +11,8 @@ import { formatJson } from './formatters/json.js';
 import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
 import { importInventory, getStats } from './db.js';
+import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
+import type { TargetPlatform } from './adapters/types.js';
 import type { OutputFormat } from './types.js';
 import { CATEGORY_LABELS } from './types.js';
 import type { AgentType } from './types.js';
@@ -138,6 +140,51 @@ program
       }
     } catch (err) {
       console.error(`[ronin] Stats failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('translate [skill]')
+  .description('Translate a skill or subagent to other AI platforms')
+  .option('--to <targets...>', 'Target platform(s): dalle, midjourney, gemini')
+  .option('--list', 'List all translatable skills')
+  .option('--dry-run', 'Report only, do not write files')
+  .option('-o, --output <dir>', 'Override output directory')
+  .action((skill, opts) => {
+    try {
+      if (opts.list) {
+        printListOutput();
+        return;
+      }
+
+      if (!skill) {
+        console.error('[ronin] Provide a skill name or use --list. Example: ronin translate illustrator --to gemini');
+        process.exit(1);
+      }
+
+      if (!opts.to || opts.to.length === 0) {
+        console.error('[ronin] Specify at least one target with --to. Example: --to dalle midjourney gemini');
+        process.exit(1);
+      }
+
+      // Validate targets
+      for (const t of opts.to) {
+        if (!isValidTarget(t)) {
+          console.error(`[ronin] Unknown target: ${t}. Valid targets: dalle, midjourney, gemini`);
+          process.exit(1);
+        }
+      }
+
+      const result = translateSkill(skill, {
+        targets: opts.to as TargetPlatform[],
+        outputDir: opts.output,
+        dryRun: opts.dryRun,
+      });
+
+      printTranslateReport(result, !!opts.dryRun);
+    } catch (err) {
+      console.error(`[ronin] Translate failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });

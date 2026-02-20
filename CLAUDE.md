@@ -29,9 +29,9 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-02-18_
+_Last updated: 2026-02-19_
 
-Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook, solving the "I don't see that agent" discoverability problem. `ronin scan` now auto-imports into the SQLite DB.
+Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms.
 
 ### Recent Completions
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
@@ -46,9 +46,19 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - **Auto-import on scan** — `ronin scan` writes directly to `~/.ronin/ronin.db` via `better-sqlite3` (skip with `--no-import`)
 - Fixed Node 25 compat issue (updated commander to v14)
 - 91 passports: 57 subagents (21 user + 36 project), 20 skills, 3 MCP, 10 projects, 1 settings
+- **`ronin translate` CLI** — two-stage skill translation engine:
+  - **Canonical engine** (`src/canonical.ts`): 9-rule pipeline — `STRIP_FRONTMATTER`, `STRIP_DISPATCH_EXAMPLES`, `GENERALIZE_TOOL_REFS`, `GENERALIZE_PATHS`, `FLATTEN_ESCALATION`, `PLATFORM_LOCKED` detection, `ENHANCE_NATIVE_CAPABILITY` flagging
+  - **Target adapters** (`src/adapters/`): Gemini (~80% fidelity), DALL-E (~60%, negative rephrasing + color annotation), Midjourney (~30%, vocab expansion + `--no` extraction + reference doc reformat)
+  - **Adapter registry** with `getAdapter()`, `listAdapters()`, `isValidTarget()`
+  - **`translations` DB table** tracking source passport, target platform, rules applied, review items
+  - **CLI**: `ronin translate illustrator --to dalle midjourney gemini`, `--list`, `--dry-run`, `--output <dir>`
+  - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
 - M3: Dog-food & polish — cataloging full agent library, testing cross-platform workflows
+- **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
+- **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
+- **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram), `landing-comparison.html` (product page mockup — needs redesign, lighter/less salesy)
 
 ### Known Issues
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
@@ -61,6 +71,7 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - M3: Dog-food & polish (catalog full library, README, demo video)
 - Extract shared SQLite schema between CLI and dashboard
 - Improve roster search relevance scoring
+- Translation adapter refinement: tune Midjourney fidelity, add more negative inversion pairs, test against gold standards
 
 ### Next (2-4 weeks)
 - M4: Distribution (npm publish, community outreach)
