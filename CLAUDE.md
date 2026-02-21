@@ -63,13 +63,13 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` command recommended before call. Linear: BIG-6 for image generation.
 
 ### Known Issues
-- **CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping (`middleware.ts:88`). Linear: BIG-10
-- **Auth cookie stores plaintext password** — raw `DEMO_PASSWORD` in browser cookie, visible in dev tools (`middleware.ts:26`, `api/auth/route.ts:15`). Linear: BIG-11
-- **Basic auth crashes on malformed header** — missing guard on `encoded` before `atob()` (`middleware.ts:34-38`). Linear: BIG-12
+- ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
+- ~~**Auth cookie stores plaintext password** — raw `DEMO_PASSWORD` in browser cookie. Linear: BIG-11~~ **FIXED** (SHA-256 derived session token, httpOnly/secure)
+- ~~**Basic auth crashes on malformed header** — missing guard on `encoded` before `atob()`. Linear: BIG-12~~ **FIXED** (guard on encoded before atob)
 - **N+1 query in getPassports** — per-row tag fetch runs 91 separate queries (`lib/db.ts:267-278`). Linear: BIG-13
 - **Unsafe `as unknown as PassportRow` cast** — double cast bypasses structural checks (`lib/db.ts:278`)
 - **LIKE search doesn't escape wildcards** — `%` and `_` in search terms act as SQL wildcards (`lib/db.ts:250-253`)
-- **No input validation on auth POST body** — malformed JSON or non-string password throws unhandled error (`api/auth/route.ts:9`)
+- ~~**No input validation on auth POST body** — malformed JSON or non-string password throws unhandled error~~ **FIXED** (try/catch + type checking, returns 400)
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
 - Schema duplication between `src/db.ts` (CLI, better-sqlite3) and `dashboard/lib/db.ts` (dashboard, sql.js) — needs shared schema extraction
 - Hardcoded paths in hook script and `/roster` skill — will resolve when published to npm (`npx ronin roster`)
