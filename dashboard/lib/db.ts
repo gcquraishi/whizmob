@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-const DB_DIR = join(homedir(), '.ronin');
+const IS_VERCEL = !!process.env.VERCEL;
+const DB_DIR = IS_VERCEL ? join(process.cwd(), 'data') : join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
 
 let db: Database | null = null;
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS scans (
 `;
 
 function saveDb() {
-  if (!db) return;
+  if (!db || IS_VERCEL) return;
   const data = db.export();
   const buffer = Buffer.from(data);
   writeFileSync(DB_PATH, buffer);
@@ -53,9 +54,24 @@ function saveDb() {
 export async function getDb(): Promise<Database> {
   if (db) return db;
 
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({
+    locateFile: (file: string) => {
+      // In Vercel serverless, the WASM file is bundled alongside the function
+      // Try multiple locations to handle both local dev and Vercel
+      const candidates = [
+        join(process.cwd(), 'node_modules', 'sql.js', 'dist', file),
+        join(__dirname, '..', 'node_modules', 'sql.js', 'dist', file),
+      ];
+      for (const candidate of candidates) {
+        if (existsSync(candidate)) return candidate;
+      }
+      return file; // fall back to default resolution
+    },
+  });
 
-  mkdirSync(DB_DIR, { recursive: true });
+  if (!IS_VERCEL) {
+    mkdirSync(DB_DIR, { recursive: true });
+  }
 
   if (existsSync(DB_PATH)) {
     const fileBuffer = readFileSync(DB_PATH);

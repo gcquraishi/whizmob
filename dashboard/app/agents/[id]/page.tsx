@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink, Plus, ChevronDown, ChevronRight, Activity, Clock, HardDrive } from 'lucide-react';
+import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink, ChevronDown, ChevronRight, Activity, Clock, HardDrive } from 'lucide-react';
 import TagPill from '@/components/TagPill';
 import clsx from 'clsx';
 import { PLATFORM_LABELS } from '@/lib/platforms';
@@ -39,8 +39,6 @@ export default function DossierPage() {
 
   const [passport, setPassport] = useState<Passport | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tagInput, setTagInput] = useState('');
-  const [saving, setSaving] = useState(false);
   const [sourceContent, setSourceContent] = useState<string | null>(null);
   const [sourceExtension, setSourceExtension] = useState('');
   const [sourceMtime, setSourceMtime] = useState<string | null>(null);
@@ -86,20 +84,6 @@ export default function DossierPage() {
       fetchSource();
     }
   }, [sourceExpanded, sourceContent, sourceLoading, sourceError, fetchSource]);
-
-  async function addTag() {
-    if (!passport || !tagInput.trim()) return;
-    const newTags = [...passport.tags, tagInput.trim().toLowerCase()];
-    setSaving(true);
-    await fetch(`/api/inventory/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tags: newTags }),
-    });
-    setTagInput('');
-    setSaving(false);
-    fetchPassport();
-  }
 
   async function removeTag(tag: string) {
     if (!passport) return;
@@ -181,39 +165,16 @@ export default function DossierPage() {
           <Field label="Last Updated" value={new Date(passport.updated_at).toLocaleDateString()} />
         </Section>
 
-        {/* Tags */}
-        <Section title="Tags">
-          <div className="flex flex-wrap items-center gap-1.5 mb-3">
-            {passport.tags.length === 0 && (
-              <span className="text-xs text-gray-400">No tags yet</span>
-            )}
-            {passport.tags.map((tag) => (
-              <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Add a tag..."
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') addTag(); }}
-              className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
-            />
-            <button
-              onClick={addTag}
-              disabled={!tagInput.trim() || saving}
-              className={clsx(
-                'flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                tagInput.trim()
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              )}
-            >
-              <Plus size={14} /> Add
-            </button>
-          </div>
-        </Section>
+        {/* Tags — only show when tags exist */}
+        {passport.tags.length > 0 && (
+          <Section title="Tags">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {passport.tags.map((tag) => (
+                <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
+              ))}
+            </div>
+          </Section>
+        )}
 
         {/* Source file */}
         <Section title="Source">
@@ -314,14 +275,20 @@ export default function DossierPage() {
           </Section>
         )}
 
-        {/* Metadata */}
-        {Object.keys(metadata).length > 0 && (
-          <Section title="Metadata">
-            <pre className="text-xs font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto">
-              {JSON.stringify(metadata, null, 2)}
-            </pre>
-          </Section>
-        )}
+        {/* Metadata — hide keys already surfaced in Usage section for projects */}
+        {(() => {
+          const projectUsageKeys = ['session_count', 'last_active', 'total_session_bytes'];
+          const displayMeta = passport.type === 'project'
+            ? Object.fromEntries(Object.entries(metadata).filter(([k]) => !projectUsageKeys.includes(k)))
+            : metadata;
+          return Object.keys(displayMeta).length > 0 ? (
+            <Section title="Metadata">
+              <pre className="text-xs font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto">
+                {JSON.stringify(displayMeta, null, 2)}
+              </pre>
+            </Section>
+          ) : null;
+        })()}
       </div>
     </div>
   );

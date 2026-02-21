@@ -24,6 +24,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (process.env.VERCEL) {
+    return NextResponse.json({ error: 'Read-only demo' }, { status: 403 });
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();

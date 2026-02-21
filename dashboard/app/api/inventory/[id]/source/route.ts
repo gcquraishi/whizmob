@@ -9,6 +9,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (process.env.VERCEL) {
+      return NextResponse.json({ error: 'Source viewer disabled in demo' }, { status: 403 });
+    }
+
     const { id } = await params;
     const passport = await getPassport(decodeURIComponent(id));
     if (!passport) {
