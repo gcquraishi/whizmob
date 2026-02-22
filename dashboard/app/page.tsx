@@ -7,7 +7,10 @@ import TypeFilter from '@/components/TypeFilter';
 import PlatformFilter from '@/components/PlatformFilter';
 import AgentCard from '@/components/AgentCard';
 import ScanButton from '@/components/ScanButton';
+import SprawlToggle from '@/components/SprawlToggle';
+import SprawlReport from '@/components/SprawlReport';
 import DiffModal from '@/components/DiffModal';
+import { computeDedupGroups } from '@/lib/dedup';
 import { Swords, Inbox } from 'lucide-react';
 
 interface Passport {
@@ -37,7 +40,9 @@ export default function YardPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'sprawl'>('grid');
   const [diff, setDiff] = useState<ScanDiff | null>(null);
+  const [lastScan, setLastScan] = useState<{ scanned_at: string; total: number } | null>(null);
 
   // Fetch all passports once on mount (and after scans)
   const fetchAll = useCallback(async () => {
@@ -48,9 +53,18 @@ export default function YardPage() {
     setLoading(false);
   }, []);
 
+  // Fetch last scan metadata
+  const fetchLastScan = useCallback(async () => {
+    const res = await fetch('/api/scan');
+    if (res.ok) {
+      setLastScan(await res.json());
+    }
+  }, []);
+
   useEffect(() => {
     fetchAll();
-  }, [fetchAll]);
+    fetchLastScan();
+  }, [fetchAll, fetchLastScan]);
 
   // Client-side filtering — instant, no network round-trip
   const passports = useMemo(() => {
@@ -71,9 +85,12 @@ export default function YardPage() {
     return result;
   }, [allPassports, typeFilter, platformFilter, search]);
 
+  const dedupResult = useMemo(() => computeDedupGroups(allPassports), [allPassports]);
+
   function handleScanComplete(scanDiff: ScanDiff) {
     setDiff(scanDiff);
     fetchAll();
+    fetchLastScan();
   }
 
   // Compute counts from unfiltered data
@@ -114,7 +131,7 @@ export default function YardPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">Ronin</h1>
-            <p className="text-xs text-gray-500">Agent Inventory</p>
+            <p className="text-xs text-gray-500">Agent Control Plane</p>
           </div>
         </div>
         <ScanButton onScanComplete={handleScanComplete} />
@@ -124,7 +141,7 @@ export default function YardPage() {
       {!isEmpty && (
         <div className="space-y-4 mb-6">
           {!typeFilter && !search && !platformFilter && (
-            <SummaryStats counts={counts} platformCounts={platformCounts} mostRecentProject={mostRecentProject} />
+            <SummaryStats counts={counts} platformCounts={platformCounts} mostRecentProject={mostRecentProject} lastScan={lastScan} dedupGroups={dedupResult.groups.length} dedupPassports={dedupResult.groups.reduce((sum, g) => sum + g.members.length, 0)} />
           )}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1 w-full sm:w-auto">
@@ -132,6 +149,7 @@ export default function YardPage() {
             </div>
             <PlatformFilter value={platformFilter} onChange={setPlatformFilter} platforms={platforms} />
             <TypeFilter value={typeFilter} onChange={setTypeFilter} />
+            <SprawlToggle mode={viewMode} onChange={setViewMode} groupCount={dedupResult.groups.length} />
           </div>
         </div>
       )}
@@ -168,7 +186,7 @@ export default function YardPage() {
       )}
 
       {/* No search results */}
-      {noResults && (
+      {noResults && viewMode === 'grid' && (
         <div className="text-center py-16">
           <p className="text-sm text-gray-500">
             No results found.{' '}
@@ -182,8 +200,13 @@ export default function YardPage() {
         </div>
       )}
 
+      {/* Sprawl report */}
+      {!loading && viewMode === 'sprawl' && !isEmpty && (
+        <SprawlReport result={dedupResult} />
+      )}
+
       {/* Card grid */}
-      {!loading && passports.length > 0 && (
+      {!loading && viewMode === 'grid' && passports.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {passports.map((p) => (
             <AgentCard

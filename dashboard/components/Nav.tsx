@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Grid3X3, Languages, Swords } from 'lucide-react';
+import { LayoutGrid, ArrowRightLeft, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 const links = [
-  { href: '/', label: 'Yard', Icon: Grid3X3 },
-  { href: '/translation', label: 'Translation', Icon: Languages },
+  { href: '/', label: 'Inventory', Icon: LayoutGrid },
+  { href: '/translation', label: 'Translate', Icon: ArrowRightLeft, secondary: true },
 ];
 
 export default function Nav() {
@@ -25,23 +25,25 @@ export default function Nav() {
         </Link>
 
         {/* Nav links */}
-        {links.map(({ href, label, Icon }) => {
-          // Exact match for home, prefix match for others
+        {links.map(({ href, label, Icon, secondary }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               className={clsx(
-                'flex items-center gap-1.5 text-sm font-medium transition-colors',
+                'flex items-center gap-1.5 transition-colors',
+                secondary ? 'text-xs' : 'text-sm font-medium',
                 isActive
                   ? 'text-gray-900'
-                  : 'text-gray-400 hover:text-gray-700'
+                  : secondary
+                    ? 'text-gray-300 hover:text-gray-500'
+                    : 'text-gray-400 hover:text-gray-700'
               )}
             >
               <Icon
-                size={14}
-                className={clsx(isActive ? 'text-gray-900' : 'text-gray-400')}
+                size={secondary ? 12 : 14}
+                className={clsx(isActive ? 'text-gray-900' : secondary ? 'text-gray-300' : 'text-gray-400')}
               />
               {label}
             </Link>

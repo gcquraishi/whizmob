@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { runScan } from '@/lib/scanner-bridge';
-import { importInventory } from '@/lib/db';
+import { importInventory, getLastScan } from '@/lib/db';
+
+export async function GET() {
+  try {
+    const lastScan = await getLastScan();
+    return NextResponse.json(lastScan);
+  } catch (err) {
+    return NextResponse.json(
+      { error: (err as Error).message },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST() {
   if (process.env.VERCEL) {

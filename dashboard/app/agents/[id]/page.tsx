@@ -112,7 +112,7 @@ export default function DossierPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
         <button onClick={() => router.push('/')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
-          <ArrowLeft size={14} /> Back to Yard
+          <ArrowLeft size={14} /> Back to Inventory
         </button>
         <p className="text-sm text-gray-500">Agent not found.</p>
       </div>
@@ -129,7 +129,7 @@ export default function DossierPage() {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
       {/* Back */}
       <button onClick={() => router.push('/')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
-        <ArrowLeft size={14} /> Back to Yard
+        <ArrowLeft size={14} /> Back to Inventory
       </button>
 
       {/* Header */}
