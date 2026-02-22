@@ -104,4 +104,10 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - Ronin metaphor: "warriors without a master" — agents don't belong to a platform
 - The Yard (inventory), the Dossier (detail), the Forge (creation)
 
-**Maintenance**: Agents should update `## Current State` at the end of significant work sessions. Bump the `_Last updated_` date.
+## Session Close Protocol
+
+Before ending a work session:
+1. Update `## Current State` with what was accomplished
+2. Bump `_Last updated_` date
+3. Commit changes with a descriptive message
+4. If blocked, document the blocker under Known Issues
