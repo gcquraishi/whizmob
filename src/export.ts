@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { join, relative, basename, dirname } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
@@ -80,9 +80,6 @@ const SECRET_PATTERNS = [
   /xoxb-[a-zA-Z0-9-]+/g, // Slack bot tokens
 ];
 
-// Env var reference pattern
-const ENV_REF_PATTERN = /(?:process\.env\.)([A-Z_]+)/g;
-
 function expandTilde(p: string): string {
   if (p.startsWith('~/')) {
     return join(homedir(), p.slice(2));
@@ -125,7 +122,6 @@ function stripSecrets(content: string, filePath: string): { content: string; str
   // General secret pattern stripping for any file
   for (const pattern of SECRET_PATTERNS) {
     const regex = new RegExp(pattern.source, pattern.flags);
-    const before = modified;
     modified = modified.replace(regex, (match) => {
       stripped = true;
       // Keep the key name but redact the value
@@ -182,7 +178,7 @@ function detectDependencies(files: { path: string; content: string }[]): ExportD
       try {
         const mcp = JSON.parse(content);
         const servers = mcp.mcpServers || mcp;
-        for (const [name, config] of Object.entries(servers)) {
+        for (const name of Object.keys(servers)) {
           const key = `mcp:${name}`;
           if (!seen.has(key)) {
             seen.add(key);
@@ -299,7 +295,6 @@ export function exportConstellation(
 
     // Build bundle
     const bundleDir = options.outputDir || join(DB_DIR, 'exports', id);
-    const filesDir = join(bundleDir, 'files');
 
     const fileEntries: ExportFileEntry[] = [];
     const rawFiles: { path: string; content: string }[] = [];

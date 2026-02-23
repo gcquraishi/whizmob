@@ -67,7 +67,10 @@ function checkDependency(dep: { type: string; name: string }): boolean {
   }
 
   if (dep.type === 'npm_package') {
-    // Check if globally available
+    // Validate name before passing to shell to prevent command injection
+    if (!/^[a-z@][a-z0-9@/_.-]*$/i.test(dep.name)) {
+      return false;
+    }
     try {
       execSync(`which ${dep.name} 2>/dev/null || npm list -g ${dep.name} 2>/dev/null`, { stdio: 'pipe' });
       return true;
