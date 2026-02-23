@@ -10,12 +10,21 @@ import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
 import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
-import { importInventory, getStats } from './db.js';
+import { importInventory, getStats, resolveSkill } from './db.js';
+import {
+  defineConstellation,
+  addComponents,
+  getConstellations,
+  getConstellation,
+  deleteConstellation,
+  removeComponent,
+  slugify,
+} from './constellation.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
 import type { TargetPlatform } from './adapters/types.js';
-import type { OutputFormat } from './types.js';
-import { CATEGORY_LABELS } from './types.js';
-import type { AgentType } from './types.js';
+import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
+
+const VALID_COMPONENT_TYPES: ComponentType[] = ['passport', 'hook', 'memory_schema', 'claude_md', 'config'];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -203,6 +212,192 @@ program
       });
     } catch {
       // User killed the process (Ctrl+C)
+    }
+  });
+
+const constellation = program
+  .command('constellation')
+  .description('Manage constellations — groups of agents that work together');
+
+constellation
+  .command('define <name>')
+  .description('Define a new constellation')
+  .option('--desc <description>', 'Description of the constellation', '')
+  .option('--author <author>', 'Author name')
+  .option('--add <passports...>', 'Passport names to add as initial components')
+  .action((name: string, opts) => {
+    try {
+      const id = defineConstellation(name, opts.desc, opts.author);
+      console.log(`Created constellation: ${id}`);
+
+      if (opts.add && opts.add.length > 0) {
+        const components = [];
+        const notFound: string[] = [];
+
+        for (const passportName of opts.add) {
+          const passport = resolveSkill(passportName);
+          if (passport) {
+            components.push({
+              passport_id: passport.id,
+              component_type: 'passport' as ComponentType,
+              role: passport.type === 'skill' ? 'skill' : undefined,
+            });
+          } else {
+            notFound.push(passportName);
+          }
+        }
+
+        if (components.length > 0) {
+          const added = addComponents(id, components);
+          console.log(`Added ${added} component${added !== 1 ? 's' : ''}.`);
+        }
+
+        if (notFound.length > 0) {
+          console.error(`[ronin] Not found in DB: ${notFound.join(', ')}`);
+        }
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('list')
+  .description('List all constellations')
+  .action(() => {
+    try {
+      const items = getConstellations();
+      if (items.length === 0) {
+        console.log('No constellations defined. Use `ronin constellation define <name>` to create one.');
+        return;
+      }
+      for (const c of items) {
+        const parts = [c.name];
+        if (c.description) parts.push(`— ${c.description}`);
+        parts.push(`(${c.component_count} component${c.component_count !== 1 ? 's' : ''})`);
+        console.log(parts.join(' '));
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('show <name>')
+  .description('Show constellation details')
+  .action((name: string) => {
+    try {
+      const id = slugify(name);
+      const detail = getConstellation(id);
+      if (!detail) {
+        console.error(`[ronin] Constellation "${name}" not found.`);
+        process.exit(1);
+      }
+
+      console.log(`${detail.name} (${detail.id})`);
+      if (detail.description) console.log(`  ${detail.description}`);
+      if (detail.author) console.log(`  Author: ${detail.author}`);
+      console.log(`  Created: ${detail.created_at}`);
+      console.log(`  Updated: ${detail.updated_at}`);
+      console.log(`  Components (${detail.components.length}):`);
+
+      for (const comp of detail.components) {
+        const label = comp.passport_name || comp.file_path || comp.passport_id || '(unknown)';
+        const typeBadge = comp.component_type !== 'passport' ? ` [${comp.component_type}]` : '';
+        const roleBadge = comp.role ? ` (${comp.role})` : '';
+        console.log(`    - ${label}${typeBadge}${roleBadge}`);
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('add-component <constellation> <passport-or-path>')
+  .description('Add a component to a constellation')
+  .option('--type <type>', 'Component type: passport, hook, memory_schema, claude_md, config', 'passport')
+  .option('--role <role>', 'Role label for display')
+  .action((constellationName: string, passportOrPath: string, opts) => {
+    try {
+      const constellationId = slugify(constellationName);
+      if (!VALID_COMPONENT_TYPES.includes(opts.type)) {
+        console.error(`[ronin] Invalid type: ${opts.type}. Valid: ${VALID_COMPONENT_TYPES.join(', ')}`);
+        process.exit(1);
+      }
+      const componentType = opts.type as ComponentType;
+
+      if (componentType === 'passport') {
+        const passport = resolveSkill(passportOrPath);
+        if (!passport) {
+          console.error(`[ronin] Passport "${passportOrPath}" not found in DB.`);
+          process.exit(1);
+        }
+        const added = addComponents(constellationId, [{
+          passport_id: passport.id,
+          component_type: 'passport',
+          role: opts.role,
+        }]);
+        if (added > 0) {
+          console.log(`Added ${passport.name} to ${constellationName}.`);
+        } else {
+          console.log(`${passport.name} is already in ${constellationName}.`);
+        }
+      } else {
+        const added = addComponents(constellationId, [{
+          file_path: passportOrPath,
+          component_type: componentType,
+          role: opts.role,
+        }]);
+        if (added > 0) {
+          console.log(`Added ${passportOrPath} [${componentType}] to ${constellationName}.`);
+        } else {
+          console.log(`${passportOrPath} is already in ${constellationName}.`);
+        }
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('remove-component <constellation> <passport-or-path>')
+  .description('Remove a component from a constellation')
+  .action((constellationName: string, passportOrPath: string) => {
+    try {
+      const constellationId = slugify(constellationName);
+      const removed = removeComponent(constellationId, passportOrPath);
+      if (removed) {
+        console.log(`Removed ${passportOrPath} from ${constellationName}.`);
+      } else {
+        console.error(`[ronin] Component "${passportOrPath}" not found in constellation "${constellationName}".`);
+        process.exit(1);
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('delete <name>')
+  .description('Delete a constellation and all its component links')
+  .action((name: string) => {
+    try {
+      const id = slugify(name);
+      const deleted = deleteConstellation(id);
+      if (deleted) {
+        console.log(`Deleted constellation: ${name}`);
+      } else {
+        console.error(`[ronin] Constellation "${name}" not found.`);
+        process.exit(1);
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
     }
   });
 

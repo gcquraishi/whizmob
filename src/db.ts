@@ -51,7 +51,42 @@ CREATE TABLE IF NOT EXISTS translations (
   translated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(source_passport_id, target_platform)
 );
+
+CREATE TABLE IF NOT EXISTS constellations (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  author TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS constellation_components (
+  constellation_id TEXT NOT NULL REFERENCES constellations(id) ON DELETE CASCADE,
+  passport_id TEXT REFERENCES passports(id) ON DELETE SET NULL,
+  component_type TEXT NOT NULL DEFAULT 'passport',
+  file_path TEXT,
+  role TEXT,
+  UNIQUE (constellation_id, passport_id, component_type, file_path)
+);
 `;
+
+export interface ConstellationRow {
+  id: string;
+  name: string;
+  description: string;
+  author: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConstellationComponentRow {
+  constellation_id: string;
+  passport_id: string | null;
+  component_type: string;
+  file_path: string | null;
+  role: string | null;
+}
 
 export interface ScanDiff {
   added: number;
