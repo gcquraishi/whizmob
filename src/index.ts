@@ -517,6 +517,9 @@ program
       const result = executeImport(bundlePath, plan, { force: opts.force });
 
       console.log(`Installed: ${result.installed} file(s)`);
+      if (result.provenanceRecorded > 0) {
+        console.log(`Provenance recorded: ${result.provenanceRecorded} passport(s)`);
+      }
       if (result.conflicts > 0 && !opts.force) {
         console.log(`Skipped: ${result.conflicts} existing file(s) (use --force to overwrite)`);
       }

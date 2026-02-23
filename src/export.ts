@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { slugify } from './constellation.js';
-import type { ComponentType } from './types.js';
+import type { ComponentType, LicenseType } from './types.js';
 
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
@@ -47,6 +47,13 @@ export interface ExportFileEntry {
   secrets_stripped: boolean;
   /** Whether this is a memory schema (structure only, no data) */
   memory_bootstrapped: boolean;
+  /** Provenance: who authored this agent */
+  provenance?: {
+    origin: string | null;
+    author: string | null;
+    license: LicenseType | null;
+    forked_from: string | null;
+  };
 }
 
 export interface ExportDependency {
@@ -225,10 +232,11 @@ export function exportConstellation(
       throw new Error(`Constellation "${constellationName}" not found. Use \`ronin constellation list\` to see available constellations.`);
     }
 
-    // Fetch components with passport details
+    // Fetch components with passport details and provenance
     const components = db.prepare(`
       SELECT cc.passport_id, cc.component_type, cc.file_path, cc.role,
-             p.name as passport_name, p.source_file as passport_source
+             p.name as passport_name, p.source_file as passport_source,
+             p.origin, p.author as passport_author, p.license, p.forked_from
       FROM constellation_components cc
       LEFT JOIN passports p ON cc.passport_id = p.id
       WHERE cc.constellation_id = ?
@@ -240,6 +248,10 @@ export function exportConstellation(
       role: string | null;
       passport_name: string | null;
       passport_source: string | null;
+      origin: string | null;
+      passport_author: string | null;
+      license: LicenseType | null;
+      forked_from: string | null;
     }[];
 
     if (components.length === 0) {
@@ -253,9 +265,14 @@ export function exportConstellation(
       role: string | null;
       passportName: string | null;
       isMemory: boolean;
+      provenance: { origin: string | null; author: string | null; license: LicenseType | null; forked_from: string | null } | undefined;
     }[] = [];
 
     for (const comp of components) {
+      const provenance = comp.passport_id
+        ? { origin: comp.origin, author: comp.passport_author, license: comp.license, forked_from: comp.forked_from }
+        : undefined;
+
       if (comp.component_type === 'passport' && comp.passport_source) {
         // Export the passport's source file
         filesToExport.push({
@@ -264,6 +281,7 @@ export function exportConstellation(
           role: comp.role,
           passportName: comp.passport_name,
           isMemory: false,
+          provenance,
         });
       } else if (comp.file_path) {
         filesToExport.push({
@@ -272,6 +290,7 @@ export function exportConstellation(
           role: comp.role,
           passportName: comp.passport_name,
           isMemory: comp.component_type === 'memory_schema',
+          provenance,
         });
       } else {
         warnings.push(`Component ${comp.passport_name || comp.passport_id || '(unknown)'} has no file path — skipped.`);
@@ -336,6 +355,7 @@ export function exportConstellation(
         passport_name: file.passportName,
         secrets_stripped: stripped,
         memory_bootstrapped: memoryBootstrappedFlag,
+        provenance: file.provenance,
       });
 
       // Write file to bundle (unless dry-run)

@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
@@ -137,6 +138,7 @@ export interface ImportResult {
   installed: number;
   skipped: number;
   conflicts: number;
+  provenanceRecorded: number;
   warnings: string[];
 }
 
@@ -148,6 +150,7 @@ export function executeImport(
   let installed = 0;
   let skipped = 0;
   let conflicts = 0;
+  let provenanceRecorded = 0;
   const warnings: string[] = [...plan.warnings];
 
   for (const action of plan.actions) {
@@ -174,5 +177,36 @@ export function executeImport(
     installed++;
   }
 
-  return { installed, skipped, conflicts, warnings };
+  // Record provenance in Ronin DB for imported passports
+  const dbPath = join(homedir(), '.ronin', 'ronin.db');
+  if (existsSync(dbPath)) {
+    const db = new Database(dbPath);
+    try {
+      const updateProvenance = db.prepare(`
+        UPDATE passports SET
+          origin = COALESCE(?, origin),
+          author = COALESCE(?, author),
+          license = COALESCE(?, license),
+          forked_from = COALESCE(?, forked_from)
+        WHERE source_file LIKE ?
+      `);
+
+      for (const action of plan.actions) {
+        const prov = action.file.provenance;
+        if (prov && (prov.origin || prov.author || prov.license || prov.forked_from)) {
+          // Match by the target path (which becomes the source_file after next scan)
+          const sourcePattern = `%${action.targetPath.split('/').slice(-2).join('/')}%`;
+          const result = updateProvenance.run(
+            prov.origin, prov.author, prov.license, prov.forked_from,
+            sourcePattern,
+          );
+          if (result.changes > 0) provenanceRecorded++;
+        }
+      }
+    } finally {
+      db.close();
+    }
+  }
+
+  return { installed, skipped, conflicts, provenanceRecorded, warnings };
 }
