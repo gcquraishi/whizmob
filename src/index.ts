@@ -21,6 +21,8 @@ import {
   slugify,
 } from './constellation.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
+import { exportConstellation } from './export.js';
+import { planImport, executeImport } from './import.js';
 import type { TargetPlatform } from './adapters/types.js';
 import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
 
@@ -394,6 +396,132 @@ constellation
       } else {
         console.error(`[ronin] Constellation "${name}" not found.`);
         process.exit(1);
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('export <constellation>')
+  .description('Export a constellation as a portable bundle')
+  .option('-o, --output <dir>', 'Output directory (default: ~/.ronin/exports/<id>)')
+  .option('--dry-run', 'Show what would be exported without writing files')
+  .action((constellationName: string, opts) => {
+    try {
+      const result = exportConstellation(constellationName, {
+        outputDir: opts.output,
+        dryRun: opts.dryRun,
+      });
+
+      if (opts.dryRun) {
+        console.log(`[dry-run] Would export constellation "${result.manifest.constellation.name}":`);
+      } else {
+        console.log(`Exported "${result.manifest.constellation.name}" to ${result.bundleDir}`);
+      }
+
+      console.log(`  Files: ${result.fileCount}`);
+      if (result.secretsStripped > 0) {
+        console.log(`  Secrets stripped: ${result.secretsStripped} file(s)`);
+      }
+      if (result.memoryBootstrapped > 0) {
+        console.log(`  Memory bootstrapped: ${result.memoryBootstrapped} file(s) (structure only)`);
+      }
+      if (result.manifest.dependencies.length > 0) {
+        console.log(`  Dependencies: ${result.manifest.dependencies.map(d => d.name).join(', ')}`);
+      }
+
+      for (const entry of result.manifest.files) {
+        const flags: string[] = [];
+        if (entry.secrets_stripped) flags.push('secrets-stripped');
+        if (entry.memory_bootstrapped) flags.push('bootstrapped');
+        const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
+        console.log(`    ${entry.original_path} → ${entry.bundle_path}${flagStr}`);
+      }
+
+      if (result.warnings.length > 0) {
+        console.log('');
+        for (const w of result.warnings) {
+          console.log(`  ⚠ ${w}`);
+        }
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('import <bundle>')
+  .description('Import a constellation bundle into the local environment')
+  .option('--dry-run', 'Show what would be installed without writing files')
+  .option('--force', 'Overwrite existing files without prompting')
+  .option('--param <params...>', 'Override parameters as KEY=VALUE (e.g. --param "{{HOME}}=/Users/me")')
+  .action((bundlePath: string, opts) => {
+    try {
+      // Parse custom parameters
+      const params: Record<string, string> = {};
+      if (opts.param) {
+        for (const p of opts.param) {
+          const eqIdx = p.indexOf('=');
+          if (eqIdx < 0) {
+            console.error(`[ronin] Invalid parameter: ${p}. Use KEY=VALUE format.`);
+            process.exit(1);
+          }
+          params[p.slice(0, eqIdx)] = p.slice(eqIdx + 1);
+        }
+      }
+
+      const plan = planImport(bundlePath, Object.keys(params).length > 0 ? params : undefined);
+
+      console.log(`Constellation: ${plan.manifest.constellation.name}`);
+      console.log(`Exported from: ${plan.manifest.exported_from} at ${plan.manifest.exported_at}`);
+      console.log(`Files: ${plan.actions.length}`);
+      console.log('');
+
+      // Show plan
+      for (const action of plan.actions) {
+        const flags: string[] = [];
+        if (action.conflict) flags.push('EXISTS');
+        if (action.needsSecrets) flags.push('needs-secrets');
+        if (action.isBootstrapped) flags.push('bootstrapped');
+        const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
+        console.log(`  ${action.file.bundle_path} → ${action.targetPath}${flagStr}`);
+      }
+
+      // Show dependencies
+      if (plan.dependencies.length > 0) {
+        console.log('');
+        console.log('Dependencies:');
+        for (const dep of plan.dependencies) {
+          const status = dep.available ? 'OK' : (dep.required ? 'MISSING' : 'optional');
+          console.log(`  ${dep.type}: ${dep.name} — ${status}`);
+        }
+      }
+
+      // Show warnings
+      if (plan.warnings.length > 0) {
+        console.log('');
+        for (const w of plan.warnings) {
+          console.log(`  Warning: ${w}`);
+        }
+      }
+
+      if (opts.dryRun) {
+        console.log('\n[dry-run] No files written.');
+        return;
+      }
+
+      console.log('');
+      const result = executeImport(bundlePath, plan, { force: opts.force });
+
+      console.log(`Installed: ${result.installed} file(s)`);
+      if (result.conflicts > 0 && !opts.force) {
+        console.log(`Skipped: ${result.conflicts} existing file(s) (use --force to overwrite)`);
+      }
+      if (result.skipped > 0 && result.skipped !== result.conflicts) {
+        console.log(`Skipped: ${result.skipped - result.conflicts} file(s) (missing from bundle)`);
       }
     } catch (err) {
       console.error(`[ronin] ${(err as Error).message}`);
