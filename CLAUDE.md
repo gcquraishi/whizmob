@@ -26,12 +26,13 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `seed-inventory.json` — George's initial agent inventory export (36 agents)
 - `src/roster.ts` — Roster query engine (compact, hook, search modes)
 - `src/db.ts` — CLI-side SQLite import (better-sqlite3)
+- `src/constellation.ts` — Constellation CRUD (define, add, list, show, delete)
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-02-19_
+_Last updated: 2026-02-23_
 
-Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms.
+Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations data model is live — users can define named groups of agents, hooks, and configs that work together as systems.
 
 ### Recent Completions
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
@@ -44,8 +45,14 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - **`/roster` skill** — on-demand agent search from within Claude Code sessions
 - **Project-level agent scanning** — discovers `.claude/agents/` within project directories (not just `~/.claude/agents/`)
 - **Auto-import on scan** — `ronin scan` writes directly to `~/.ronin/ronin.db` via `better-sqlite3` (skip with `--no-import`)
-- Fixed Node 25 compat issue (updated commander to v14)
+- Fixed Node 25 compat issue (updated commander to v14, glob 11→13)
 - 91 passports: 57 subagents (21 user + 36 project), 20 skills, 3 MCP, 10 projects, 1 settings
+- **Constellations M1** — data model for grouping agents into systems:
+  - Schema: `constellations` + `constellation_components` tables in both CLI and dashboard DBs
+  - CRUD: `src/constellation.ts` with define, addComponents, get, list, delete, removeComponent
+  - CLI: `ronin constellation define|list|show|add-component|remove-component|delete`
+  - Component types: `passport`, `hook`, `memory_schema`, `claude_md`, `config`
+  - Input validation: component type checking, empty slug guard
 - **`ronin translate` CLI** — two-stage skill translation engine:
   - **Canonical engine** (`src/canonical.ts`): 9-rule pipeline — `STRIP_FRONTMATTER`, `STRIP_DISPATCH_EXAMPLES`, `GENERALIZE_TOOL_REFS`, `GENERALIZE_PATHS`, `FLATTEN_ESCALATION`, `PLATFORM_LOCKED` detection, `ENHANCE_NATIVE_CAPABILITY` flagging
   - **Target adapters** (`src/adapters/`): Gemini (~80% fidelity), DALL-E (~60%, negative rephrasing + color annotation), Midjourney (~30%, vocab expansion + `--no` extraction + reference doc reformat)
@@ -55,6 +62,7 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
+- Constellations M2: export/import engine — package a constellation for portability across machines
 - M3: Dog-food & polish — cataloging full agent library, testing cross-platform workflows
 - **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
 - **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
@@ -71,14 +79,15 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - **LIKE search doesn't escape wildcards** — `%` and `_` in search terms act as SQL wildcards (`lib/db.ts:250-253`)
 - ~~**No input validation on auth POST body** — malformed JSON or non-string password throws unhandled error~~ **FIXED** (try/catch + type checking, returns 400)
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
-- Schema duplication between `src/db.ts` (CLI, better-sqlite3) and `dashboard/lib/db.ts` (dashboard, sql.js) — needs shared schema extraction
+- Schema duplication between `src/db.ts` (CLI, better-sqlite3), `dashboard/lib/db.ts` (dashboard, sql.js), and `src/constellation.ts` — needs shared schema extraction
 - Hardcoded paths in hook script and `/roster` skill — will resolve when published to npm (`npx ronin roster`)
 - Roster search matches too broadly on purpose text (LIKE `%query%`) — needs relevance scoring improvement
 
 ## Roadmap
 ### Immediate (This Sprint)
+- Constellations M2: export/import engine for constellation portability
 - M3: Dog-food & polish (catalog full library, README, demo video)
-- Extract shared SQLite schema between CLI and dashboard
+- Extract shared SQLite schema between CLI, dashboard, and constellation module
 - Improve roster search relevance scoring
 - Translation adapter refinement: tune Midjourney fidelity, add more negative inversion pairs, test against gold standards
 
