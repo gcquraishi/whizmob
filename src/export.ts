@@ -71,10 +71,14 @@ export interface ExportResult {
   warnings: string[];
 }
 
-// Patterns that indicate secrets
+// Patterns that indicate secrets — specific enough to avoid matching prose
+// like "key files" or "token count". Only match assignment/config patterns.
 const SECRET_PATTERNS = [
-  /(?:password|secret|token|key|credential|api_key|apikey|private_key)\s*[:=]\s*.+/gi,
-  /"(?:password|secret|token|key|credential|api_key|apikey|private_key)"\s*:\s*"[^"]+"/gi,
+  // JSON-style: "some_secret_key": "value"
+  /"\w*(?:password|secret|_token|_key|credential|api_key|apikey|private_key|auth_token|access_token|secret_key)\w*"\s*:\s*"[^"]+"/gi,
+  // YAML/env-style: SECRET_KEY=value or SECRET_KEY: value (uppercase key names)
+  /\b[A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z_]*\s*[:=]\s*\S+/g,
+  // Known key formats
   /sk[-_][a-zA-Z0-9]{20,}/g, // Stripe-style keys
   /ghp_[a-zA-Z0-9]{36}/g, // GitHub PATs
   /xoxb-[a-zA-Z0-9-]+/g, // Slack bot tokens
@@ -110,9 +114,9 @@ function stripSecrets(content: string, filePath: string): { content: string; str
     });
   }
 
-  // For settings.json, redact sensitive fields
+  // For settings.json, redact sensitive fields (require underscore-prefixed secret words to avoid matching "key" in prose)
   if (basename(filePath) === 'settings.json') {
-    modified = modified.replace(/"(?:password|secret|token|key|credential)[^"]*"\s*:\s*"[^"]*"/gi, (match) => {
+    modified = modified.replace(/"\w*(?:password|secret|_token|_key|credential|api_key|private_key)\w*"\s*:\s*"[^"]*"/gi, (match) => {
       stripped = true;
       const key = match.split(':')[0];
       return `${key}: "REDACTED"`;
