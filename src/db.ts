@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
-import type { RoninInventory, AgentType } from './types.js';
+import type { RoninInventory, AgentType, LicenseType } from './types.js';
 
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
@@ -71,6 +71,30 @@ CREATE TABLE IF NOT EXISTS constellation_components (
 );
 `;
 
+// Additive migrations — safe to run multiple times
+const MIGRATIONS = `
+-- Provenance fields (M3)
+ALTER TABLE passports ADD COLUMN origin TEXT;
+ALTER TABLE passports ADD COLUMN author TEXT;
+ALTER TABLE passports ADD COLUMN license TEXT;
+ALTER TABLE passports ADD COLUMN forked_from TEXT;
+`;
+
+function runMigrations(db: Database.Database): void {
+  for (const line of MIGRATIONS.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) continue;
+    try {
+      db.exec(trimmed);
+    } catch (err) {
+      // "duplicate column name" is expected on repeat runs
+      if (!(err instanceof Error) || !err.message.includes('duplicate column')) {
+        throw err;
+      }
+    }
+  }
+}
+
 export interface ConstellationRow {
   id: string;
   name: string;
@@ -103,6 +127,7 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
   const db = new Database(DB_PATH);
 
   db.exec(SCHEMA);
+  runMigrations(db);
 
   // Get existing IDs
   const existingIds = new Map<string, string>();
@@ -116,8 +141,8 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
   let updated = 0;
 
   const upsert = db.prepare(`
-    INSERT INTO passports (id, name, type, platform, scope, purpose, model_hint, invocation, status, source_file, metadata_json, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO passports (id, name, type, platform, scope, purpose, model_hint, invocation, status, source_file, metadata_json, origin, author, license, forked_from, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       type = excluded.type,
@@ -129,6 +154,10 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
       status = excluded.status,
       source_file = excluded.source_file,
       metadata_json = excluded.metadata_json,
+      origin = COALESCE(excluded.origin, passports.origin),
+      author = COALESCE(excluded.author, passports.author),
+      license = COALESCE(excluded.license, passports.license),
+      forked_from = COALESCE(excluded.forked_from, passports.forked_from),
       updated_at = datetime('now')
   `);
 
@@ -138,6 +167,7 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
         p.id, p.name, p.type, p.platform, p.scope, p.purpose,
         p.model_hint || null, p.invocation || null, p.status,
         p.source_file, JSON.stringify(p.metadata || {}),
+        p.origin || null, p.author || null, p.license || null, p.forked_from || null,
       );
       if (!existingIds.has(p.id)) {
         addedNames.push(p.name);
@@ -278,6 +308,10 @@ export interface PassportRow {
   platform: string;
   purpose: string;
   source_file: string;
+  origin: string | null;
+  author: string | null;
+  license: LicenseType | null;
+  forked_from: string | null;
 }
 
 export function resolveSkill(nameOrId: string): PassportRow | null {
@@ -287,21 +321,21 @@ export function resolveSkill(nameOrId: string): PassportRow | null {
   try {
     // Try exact ID match first
     const byId = db.prepare(
-      `SELECT id, name, type, platform, purpose, source_file FROM passports
+      `SELECT id, name, type, platform, purpose, source_file, origin, author, license, forked_from FROM passports
        WHERE id = ? AND type IN ('skill', 'subagent')`
     ).get(nameOrId) as PassportRow | undefined;
     if (byId) return byId;
 
     // Case-insensitive name match
     const byName = db.prepare(
-      `SELECT id, name, type, platform, purpose, source_file FROM passports
+      `SELECT id, name, type, platform, purpose, source_file, origin, author, license, forked_from FROM passports
        WHERE LOWER(name) = LOWER(?) AND type IN ('skill', 'subagent')`
     ).get(nameOrId) as PassportRow | undefined;
     if (byName) return byName;
 
     // Partial name match
     const byPartial = db.prepare(
-      `SELECT id, name, type, platform, purpose, source_file FROM passports
+      `SELECT id, name, type, platform, purpose, source_file, origin, author, license, forked_from FROM passports
        WHERE LOWER(name) LIKE LOWER(?) AND type IN ('skill', 'subagent')
        ORDER BY LENGTH(name) ASC LIMIT 1`
     ).get(`%${nameOrId}%`) as PassportRow | undefined;
@@ -317,7 +351,7 @@ export function listTranslatableSkills(): PassportRow[] {
 
   try {
     return db.prepare(
-      `SELECT id, name, type, platform, purpose, source_file FROM passports
+      `SELECT id, name, type, platform, purpose, source_file, origin, author, license, forked_from FROM passports
        WHERE type IN ('skill', 'subagent')
        ORDER BY type, name`
     ).all() as PassportRow[];

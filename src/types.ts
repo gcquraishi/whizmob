@@ -3,6 +3,7 @@ export type AgentType = 'subagent' | 'skill' | 'mcp' | 'project' | 'settings' | 
 export type AgentScope = 'user' | 'project';
 export type AgentStatus = 'active' | 'draft' | 'archived';
 export type ComponentType = 'passport' | 'hook' | 'memory_schema' | 'claude_md' | 'config';
+export type LicenseType = 'personal' | 'work' | 'open' | 'commercial';
 export type OutputFormat = 'json' | 'table';
 
 /** Canonical display labels for each AgentType. Use these in all user-facing output. */
@@ -27,6 +28,10 @@ export interface ProtoPassport {
   status: AgentStatus;
   tags: string[];
   source_file: string;
+  origin?: string | null;
+  author?: string | null;
+  license?: LicenseType | null;
+  forked_from?: string | null;
   metadata: Record<string, unknown>;
 }
 
