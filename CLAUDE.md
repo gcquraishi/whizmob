@@ -29,12 +29,13 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `src/constellation.ts` — Constellation CRUD (define, add, list, show, delete)
 - `src/export.ts` — Constellation export engine (path rewriting, secret stripping, memory bootstrapping)
 - `src/import.ts` — Constellation import engine (parameter resolution, conflict detection, dry-run)
+- `src/sync.ts` — Constellation sync engine (change detection, inline diff)
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
 _Last updated: 2026-02-23_
 
-Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations data model is live with export/import engine — users can define named groups of agents, package them as portable bundles with path rewriting and secret stripping, and import them onto another machine.
+Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components.
 
 ### Recent Completions
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
@@ -64,6 +65,19 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - **Import** (`src/import.ts`): `ronin import <bundle>` with `--dry-run`, `--force`, `--param` overrides
   - Conflict detection: warns about existing files, skips unless `--force`
   - Git-friendly bundles: `.gitignore` included, no binaries
+- **Constellations M3** — provenance & licensing metadata:
+  - Passport schema extended: `origin`, `author`, `license` (personal/work/open/commercial), `forked_from`
+  - Additive migration (ALTER TABLE) safe to run repeatedly
+  - Export embeds per-file provenance in manifest; import preserves it in local DB
+  - `ronin constellation sync <bundle>` — read-only diff detection with inline changes
+- **Constellations M5** — constellation-aware roster:
+  - `ronin roster --hook` groups agents by constellation before ungrouped listing
+  - `ronin roster --search` shows constellation membership per result
+  - `ronin stats` includes constellation and component counts
+- **CEO Operating System constellation** — 12 components defined and exported:
+  - Skills: cofounder, standup, roadmap, debrief, leadership-meeting, sprint
+  - Agents: chief-of-staff, sprint-coordinator
+  - Non-passport: cofounder memory (bootstrapped), panel-start/stop hooks, CLAUDE.md executive pattern
 - **`ronin translate` CLI** — two-stage skill translation engine:
   - **Canonical engine** (`src/canonical.ts`): 9-rule pipeline — `STRIP_FRONTMATTER`, `STRIP_DISPATCH_EXAMPLES`, `GENERALIZE_TOOL_REFS`, `GENERALIZE_PATHS`, `FLATTEN_ESCALATION`, `PLATFORM_LOCKED` detection, `ENHANCE_NATIVE_CAPABILITY` flagging
   - **Target adapters** (`src/adapters/`): Gemini (~80% fidelity), DALL-E (~60%, negative rephrasing + color annotation), Midjourney (~30%, vocab expansion + `--no` extraction + reference doc reformat)
@@ -73,8 +87,8 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- Constellations M3: Provenance & licensing metadata
-- M4: Dog-food — port the CEO system between machines
+- M4: Dog-food — port the CEO Operating System to work machine (blocked on work machine access)
+- CEO constellation exported to `~/.ronin/exports/ceo-operating-system` — ready for git transfer
 - **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
 - **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
 - **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram)
@@ -96,11 +110,10 @@ Scanner discovers 91 passports across 3 platforms (Claude Code, Cursor, Codex), 
 
 ## Roadmap
 ### Immediate (This Sprint)
-- Constellations M3: Provenance & licensing metadata (origin, author, license, forkedFrom)
-- M4: Dog-food — port the CEO Operating System constellation between machines
-- M5: Constellation-aware roster (group agents by constellation in hook output)
+- M4: Dog-food — port CEO Operating System to work machine (blocked on access)
 - Extract shared SQLite schema between CLI, dashboard, and constellation module
 - Improve roster search relevance scoring
+- Dashboard constellation view (deferred from M1)
 
 ### Next (2-4 weeks)
 - M4: Distribution (npm publish, community outreach)
