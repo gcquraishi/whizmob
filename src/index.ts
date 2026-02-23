@@ -23,6 +23,7 @@ import {
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
 import { exportConstellation } from './export.js';
 import { planImport, executeImport } from './import.js';
+import { syncConstellation } from './sync.js';
 import type { TargetPlatform } from './adapters/types.js';
 import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
 
@@ -377,6 +378,40 @@ constellation
       } else {
         console.error(`[ronin] Component "${passportOrPath}" not found in constellation "${constellationName}".`);
         process.exit(1);
+      }
+    } catch (err) {
+      console.error(`[ronin] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+constellation
+  .command('sync <bundle>')
+  .description('Detect changes between source files and an export bundle (read-only)')
+  .action((bundlePath: string) => {
+    try {
+      const result = syncConstellation(bundlePath);
+
+      console.log(`Constellation: ${result.constellation}`);
+      console.log(`Exported: ${result.exportedAt} from ${result.exportedFrom}`);
+      console.log(`Status: ${result.unchanged} unchanged, ${result.modified} modified, ${result.missingSrc} missing source, ${result.missingBundle} missing bundle`);
+      console.log('');
+
+      for (const entry of result.entries) {
+        const label = entry.passportName || entry.originalPath;
+        const statusIcon = {
+          unchanged: ' ',
+          modified: 'M',
+          missing_source: '!',
+          missing_bundle: '?',
+        }[entry.status];
+
+        console.log(`  ${statusIcon} ${label}`);
+        if (entry.diff) {
+          for (const line of entry.diff.split('\n')) {
+            console.log(`    ${line}`);
+          }
+        }
       }
     } catch (err) {
       console.error(`[ronin] ${(err as Error).message}`);
