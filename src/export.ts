@@ -331,18 +331,21 @@ export function exportConstellation(
       // Path rewriting
       const paramPath = parameterizePath(file.absolutePath);
 
-      // Bundle path: flatten into files/<component_type>/<basename>
-      // Use a counter suffix if names collide
+      // Bundle path: files/<component_type>/<contextual_name>
+      // For generic filenames (SKILL.md, CLAUDE.md), prefix with parent dir name
       const bundleSubdir = file.componentType;
       const fileName = basename(file.absolutePath);
-      let bundlePath = join('files', bundleSubdir, fileName);
+      const parentDir = basename(dirname(file.absolutePath));
+      const GENERIC_NAMES = ['SKILL.md', 'CLAUDE.md', 'README.md', 'index.ts', 'index.js'];
+      const contextualName = GENERIC_NAMES.includes(fileName) ? `${parentDir}-${fileName}` : fileName;
+      let bundlePath = join('files', bundleSubdir, contextualName);
 
       // Deduplicate
       let counter = 1;
       const usedPaths = new Set(fileEntries.map(e => e.bundle_path));
       while (usedPaths.has(bundlePath)) {
-        const ext = fileName.includes('.') ? '.' + fileName.split('.').pop() : '';
-        const base = ext ? fileName.slice(0, -ext.length) : fileName;
+        const ext = contextualName.includes('.') ? '.' + contextualName.split('.').pop() : '';
+        const base = ext ? contextualName.slice(0, -ext.length) : contextualName;
         bundlePath = join('files', bundleSubdir, `${base}-${counter}${ext}`);
         counter++;
       }
