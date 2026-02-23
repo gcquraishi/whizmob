@@ -143,6 +143,10 @@ program
 
       console.log(`${stats.total} items across ${stats.platformCount} platform${stats.platformCount !== 1 ? 's' : ''}: ${parts.join(', ')}.${lastScanStr ? ` Last scan: ${lastScanStr}.` : ''}`);
 
+      if (stats.constellationCount > 0) {
+        console.log(`${stats.constellationCount} constellation${stats.constellationCount !== 1 ? 's' : ''} (${stats.constellationComponentCount} components)`);
+      }
+
       if (opts.verbose) {
         console.log('');
         const platforms = Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]);

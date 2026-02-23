@@ -19,6 +19,31 @@ interface PassportRow {
   source_file: string;
 }
 
+interface ConstellationMembership {
+  passport_id: string;
+  constellation_name: string;
+}
+
+function getConstellationMemberships(db: Database.Database): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  try {
+    const rows = db.prepare(`
+      SELECT cc.passport_id, c.name as constellation_name
+      FROM constellation_components cc
+      JOIN constellations c ON cc.constellation_id = c.id
+      WHERE cc.passport_id IS NOT NULL
+    `).all() as ConstellationMembership[];
+    for (const row of rows) {
+      const list = map.get(row.passport_id) || [];
+      list.push(row.constellation_name);
+      map.set(row.passport_id, list);
+    }
+  } catch {
+    // Table may not exist yet
+  }
+  return map;
+}
+
 function openDb(): Database.Database | null {
   if (!existsSync(DB_PATH)) return null;
   return new Database(DB_PATH, { readonly: true });
@@ -91,7 +116,7 @@ export function hookRoster(): string {
 
   try {
     const rows = db.prepare(
-      `SELECT name, type, platform, purpose, invocation
+      `SELECT id, name, type, platform, purpose, invocation
        FROM passports
        WHERE type IN ('subagent', 'skill')
        ORDER BY type, name`
@@ -99,25 +124,56 @@ export function hookRoster(): string {
 
     if (rows.length === 0) return '';
 
-    const subagents = rows.filter(r => r.type === 'subagent');
-    const skills = rows.filter(r => r.type === 'skill');
+    const memberships = getConstellationMemberships(db);
+
+    // Collect constellation-grouped agents
+    const constellationAgents = new Map<string, PassportRow[]>();
+    const ungrouped: PassportRow[] = [];
+
+    for (const row of rows) {
+      const constellations = memberships.get(row.id);
+      if (constellations && constellations.length > 0) {
+        for (const cName of constellations) {
+          const list = constellationAgents.get(cName) || [];
+          list.push(row);
+          constellationAgents.set(cName, list);
+        }
+      } else {
+        ungrouped.push(row);
+      }
+    }
 
     const lines: string[] = [
       `<ronin-roster agents="${rows.length}">`,
     ];
 
-    if (subagents.length > 0) {
+    // Show constellation groups first
+    for (const [cName, agents] of constellationAgents) {
+      lines.push(`Constellation: ${cName}`);
+      for (const a of agents) {
+        const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
+        const invoke = a.invocation ? ` (${a.invocation})` : '';
+        const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
+        lines.push(`  ${a.name}${platform}${invoke} — ${purpose}`);
+      }
+    }
+
+    // Then ungrouped agents/skills
+    const ungroupedSubagents = ungrouped.filter(r => r.type === 'subagent');
+    const ungroupedSkills = ungrouped.filter(r => r.type === 'skill');
+
+    if (ungroupedSubagents.length > 0) {
       lines.push('Agents:');
-      for (const a of subagents) {
+      for (const a of ungroupedSubagents) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
         lines.push(`  ${a.name}${platform} — ${purpose}`);
       }
     }
 
-    if (skills.length > 0) {
+    if (ungroupedSkills.length > 0) {
       lines.push('Skills:');
-      for (const a of skills) {
+      for (const a of ungroupedSkills) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         const invoke = a.invocation ? ` (${a.invocation})` : '';
         const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
@@ -155,6 +211,7 @@ export function searchRoster(query: string): string {
 
     if (rows.length === 0) return `# Ronin: No agents matching "${query}"`;
 
+    const memberships = getConstellationMemberships(db);
     const lines: string[] = [`# Ronin: ${rows.length} agent(s) matching "${query}"\n`];
 
     for (const a of rows) {
@@ -165,6 +222,10 @@ export function searchRoster(query: string): string {
       lines.push(`- **Purpose**: ${a.purpose}`);
       if (a.model_hint) lines.push(`- **Model**: ${a.model_hint}`);
       if (a.invocation) lines.push(`- **Invocation**: ${a.invocation}`);
+      const constellations = memberships.get(a.id);
+      if (constellations && constellations.length > 0) {
+        lines.push(`- **Constellations**: ${constellations.join(', ')}`);
+      }
       lines.push(`- **Source**: ${a.source_file}`);
       lines.push('');
     }

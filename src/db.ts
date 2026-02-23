@@ -217,6 +217,8 @@ export interface RoninStats {
   byType: Record<string, number>;
   byPlatform: Record<string, number>;
   platformCount: number;
+  constellationCount: number;
+  constellationComponentCount: number;
   lastScan: { scanned_at: string; duration_ms: number; total: number } | null;
 }
 
@@ -380,11 +382,25 @@ export function getStats(): RoninStats | null {
 
     const lastScanRow = db.prepare('SELECT scanned_at, duration_ms, total FROM scans ORDER BY id DESC LIMIT 1').get() as { scanned_at: string; duration_ms: number; total: number } | undefined;
 
+    // Constellation counts (table may not exist yet)
+    let constellationCount = 0;
+    let constellationComponentCount = 0;
+    try {
+      const cRow = db.prepare('SELECT COUNT(*) as cnt FROM constellations').get() as { cnt: number };
+      constellationCount = cRow.cnt;
+      const ccRow = db.prepare('SELECT COUNT(*) as cnt FROM constellation_components').get() as { cnt: number };
+      constellationComponentCount = ccRow.cnt;
+    } catch {
+      // Tables don't exist yet
+    }
+
     return {
       total,
       byType,
       byPlatform,
       platformCount,
+      constellationCount,
+      constellationComponentCount,
       lastScan: lastScanRow || null,
     };
   } finally {
