@@ -94,12 +94,13 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- M4: Dog-food — port the CEO Operating System to work machine (blocked on work machine access)
-- CEO constellation exported to `~/.ronin/exports/ceo-operating-system` — ready for git transfer
+- **Constellation UI needs smoke-testing** — list (`/constellations`), detail (`/constellations/[id]`), export, and import pages are built but not yet browser-tested. Next step: run `cd dashboard && npm run dev`, visit `http://localhost:3000/constellations`, verify the CEO Operating System constellation renders, test export, and test import dry-run flow.
+- **Next.js 15→16 upgrade** — upgraded to fix Node 25 compat. Middleware deprecation warning appears (`"middleware" → "proxy"` convention) but middleware only runs on Vercel so no local impact. May need migration if deploying to Vercel.
+- M4: Dog-food — port the CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.ronin/exports/ceo-operating-system`. Cross-machine workflow: export from dashboard on personal machine → git transfer → import from dashboard on work machine.
 - **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
 - **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
 - **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram)
-- **Dashboard translation page** live at `/translation` — ported from `landing-comparison.html` into proper React/Tailwind page with nav bar (Yard + Translation links). Includes flow diagram, "what changes" table, image comparison grid with toggle. Awaiting generated images.
+- **Dashboard translation page** live at `/translation` — ported from `landing-comparison.html` into proper React/Tailwind page with nav bar (Yard + Translation + Constellations links). Includes flow diagram, "what changes" table, image comparison grid with toggle. Awaiting generated images.
 - **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` command recommended before call. Linear: BIG-6 for image generation.
 
 ### Known Issues
@@ -114,9 +115,11 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - Schema duplication between `src/db.ts` (CLI, better-sqlite3), `dashboard/lib/db.ts` (dashboard, sql.js), and `src/constellation.ts` — needs shared schema extraction
 - Hardcoded paths in hook script and `/roster` skill — will resolve when published to npm (`npx ronin roster`)
 - Roster search matches too broadly on purpose text (LIKE `%query%`) — needs relevance scoring improvement
+- **Next.js 16 middleware deprecation** — `middleware.ts` should be renamed to `proxy.ts` per Next 16 conventions. Only affects Vercel deployment (locally it's a no-op). Low priority.
 
 ## Roadmap
 ### Immediate (This Sprint)
+- **Smoke-test constellation UI** — run dashboard, verify list/detail/export/import pages work in browser
 - M4: Dog-food — port CEO Operating System to work machine (blocked on access)
 - Extract shared SQLite schema between CLI, dashboard, and constellation module
 - Improve roster search relevance scoring
