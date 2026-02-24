@@ -33,7 +33,7 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-02-23_
+_Last updated: 2026-02-24_
 
 Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components.
 
@@ -74,6 +74,13 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - `ronin roster --hook` groups agents by constellation before ungrouped listing
   - `ronin roster --search` shows constellation membership per result
   - `ronin stats` includes constellation and component counts
+- **Dashboard constellation UI** — full constellation management in the web dashboard:
+  - List page (`/constellations`): card grid with component counts, author, import button
+  - Detail page (`/constellations/[id]`): component graph grouped by type, linked to passport dossiers, export button
+  - Export from UI: calls CLI `exportConstellation()` via dynamic import, shows bundle contents, secrets stripped, dependencies
+  - Import page (`/constellations/import`): enter bundle path, dry-run preview (files, conflicts, dependencies, warnings), install with optional force-overwrite
+  - API routes: `GET /api/constellations`, `GET /api/constellations/[id]`, `POST /api/constellations/[id]/export`, `POST /api/constellations/import`
+  - Nav updated with Constellations link
 - **CEO Operating System constellation** — 12 components defined and exported:
   - Skills: cofounder, standup, roadmap, debrief, leadership-meeting, sprint
   - Agents: chief-of-staff, sprint-coordinator
@@ -113,7 +120,7 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - M4: Dog-food — port CEO Operating System to work machine (blocked on access)
 - Extract shared SQLite schema between CLI, dashboard, and constellation module
 - Improve roster search relevance scoring
-- Dashboard constellation view (deferred from M1)
+- ~~Dashboard constellation view (deferred from M1)~~ **DONE** — list, detail, export, and import pages
 
 ### Next (2-4 weeks)
 - M4: Distribution (npm publish, community outreach)
