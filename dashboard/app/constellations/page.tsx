@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Orbit, Package, User, Inbox } from 'lucide-react';
+import { Orbit, Package, User, Inbox, Upload } from 'lucide-react';
 
 interface Constellation {
   id: string;
@@ -45,6 +45,13 @@ export default function ConstellationsPage() {
             <p className="text-xs text-gray-500">Agent systems &mdash; groups of agents, skills, hooks, and config that work together</p>
           </div>
         </div>
+        <Link
+          href="/constellations/import"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+        >
+          <Upload size={14} />
+          Import
+        </Link>
       </div>
 
       {/* Loading */}
