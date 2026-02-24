@@ -342,6 +342,90 @@ export async function getAllTags(): Promise<Array<{ tag: string; count: number }
   }));
 }
 
+// --- Constellation queries ---
+
+export interface ConstellationRow {
+  id: string;
+  name: string;
+  description: string;
+  author: string | null;
+  component_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConstellationComponentRow {
+  passport_id: string | null;
+  passport_name: string | null;
+  passport_type: string | null;
+  component_type: string;
+  file_path: string | null;
+  role: string | null;
+}
+
+export interface ConstellationDetailRow extends ConstellationRow {
+  components: ConstellationComponentRow[];
+}
+
+export async function getConstellations(): Promise<ConstellationRow[]> {
+  const database = await getDb();
+  const result = database.exec(`
+    SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
+           COUNT(cc.constellation_id) as component_count
+    FROM constellations c
+    LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+    GROUP BY c.id
+    ORDER BY c.name
+  `);
+  if (result.length === 0) return [];
+  const columns = result[0].columns;
+  return result[0].values.map(row => {
+    const obj: Record<string, unknown> = {};
+    columns.forEach((col, i) => { obj[col] = row[i]; });
+    return obj as unknown as ConstellationRow;
+  });
+}
+
+export async function getConstellation(id: string): Promise<ConstellationDetailRow | null> {
+  const database = await getDb();
+  const result = database.exec(`
+    SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
+           COUNT(cc.constellation_id) as component_count
+    FROM constellations c
+    LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+    WHERE c.id = ?
+    GROUP BY c.id
+  `, [id]);
+  if (result.length === 0 || result[0].values.length === 0) return null;
+
+  const columns = result[0].columns;
+  const row = result[0].values[0];
+  const obj: Record<string, unknown> = {};
+  columns.forEach((col, i) => { obj[col] = row[i]; });
+
+  // Fetch components
+  const compResult = database.exec(`
+    SELECT cc.passport_id, p.name as passport_name, p.type as passport_type,
+           cc.component_type, cc.file_path, cc.role
+    FROM constellation_components cc
+    LEFT JOIN passports p ON cc.passport_id = p.id
+    WHERE cc.constellation_id = ?
+    ORDER BY cc.component_type, COALESCE(p.name, cc.file_path)
+  `, [id]);
+
+  let components: ConstellationComponentRow[] = [];
+  if (compResult.length > 0) {
+    const compCols = compResult[0].columns;
+    components = compResult[0].values.map(r => {
+      const c: Record<string, unknown> = {};
+      compCols.forEach((col, i) => { c[col] = r[i]; });
+      return c as unknown as ConstellationComponentRow;
+    });
+  }
+
+  return { ...obj, components } as unknown as ConstellationDetailRow;
+}
+
 export async function getLastScan(): Promise<{
   scanned_at: string;
   duration_ms: number;

@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ArrowRightLeft, Swords } from 'lucide-react';
+import { LayoutGrid, ArrowRightLeft, Swords, Orbit } from 'lucide-react';
 import clsx from 'clsx';
 
 const links = [
   { href: '/', label: 'Inventory', Icon: LayoutGrid },
+  { href: '/constellations', label: 'Constellations', Icon: Orbit },
   { href: '/translation', label: 'Translate', Icon: ArrowRightLeft, secondary: true },
 ];
 

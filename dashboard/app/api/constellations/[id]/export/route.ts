@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { join } from 'node:path';
+
+interface ExportResultShape {
+  bundleDir: string;
+  fileCount: number;
+  secretsStripped: number;
+  memoryBootstrapped: number;
+  warnings: string[];
+  manifest: Record<string, unknown>;
+}
+
+export async function POST(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (process.env.VERCEL) {
+    return NextResponse.json({ error: 'Read-only demo' }, { status: 403 });
+  }
+
+  try {
+    const { id } = await params;
+    const constellationId = decodeURIComponent(id);
+
+    // Dynamically import the CLI export module (uses better-sqlite3)
+    const roninRoot = join(process.cwd(), '..');
+    const exportPath = join(roninRoot, 'dist', 'export.js');
+    const mod = await import(/* webpackIgnore: true */ exportPath);
+    const exportFn = mod.exportConstellation as (name: string, opts?: Record<string, unknown>) => ExportResultShape;
+
+    const result = exportFn(constellationId);
+
+    return NextResponse.json({
+      bundleDir: result.bundleDir,
+      fileCount: result.fileCount,
+      secretsStripped: result.secretsStripped,
+      memoryBootstrapped: result.memoryBootstrapped,
+      warnings: result.warnings,
+      manifest: result.manifest,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: (err as Error).message },
+      { status: 500 }
+    );
+  }
+}
