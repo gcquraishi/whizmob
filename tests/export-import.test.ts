@@ -28,11 +28,12 @@ const TEST_DIR = join(tmpdir(), `whizmob-export-test-${process.pid}`);
 const TEST_DB_PATH = join(TEST_DIR, 'test.db');
 const BUNDLE_DIR = join(TEST_DIR, 'bundle');
 const HOOK_FILE = join(TEST_DIR, 'hook.sh');
+const TEMPLATIZED_SKILL = join(TEST_DIR, 'templatized-skill.md');
 
 process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 
 import { exportConstellation } from '../src/export.js';
-import { planImport } from '../src/import.js';
+import { planImport, executeImport } from '../src/import.js';
 
 // ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,17 @@ function setup(): void {
 
   // Create a real file that will be included in the export
   writeFileSync(HOOK_FILE, '#!/bin/bash\necho "panel start"\n', 'utf-8');
+
+  // Create a templatized skill file with content parameters
+  writeFileSync(TEMPLATIZED_SKILL, [
+    '# /roadmap — Roadmap Planning',
+    '',
+    'You are facilitating a roadmap session for {{ORG_NAME}}.',
+    '{{OWNER_NAME}} is the PM — you provide analysis and they make the calls.',
+    '',
+    '## Projects',
+    'Scan {{WORKSPACE_ROOT}}/*/CLAUDE.md for project state.',
+  ].join('\n'), 'utf-8');
 
   // Bootstrap the test DB
   const db = new Database(TEST_DB_PATH);
@@ -66,6 +78,15 @@ function setup(): void {
     `INSERT INTO constellation_components (constellation_id, component_type, file_path, role)
      VALUES ('export-test', 'hook', ?, 'session-start')`
   ).run(HOOK_FILE);
+
+  // Insert a second constellation with templatized content
+  db.prepare(
+    `INSERT INTO constellations (id, name, description, author) VALUES ('param-test', 'Param Test', 'Testing content parameters', 'test-author')`
+  ).run();
+  db.prepare(
+    `INSERT INTO constellation_components (constellation_id, component_type, file_path, role)
+     VALUES ('param-test', 'claude_md', ?, 'skill')`
+  ).run(TEMPLATIZED_SKILL);
 
   db.close();
 }
@@ -180,5 +201,93 @@ describe('export / import pipeline', () => {
       () => planImport(emptyDir),
       /manifest\.json/i,
     );
+  });
+
+  // ── Content parameter tests ─────────────────────────────────────────────
+
+  test('export detects content parameters in templatized files', () => {
+    const result = exportConstellation('Param Test', { dryRun: true });
+
+    assert.ok(result.contentParamsDetected > 0, 'Should detect content parameters');
+    const cp = result.manifest.content_parameters;
+    assert.ok('{{ORG_NAME}}' in cp, 'Should detect {{ORG_NAME}}');
+    assert.ok('{{OWNER_NAME}}' in cp, 'Should detect {{OWNER_NAME}}');
+    assert.ok('{{WORKSPACE_ROOT}}' in cp, 'Should detect {{WORKSPACE_ROOT}}');
+    assert.equal(Object.keys(cp).length, 3, 'Should detect exactly 3 content params');
+  });
+
+  test('export does not flag path parameters as content parameters', () => {
+    const result = exportConstellation('Param Test', { dryRun: true });
+    const cp = result.manifest.content_parameters;
+
+    // {{HOME}}, {{CLAUDE_DIR}}, {{WHIZMOB_DIR}} are path params, not content params
+    assert.ok(!('{{HOME}}' in cp), '{{HOME}} should not be a content param');
+    assert.ok(!('{{CLAUDE_DIR}}' in cp), '{{CLAUDE_DIR}} should not be a content param');
+    assert.ok(!('{{WHIZMOB_DIR}}' in cp), '{{WHIZMOB_DIR}} should not be a content param');
+  });
+
+  test('content parameters are required by default', () => {
+    const result = exportConstellation('Param Test', { dryRun: true });
+    for (const meta of Object.values(result.manifest.content_parameters)) {
+      assert.equal(meta.required, true, 'Content params should be required by default');
+      assert.equal(meta.default_value, null, 'Content params should have no default');
+    }
+  });
+
+  test('planImport warns about missing required content params', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+    exportConstellation('Param Test', { outputDir: paramBundleDir });
+
+    const plan = planImport(paramBundleDir);
+
+    assert.ok(plan.contentParams.length === 3, 'Should have 3 content params in plan');
+    const unresolved = plan.contentParams.filter(cp => !cp.resolved);
+    assert.equal(unresolved.length, 3, 'All 3 should be unresolved without --param');
+    assert.ok(
+      plan.warnings.some(w => w.includes('{{ORG_NAME}}')),
+      'Should warn about missing {{ORG_NAME}}',
+    );
+  });
+
+  test('planImport resolves content params from --param flags', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+
+    const plan = planImport(paramBundleDir, {
+      '{{ORG_NAME}}': 'acme-corp',
+      '{{OWNER_NAME}}': 'Alice',
+      '{{WORKSPACE_ROOT}}': '~/work',
+    });
+
+    const resolved = plan.contentParams.filter(cp => cp.resolved);
+    assert.equal(resolved.length, 3, 'All 3 should be resolved');
+    assert.ok(
+      !plan.warnings.some(w => w.includes('content parameter')),
+      'Should have no content param warnings',
+    );
+  });
+
+  test('executeImport substitutes content params in file content', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+    const importTargetDir = join(TEST_DIR, 'import-target');
+    mkdirSync(importTargetDir, { recursive: true });
+
+    const plan = planImport(paramBundleDir, {
+      '{{ORG_NAME}}': 'acme-corp',
+      '{{OWNER_NAME}}': 'Alice',
+      '{{WORKSPACE_ROOT}}': '~/work',
+    });
+
+    const result = executeImport(paramBundleDir, plan, { force: true });
+
+    assert.ok(result.contentParamsApplied > 0, 'Should report substitutions applied');
+    assert.equal(result.installed, 1, 'Should install 1 file');
+
+    // Read the installed file and verify substitutions
+    const installedContent = readFileSync(plan.actions[0].targetPath, 'utf-8');
+    assert.ok(installedContent.includes('acme-corp'), 'Should contain substituted org name');
+    assert.ok(installedContent.includes('Alice'), 'Should contain substituted owner name');
+    assert.ok(installedContent.includes('~/work'), 'Should contain substituted workspace root');
+    assert.ok(!installedContent.includes('{{ORG_NAME}}'), 'Should not contain raw {{ORG_NAME}} token');
+    assert.ok(!installedContent.includes('{{OWNER_NAME}}'), 'Should not contain raw {{OWNER_NAME}} token');
   });
 });

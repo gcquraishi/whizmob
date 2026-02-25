@@ -22,6 +22,12 @@ const PATH_PARAMS: [string, string][] = [
   ['{{HOME}}', homedir()],
 ];
 
+export interface ContentParameter {
+  description: string;
+  required: boolean;
+  default_value: string | null;
+}
+
 export interface ExportManifest {
   version: '1.0';
   constellation: {
@@ -34,7 +40,8 @@ export interface ExportManifest {
   exported_from: string; // machine hostname
   files: ExportFileEntry[];
   dependencies: ExportDependency[];
-  parameters: Record<string, string>; // param name → description
+  parameters: Record<string, string>; // path param name → description
+  content_parameters: Record<string, ContentParameter>; // content param name → metadata
 }
 
 export interface ExportFileEntry {
@@ -73,6 +80,7 @@ export interface ExportResult {
   fileCount: number;
   secretsStripped: number;
   memoryBootstrapped: number;
+  contentParamsDetected: number;
   warnings: string[];
 }
 
@@ -214,6 +222,44 @@ function detectDependencies(files: { path: string; content: string }[]): ExportD
   return deps;
 }
 
+// Known path parameters — excluded from content parameter detection
+const PATH_PARAM_NAMES = new Set(PATH_PARAMS.map(([name]) => name));
+
+/**
+ * Scan file contents for {{PARAM_NAME}} tokens that are NOT path parameters.
+ * Returns a map of parameter name → ContentParameter metadata.
+ */
+function detectContentParameters(
+  files: { bundlePath: string; content: string }[],
+): Record<string, ContentParameter> {
+  const params: Record<string, ContentParameter> = {};
+  // Match {{UPPER_SNAKE_CASE}} tokens — content params use uppercase by convention
+  const tokenPattern = /\{\{([A-Z][A-Z0-9_]*)\}\}/g;
+
+  for (const { content } of files) {
+    for (const match of content.matchAll(tokenPattern)) {
+      const token = `{{${match[1]}}}`;
+      if (PATH_PARAM_NAMES.has(token)) continue; // skip path params
+      if (params[token]) continue; // already found
+      params[token] = {
+        description: inferParamDescription(match[1]),
+        required: true,
+        default_value: null,
+      };
+    }
+  }
+
+  return params;
+}
+
+/** Generate a human-readable description from a parameter name like OWNER_NAME → "Owner name" */
+function inferParamDescription(paramName: string): string {
+  return paramName
+    .split('_')
+    .map((w, i) => i === 0 ? w.charAt(0) + w.slice(1).toLowerCase() : w.toLowerCase())
+    .join(' ');
+}
+
 export function exportConstellation(
   constellationName: string,
   options: { outputDir?: string; dryRun?: boolean } = {},
@@ -308,6 +354,7 @@ export function exportConstellation(
 
     const fileEntries: ExportFileEntry[] = [];
     const rawFiles: { path: string; content: string }[] = [];
+    const bundledContents: { bundlePath: string; content: string }[] = [];
     let secretsStripped = 0;
     let memoryBootstrapped = 0;
 
@@ -366,6 +413,9 @@ export function exportConstellation(
         provenance: file.provenance,
       });
 
+      // Track content for content parameter detection
+      bundledContents.push({ bundlePath, content });
+
       // Write file to bundle (unless dry-run)
       if (!options.dryRun) {
         const targetPath = join(bundleDir, bundlePath);
@@ -376,6 +426,9 @@ export function exportConstellation(
 
     // Detect dependencies
     const dependencies = detectDependencies(rawFiles);
+
+    // Detect content parameters ({{UPPER_SNAKE}} tokens in file content)
+    const contentParameters = detectContentParameters(bundledContents);
 
     // Build manifest
     const manifest: ExportManifest = {
@@ -395,6 +448,7 @@ export function exportConstellation(
         '{{CLAUDE_DIR}}': 'Claude Code config directory (~/.claude)',
         '{{WHIZMOB_DIR}}': 'Whizmob data directory (~/.whizmob)',
       },
+      content_parameters: contentParameters,
     };
 
     // Write manifest
@@ -420,6 +474,7 @@ export function exportConstellation(
       fileCount: fileEntries.length,
       secretsStripped,
       memoryBootstrapped,
+      contentParamsDetected: Object.keys(contentParameters).length,
       warnings,
     };
   } finally {

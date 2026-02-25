@@ -467,6 +467,14 @@ program
       if (result.memoryBootstrapped > 0) {
         console.log(`  Memory bootstrapped: ${result.memoryBootstrapped} file(s) (structure only)`);
       }
+      if (result.contentParamsDetected > 0) {
+        console.log(`  Content parameters: ${result.contentParamsDetected}`);
+        for (const [token, meta] of Object.entries(result.manifest.content_parameters)) {
+          const req = meta.required ? 'required' : 'optional';
+          const def = meta.default_value ? ` (default: ${meta.default_value})` : '';
+          console.log(`    ${token} — ${meta.description} [${req}]${def}`);
+        }
+      }
       if (result.manifest.dependencies.length > 0) {
         console.log(`  Dependencies: ${result.manifest.dependencies.map(d => d.name).join(', ')}`);
       }
@@ -529,6 +537,16 @@ program
         console.log(`  ${action.file.bundle_path} → ${action.targetPath}${flagStr}`);
       }
 
+      // Show content parameters
+      if (plan.contentParams.length > 0) {
+        console.log('');
+        console.log('Content parameters:');
+        for (const cp of plan.contentParams) {
+          const status = cp.resolved ? cp.value : (cp.meta.required ? 'MISSING' : `optional${cp.meta.default_value ? ` (default: ${cp.meta.default_value})` : ''}`);
+          console.log(`  ${cp.token} — ${cp.meta.description}: ${status}`);
+        }
+      }
+
       // Show dependencies
       if (plan.dependencies.length > 0) {
         console.log('');
@@ -556,6 +574,9 @@ program
       const result = executeImport(bundlePath, plan, { force: opts.force });
 
       console.log(`Installed: ${result.installed} file(s)`);
+      if (result.contentParamsApplied > 0) {
+        console.log(`Content parameters applied: ${result.contentParamsApplied} substitution(s)`);
+      }
       if (result.provenanceRecorded > 0) {
         console.log(`Provenance recorded: ${result.provenanceRecorded} passport(s)`);
       }

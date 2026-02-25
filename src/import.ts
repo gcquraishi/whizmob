@@ -3,7 +3,7 @@ import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import type { ExportManifest, ExportFileEntry } from './export.js';
+import type { ExportManifest, ExportFileEntry, ContentParameter } from './export.js';
 
 // Default parameter values for the current machine
 const DEFAULT_PARAMS: Record<string, string> = {
@@ -12,10 +12,18 @@ const DEFAULT_PARAMS: Record<string, string> = {
   '{{WHIZMOB_DIR}}': join(homedir(), '.whizmob'),
 };
 
+export interface ContentParamStatus {
+  token: string;
+  meta: ContentParameter;
+  resolved: boolean;
+  value: string | null;
+}
+
 export interface ImportPlan {
   manifest: ExportManifest;
   actions: ImportAction[];
   dependencies: DependencyCheck[];
+  contentParams: ContentParamStatus[];
   warnings: string[];
 }
 
@@ -134,7 +142,24 @@ export function planImport(
     warnings.push(`Required dependency missing: ${dep.type} "${dep.name}"`);
   }
 
-  return { manifest, actions, dependencies, warnings };
+  // Resolve content parameters
+  const contentParams: ContentParamStatus[] = [];
+  const manifestContentParams = manifest.content_parameters || {};
+  for (const [token, meta] of Object.entries(manifestContentParams)) {
+    const userValue = resolvedParams[token] ?? null;
+    const resolved = userValue !== null;
+    if (!resolved && meta.required) {
+      warnings.push(`Required content parameter ${token} not provided. Use --param '${token}=<value>'`);
+    }
+    contentParams.push({
+      token,
+      meta,
+      resolved,
+      value: userValue ?? meta.default_value,
+    });
+  }
+
+  return { manifest, actions, dependencies, contentParams, warnings };
 }
 
 export interface ImportResult {
@@ -142,7 +167,44 @@ export interface ImportResult {
   skipped: number;
   conflicts: number;
   provenanceRecorded: number;
+  contentParamsApplied: number;
   warnings: string[];
+}
+
+/**
+ * Build a substitution map from resolved content parameters.
+ * Only includes params that have a non-null value.
+ */
+function buildContentSubstitutions(contentParams: ContentParamStatus[]): Record<string, string> {
+  const subs: Record<string, string> = {};
+  for (const cp of contentParams) {
+    if (cp.value !== null) {
+      subs[cp.token] = cp.value;
+    }
+  }
+  return subs;
+}
+
+/**
+ * Apply content parameter substitution to file content.
+ * Replaces all {{PARAM}} tokens with their resolved values.
+ * Returns the substituted content and count of substitutions made.
+ */
+function substituteContentParams(
+  content: string,
+  subs: Record<string, string>,
+): { content: string; count: number } {
+  let result = content;
+  let count = 0;
+  for (const [token, value] of Object.entries(subs)) {
+    // Count occurrences before replacing
+    const occurrences = result.split(token).length - 1;
+    if (occurrences > 0) {
+      result = result.split(token).join(value);
+      count += occurrences;
+    }
+  }
+  return { content: result, count };
 }
 
 export function executeImport(
@@ -154,7 +216,11 @@ export function executeImport(
   let skipped = 0;
   let conflicts = 0;
   let provenanceRecorded = 0;
+  let contentParamsApplied = 0;
   const warnings: string[] = [...plan.warnings];
+
+  // Build content substitution map from resolved params
+  const contentSubs = buildContentSubstitutions(plan.contentParams);
 
   for (const action of plan.actions) {
     if (action.conflict && !options.force) {
@@ -170,7 +236,14 @@ export function executeImport(
       continue;
     }
 
-    const content = readFileSync(sourcePath, 'utf-8');
+    let content = readFileSync(sourcePath, 'utf-8');
+
+    // Apply content parameter substitution
+    if (Object.keys(contentSubs).length > 0) {
+      const { content: substituted, count } = substituteContentParams(content, contentSubs);
+      content = substituted;
+      contentParamsApplied += count;
+    }
 
     // Create target directory
     mkdirSync(dirname(action.targetPath), { recursive: true });
@@ -211,5 +284,5 @@ export function executeImport(
     }
   }
 
-  return { installed, skipped, conflicts, provenanceRecorded, warnings };
+  return { installed, skipped, conflicts, provenanceRecorded, contentParamsApplied, warnings };
 }
