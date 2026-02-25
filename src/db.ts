@@ -6,7 +6,11 @@ import type { RoninInventory, AgentType, LicenseType } from './types.js';
 import { SCHEMA, MIGRATIONS } from './schema.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
-const DB_PATH = join(DB_DIR, 'whizmob.db');
+const DEFAULT_DB_PATH = join(DB_DIR, 'whizmob.db');
+
+function resolveDbPath(): string {
+  return process.env.WHIZMOB_DB_PATH || DEFAULT_DB_PATH;
+}
 
 function runMigrations(db: Database.Database): void {
   for (const line of MIGRATIONS.split('\n')) {
@@ -52,7 +56,7 @@ export interface ScanDiff {
 export function importInventory(inventory: RoninInventory): ScanDiff {
   mkdirSync(DB_DIR, { recursive: true });
 
-  const db = new Database(DB_PATH);
+  const db = new Database(resolveDbPath());
 
   db.exec(SCHEMA);
   runMigrations(db);
@@ -163,7 +167,7 @@ export interface TranslationRecord {
 
 export function recordTranslation(record: TranslationRecord): void {
   mkdirSync(DB_DIR, { recursive: true });
-  const db = new Database(DB_PATH);
+  const db = new Database(resolveDbPath());
   db.exec(SCHEMA);
 
   try {
@@ -193,8 +197,8 @@ export function recordTranslation(record: TranslationRecord): void {
 }
 
 export function getTranslations(passportId?: string): TranslationRecord[] {
-  if (!existsSync(DB_PATH)) return [];
-  const db = new Database(DB_PATH, { readonly: true });
+  if (!existsSync(resolveDbPath())) return [];
+  const db = new Database(resolveDbPath(), { readonly: true });
 
   try {
     let sql = 'SELECT * FROM translations';
@@ -245,8 +249,8 @@ export interface PassportRow {
 }
 
 export function resolveSkill(nameOrId: string): PassportRow | null {
-  if (!existsSync(DB_PATH)) return null;
-  const db = new Database(DB_PATH, { readonly: true });
+  if (!existsSync(resolveDbPath())) return null;
+  const db = new Database(resolveDbPath(), { readonly: true });
 
   try {
     // Try exact ID match first
@@ -276,8 +280,8 @@ export function resolveSkill(nameOrId: string): PassportRow | null {
 }
 
 export function listTranslatableSkills(): PassportRow[] {
-  if (!existsSync(DB_PATH)) return [];
-  const db = new Database(DB_PATH, { readonly: true });
+  if (!existsSync(resolveDbPath())) return [];
+  const db = new Database(resolveDbPath(), { readonly: true });
 
   try {
     return db.prepare(
@@ -291,8 +295,8 @@ export function listTranslatableSkills(): PassportRow[] {
 }
 
 export function getStats(): RoninStats | null {
-  if (!existsSync(DB_PATH)) return null;
-  const db = new Database(DB_PATH, { readonly: true });
+  if (!existsSync(resolveDbPath())) return null;
+  const db = new Database(resolveDbPath(), { readonly: true });
 
   try {
     const byType: Record<string, number> = {};

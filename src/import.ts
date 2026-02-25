@@ -181,7 +181,7 @@ export function executeImport(
   }
 
   // Record provenance in Whizmob DB for imported passports
-  const dbPath = join(homedir(), '.whizmob', 'whizmob.db');
+  const dbPath = process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
   if (existsSync(dbPath)) {
     const db = new Database(dbPath);
     try {

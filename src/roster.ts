@@ -38,8 +38,12 @@ function getConstellationMemberships(db: Database.Database): Map<string, string[
       list.push(row.constellation_name);
       map.set(row.passport_id, list);
     }
-  } catch {
-    // Table may not exist yet
+  } catch (err) {
+    // Table may not exist yet on first run before constellation schema is created
+    const msg = (err as Error).message || '';
+    if (!msg.includes('no such table')) {
+      console.warn('[whizmob] Failed to load constellation memberships:', msg);
+    }
   }
   return map;
 }
@@ -199,13 +203,14 @@ export function searchRoster(query: string): string {
   if (!db) return '# Whizmob: No agent database found. Run `whizmob scan` first.';
 
   try {
-    const term = `%${query}%`;
+    const escaped = query.replace(/\|/g, '||').replace(/%/g, '|%').replace(/_/g, '|_');
+    const term = `%${escaped}%`;
     const rows = db.prepare(
       `SELECT id, name, type, platform, scope, purpose, model_hint, invocation, source_file
        FROM passports
-       WHERE name LIKE ? OR purpose LIKE ? OR type LIKE ? OR id LIKE ?
+       WHERE name LIKE ? ESCAPE '|' OR purpose LIKE ? ESCAPE '|' OR type LIKE ? ESCAPE '|' OR id LIKE ? ESCAPE '|'
        ORDER BY
-         CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
+         CASE WHEN name LIKE ? ESCAPE '|' THEN 0 ELSE 1 END,
          type, name`
     ).all(term, term, term, term, term) as PassportRow[];
 
