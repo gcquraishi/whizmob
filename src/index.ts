@@ -35,9 +35,9 @@ const __dirname = dirname(__filename);
 const program = new Command();
 
 program
-  .name('ronin')
-  .description('Agent inventory and management tool for AI-assisted development')
-  .version('0.2.0');
+  .name('whizmob')
+  .description('Inventory, port, and manage your AI agents across Claude Code, Cursor, and Codex')
+  .version('0.1.0');
 
 program
   .command('scan')
@@ -64,9 +64,9 @@ program
       // Auto-import into Ronin DB unless --no-import
       if (opts.import !== false) {
         const diff = importInventory(inventory);
-        console.error(`[ronin] DB updated: ${diff.total} total, +${diff.added} added, -${diff.removed} removed`);
+        console.error(`[whizmob] DB updated: ${diff.total} total, +${diff.added} added, -${diff.removed} removed`);
         if (diff.added_names.length > 0) {
-          console.error(`[ronin] New: ${diff.added_names.join(', ')}`);
+          console.error(`[whizmob] New: ${diff.added_names.join(', ')}`);
         }
       }
 
@@ -81,7 +81,7 @@ program
         console.log(output);
       }
     } catch (err) {
-      console.error(`[ronin] Scan failed: ${(err as Error).message}`);
+      console.error(`[whizmob] Scan failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -104,7 +104,7 @@ program
         console.log(compactRoster({ type: opts.type, platform: opts.platform }));
       }
     } catch (err) {
-      console.error(`[ronin] Roster failed: ${(err as Error).message}`);
+      console.error(`[whizmob] Roster failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -117,7 +117,7 @@ program
     try {
       const stats = getStats();
       if (!stats) {
-        console.log('No Ronin database found. Run `ronin scan` first.');
+        console.log('No database found. Run `whizmob scan` first.');
         return;
       }
 
@@ -155,7 +155,7 @@ program
         }
       }
     } catch (err) {
-      console.error(`[ronin] Stats failed: ${(err as Error).message}`);
+      console.error(`[whizmob] Stats failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -175,19 +175,19 @@ program
       }
 
       if (!skill) {
-        console.error('[ronin] Provide a skill name or use --list. Example: ronin translate illustrator --to gemini');
+        console.error('[whizmob] Provide a skill name or use --list. Example: whizmob translate illustrator --to gemini');
         process.exit(1);
       }
 
       if (!opts.to || opts.to.length === 0) {
-        console.error('[ronin] Specify at least one target with --to. Example: --to dalle midjourney gemini');
+        console.error('[whizmob] Specify at least one target with --to. Example: --to dalle midjourney gemini');
         process.exit(1);
       }
 
       // Validate targets
       for (const t of opts.to) {
         if (!isValidTarget(t)) {
-          console.error(`[ronin] Unknown target: ${t}. Valid targets: dalle, midjourney, gemini`);
+          console.error(`[whizmob] Unknown target: ${t}. Valid targets: dalle, midjourney, gemini`);
           process.exit(1);
         }
       }
@@ -200,7 +200,7 @@ program
 
       printTranslateReport(result, !!opts.dryRun);
     } catch (err) {
-      console.error(`[ronin] Translate failed: ${(err as Error).message}`);
+      console.error(`[whizmob] Translate failed: ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -260,11 +260,11 @@ constellation
         }
 
         if (notFound.length > 0) {
-          console.error(`[ronin] Not found in DB: ${notFound.join(', ')}`);
+          console.error(`[whizmob] Not found in DB: ${notFound.join(', ')}`);
         }
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -276,7 +276,7 @@ constellation
     try {
       const items = getConstellations();
       if (items.length === 0) {
-        console.log('No constellations defined. Use `ronin constellation define <name>` to create one.');
+        console.log('No constellations defined. Use `whizmob constellation define <name>` to create one.');
         return;
       }
       for (const c of items) {
@@ -286,7 +286,7 @@ constellation
         console.log(parts.join(' '));
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -299,7 +299,7 @@ constellation
       const id = slugify(name);
       const detail = getConstellation(id);
       if (!detail) {
-        console.error(`[ronin] Constellation "${name}" not found.`);
+        console.error(`[whizmob] Constellation "${name}" not found.`);
         process.exit(1);
       }
 
@@ -317,7 +317,7 @@ constellation
         console.log(`    - ${label}${typeBadge}${roleBadge}`);
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -331,7 +331,7 @@ constellation
     try {
       const constellationId = slugify(constellationName);
       if (!VALID_COMPONENT_TYPES.includes(opts.type)) {
-        console.error(`[ronin] Invalid type: ${opts.type}. Valid: ${VALID_COMPONENT_TYPES.join(', ')}`);
+        console.error(`[whizmob] Invalid type: ${opts.type}. Valid: ${VALID_COMPONENT_TYPES.join(', ')}`);
         process.exit(1);
       }
       const componentType = opts.type as ComponentType;
@@ -339,7 +339,7 @@ constellation
       if (componentType === 'passport') {
         const passport = resolveSkill(passportOrPath);
         if (!passport) {
-          console.error(`[ronin] Passport "${passportOrPath}" not found in DB.`);
+          console.error(`[whizmob] Passport "${passportOrPath}" not found in DB.`);
           process.exit(1);
         }
         const added = addComponents(constellationId, [{
@@ -365,7 +365,7 @@ constellation
         }
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -380,11 +380,11 @@ constellation
       if (removed) {
         console.log(`Removed ${passportOrPath} from ${constellationName}.`);
       } else {
-        console.error(`[ronin] Component "${passportOrPath}" not found in constellation "${constellationName}".`);
+        console.error(`[whizmob] Component "${passportOrPath}" not found in constellation "${constellationName}".`);
         process.exit(1);
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -418,7 +418,7 @@ constellation
         }
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -433,11 +433,11 @@ constellation
       if (deleted) {
         console.log(`Deleted constellation: ${name}`);
       } else {
-        console.error(`[ronin] Constellation "${name}" not found.`);
+        console.error(`[whizmob] Constellation "${name}" not found.`);
         process.exit(1);
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -486,7 +486,7 @@ program
         }
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });
@@ -505,7 +505,7 @@ program
         for (const p of opts.param) {
           const eqIdx = p.indexOf('=');
           if (eqIdx < 0) {
-            console.error(`[ronin] Invalid parameter: ${p}. Use KEY=VALUE format.`);
+            console.error(`[whizmob] Invalid parameter: ${p}. Use KEY=VALUE format.`);
             process.exit(1);
           }
           params[p.slice(0, eqIdx)] = p.slice(eqIdx + 1);
@@ -566,7 +566,7 @@ program
         console.log(`Skipped: ${result.skipped - result.conflicts} file(s) (missing from bundle)`);
       }
     } catch (err) {
-      console.error(`[ronin] ${(err as Error).message}`);
+      console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
     }
   });

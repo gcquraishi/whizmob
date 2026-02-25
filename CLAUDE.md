@@ -35,9 +35,19 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 ## Current State
 _Last updated: 2026-02-24_
 
-Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components.
+Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components. **Ship-Ready Quality Gate (M1) complete** — N+1 query fixed, shared schema extracted, hardcoded paths removed, test suite added, dashboard builds clean on Next.js 16 + Turbopack. Ready for npm publish (M2).
 
-### Recent Completions
+### Recent Completions (Ship-Ready Quality Gate)
+- **N+1 query fixed** (BIG-13) — `getPassports()` now uses single `IN (...)` query + Map grouping instead of 91 per-row tag fetches. `getPassport()` refactored to LEFT JOIN.
+- **Unsafe cast eliminated** — `as unknown as PassportRow` replaced with explicit field mapping in both `getPassports()` and `getPassport()`
+- **LIKE wildcard escaping** — search terms with `%` and `_` are now escaped with `|` prefix + `ESCAPE '|'` clause
+- **Shared schema** — `src/schema.ts` is the single source of truth for all SQLite tables. `src/db.ts` and `src/constellation.ts` import from it. Dashboard copy synced with comment.
+- **Hardcoded paths removed** — hook script resolves dynamically via `BASH_SOURCE`, `/roster` skill uses `command -v ronin || npx ronin`, dashboard uses `toDisplayPath()` utility (`dashboard/lib/paths.ts`)
+- **Test suite** — 26 tests across 4 suites (schema, scanner, constellation CRUD, export/import). `node:test` + `tsx`, zero runtime deps. `RONIN_DB_PATH` env var for test isolation.
+- **Dashboard compat** — `lucide-react` 0.468→0.575 for Next.js 16 Turbopack. Dashboard builds clean with all routes verified.
+- **package.json** — `files` field added for npm publish (`dist/`, `dashboard/`, exclusions for `.next/` and `node_modules/`)
+
+### Recent Completions (Prior)
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
 - M2.5: Multi-platform scanner — Cursor support, platform filter, Codex parser added
 - Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
@@ -94,44 +104,42 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **Constellation UI needs smoke-testing** — list (`/constellations`), detail (`/constellations/[id]`), export, and import pages are built but not yet browser-tested. Next step: run `cd dashboard && npm run dev`, visit `http://localhost:3000/constellations`, verify the CEO Operating System constellation renders, test export, and test import dry-run flow.
-- **Next.js 15→16 upgrade** — upgraded to fix Node 25 compat. Middleware deprecation warning appears (`"middleware" → "proxy"` convention) but middleware only runs on Vercel so no local impact. May need migration if deploying to Vercel.
-- M4: Dog-food — port the CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.ronin/exports/ceo-operating-system`. Cross-machine workflow: export from dashboard on personal machine → git transfer → import from dashboard on work machine.
-- **Translation validation**: Compare `ronin translate` output against gold standards in `translation-test-prompts.md` and `gemini/illustrator/art-director.md`
-- **Translation test**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 raw baseline + 3 ronin-translated) across DALL-E, Midjourney, and Gemini for the same Roman statesman subject. Output goes to `ronin/translation-test-images/`. When George asks to "run the translation test" or "surface the prompts," read that file and present the prompts.
-- **Translation flow artifacts**: `translation-diff.html` (Claude→Gemini tracked changes), `translation-multi-target.html` (3-target comparison), `translation-flow.html` (visual flow diagram)
-- **Dashboard translation page** live at `/translation` — ported from `landing-comparison.html` into proper React/Tailwind page with nav bar (Yard + Translation + Constellations links). Includes flow diagram, "what changes" table, image comparison grid with toggle. Awaiting generated images.
-- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` command recommended before call. Linear: BIG-6 for image generation.
+- **M2: npm publish** — M1 quality gate complete. Next: README, `npm publish`, polish `ronin stats` for demo. Needs George for README direction.
+- **Dog-food** — port CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.ronin/exports/ceo-operating-system`.
+- **Translation validation**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `ronin/translation-test-images/`.
+- **Dashboard translation page** live at `/translation` — awaiting generated images.
+- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` recommended before call. Linear: BIG-6.
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
 - ~~**Auth cookie stores plaintext password** — raw `DEMO_PASSWORD` in browser cookie. Linear: BIG-11~~ **FIXED** (SHA-256 derived session token, httpOnly/secure)
 - ~~**Basic auth crashes on malformed header** — missing guard on `encoded` before `atob()`. Linear: BIG-12~~ **FIXED** (guard on encoded before atob)
-- **N+1 query in getPassports** — per-row tag fetch runs 91 separate queries (`lib/db.ts:267-278`). Linear: BIG-13
-- **Unsafe `as unknown as PassportRow` cast** — double cast bypasses structural checks (`lib/db.ts:278`)
-- **LIKE search doesn't escape wildcards** — `%` and `_` in search terms act as SQL wildcards (`lib/db.ts:250-253`)
+- ~~**N+1 query in getPassports** — per-row tag fetch runs 91 separate queries. Linear: BIG-13~~ **FIXED** (single IN query + Map grouping)
+- ~~**Unsafe `as unknown as PassportRow` cast** — double cast bypasses structural checks~~ **FIXED** (explicit field mapping)
+- ~~**LIKE search doesn't escape wildcards** — `%` and `_` in search terms act as SQL wildcards~~ **FIXED** (escape prefix + ESCAPE clause)
 - ~~**No input validation on auth POST body** — malformed JSON or non-string password throws unhandled error~~ **FIXED** (try/catch + type checking, returns 400)
+- ~~Schema duplication between `src/db.ts`, `dashboard/lib/db.ts`, and `src/constellation.ts`~~ **FIXED** (shared `src/schema.ts`, dashboard synced with comment)
+- ~~Hardcoded paths in hook script and `/roster` skill~~ **FIXED** (dynamic resolution via BASH_SOURCE + command -v)
 - Neo4j Aura password needs rotation (was exposed in git history via source viewer before redaction fix)
-- Schema duplication between `src/db.ts` (CLI, better-sqlite3), `dashboard/lib/db.ts` (dashboard, sql.js), and `src/constellation.ts` — needs shared schema extraction
-- Hardcoded paths in hook script and `/roster` skill — will resolve when published to npm (`npx ronin roster`)
+- **Duplicate file-path components** — `addComponents` allows duplicates when `passport_id` is NULL (SQLite UNIQUE treats NULL != NULL). Fix: covering partial index or non-NULL enforcement.
 - Roster search matches too broadly on purpose text (LIKE `%query%`) — needs relevance scoring improvement
 - **Next.js 16 middleware deprecation** — `middleware.ts` should be renamed to `proxy.ts` per Next 16 conventions. Only affects Vercel deployment (locally it's a no-op). Low priority.
+- **`addComponents` allows duplicate file-path-only components** — `UNIQUE (constellation_id, passport_id, component_type, file_path)` does not deduplicate rows where `passport_id` IS NULL because SQLite treats NULL != NULL in UNIQUE indexes. Calling `addComponents` twice with the same `file_path` but no `passport_id` creates duplicate rows. Surfaced by `tests/constellation.test.ts`. Fix: use a covering partial index or require non-NULL `file_path` when `passport_id` is absent.
 
 ## Roadmap
-### Immediate (This Sprint)
-- **Smoke-test constellation UI** — run dashboard, verify list/detail/export/import pages work in browser
-- M4: Dog-food — port CEO Operating System to work machine (blocked on access)
-- Extract shared SQLite schema between CLI, dashboard, and constellation module
-- Improve roster search relevance scoring
-- ~~Dashboard constellation view (deferred from M1)~~ **DONE** — list, detail, export, and import pages
+**Active roadmap**: `docs/roadmaps/npm-publish.md`
 
-### Next (2-4 weeks)
-- M4: Distribution (npm publish, community outreach)
+### Immediate
+- **M2: npm publish** — README, `npm publish`, polish `ronin stats`. Needs George for README direction + publish approval.
+
+### Blocked
+- **M3: Dog-food + Translation** — port CEO system to work machine (blocked on access), run translation image test (needs API access)
 
 ### Future (Backlog)
 - Cloud sync + accounts
 - Team Yards with role-based access
 - Gallery (public agent marketplace)
+- Improve roster search relevance scoring
 - Codex agents parser (beyond skills — if Codex adds agent-like configs)
 
 ## Security Notes

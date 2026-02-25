@@ -137,7 +137,7 @@ export async function parseProjects(scanRoots: string[], claudeDir: string): Pro
           },
         });
       } catch (err) {
-        console.warn(`[ronin] Warning: could not parse project file ${file}: ${(err as Error).message}`);
+        console.warn(`[whizmob] Warning: could not parse project file ${file}: ${(err as Error).message}`);
       }
     }
   }

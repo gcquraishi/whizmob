@@ -65,7 +65,7 @@ async function parseMcpFile(file: string, seen: Set<string>): Promise<ProtoPassp
       });
     }
   } catch (err) {
-    console.warn(`[ronin] Warning: could not parse MCP file ${file}: ${(err as Error).message}`);
+    console.warn(`[whizmob] Warning: could not parse MCP file ${file}: ${(err as Error).message}`);
   }
 
   return passports;

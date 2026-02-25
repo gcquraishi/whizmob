@@ -9,6 +9,11 @@ import type { ComponentType, LicenseType } from './types.js';
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
 
+/** Resolve the active DB path — tests can override via RONIN_DB_PATH env var. */
+function resolveDbPath(): string {
+  return process.env.RONIN_DB_PATH || DB_PATH;
+}
+
 // Path parameters for portability
 const PATH_PARAMS: [string, string][] = [
   // Order matters — most specific first
@@ -213,11 +218,12 @@ export function exportConstellation(
   constellationName: string,
   options: { outputDir?: string; dryRun?: boolean } = {},
 ): ExportResult {
-  if (!existsSync(DB_PATH)) {
-    throw new Error('No Ronin database found. Run `ronin scan` first.');
+  const activeDbPath = resolveDbPath();
+  if (!existsSync(activeDbPath)) {
+    throw new Error('No database found. Run `whizmob scan` first.');
   }
 
-  const db = new Database(DB_PATH, { readonly: true });
+  const db = new Database(activeDbPath, { readonly: true });
   const warnings: string[] = [];
 
   try {
@@ -229,7 +235,7 @@ export function exportConstellation(
     `).get(id) as { id: string; name: string; description: string; author: string | null } | undefined;
 
     if (!constellation) {
-      throw new Error(`Constellation "${constellationName}" not found. Use \`ronin constellation list\` to see available constellations.`);
+      throw new Error(`Constellation "${constellationName}" not found. Use \`whizmob constellation list\` to see available constellations.`);
     }
 
     // Fetch components with passport details and provenance
@@ -255,7 +261,7 @@ export function exportConstellation(
     }[];
 
     if (components.length === 0) {
-      throw new Error(`Constellation "${constellation.name}" has no components. Add some with \`ronin constellation add-component\`.`);
+      throw new Error(`Constellation "${constellation.name}" has no components. Add some with \`whizmob constellation add-component\`.`);
     }
 
     // Collect files to export

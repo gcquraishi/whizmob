@@ -71,7 +71,7 @@ export async function parseAgents(claudeDir: string, scanRoots?: string[]): Prom
       const passport = parseAgentFile(file, raw, 'user');
       if (passport) passports.push(passport);
     } catch (err) {
-      console.warn(`[ronin] Warning: could not parse agent file ${file}: ${(err as Error).message}`);
+      console.warn(`[whizmob] Warning: could not parse agent file ${file}: ${(err as Error).message}`);
     }
   }
 
@@ -95,7 +95,7 @@ export async function parseAgents(claudeDir: string, scanRoots?: string[]): Prom
           const passport = parseAgentFile(file, raw, 'project', project);
           if (passport) passports.push(passport);
         } catch (err) {
-          console.warn(`[ronin] Warning: could not parse agent file ${file}: ${(err as Error).message}`);
+          console.warn(`[whizmob] Warning: could not parse agent file ${file}: ${(err as Error).message}`);
         }
       }
     }

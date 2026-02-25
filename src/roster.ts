@@ -55,7 +55,7 @@ function openDb(): Database.Database | null {
  */
 export function compactRoster(opts?: { type?: string; platform?: string }): string {
   const db = openDb();
-  if (!db) return '# Ronin: No agent database found. Run `ronin scan` first.';
+  if (!db) return '# Whizmob: No agent database found. Run `whizmob scan` first.';
 
   try {
     let sql = 'SELECT name, type, platform, purpose FROM passports WHERE 1=1';
@@ -73,7 +73,7 @@ export function compactRoster(opts?: { type?: string; platform?: string }): stri
     sql += ' ORDER BY type, name';
     const rows = db.prepare(sql).all(...params) as PassportRow[];
 
-    if (rows.length === 0) return '# Ronin: No agents found.';
+    if (rows.length === 0) return '# Whizmob: No agents found.';
 
     // Group by type
     const grouped = new Map<string, PassportRow[]>();
@@ -144,7 +144,7 @@ export function hookRoster(): string {
     }
 
     const lines: string[] = [
-      `<ronin-roster agents="${rows.length}">`,
+      `<whizmob-roster agents="${rows.length}">`,
     ];
 
     // Show constellation groups first
@@ -181,8 +181,8 @@ export function hookRoster(): string {
       }
     }
 
-    lines.push('Use `ronin roster --search <name>` or /roster for details.');
-    lines.push('</ronin-roster>');
+    lines.push('Use `whizmob roster --search <name>` or /roster for details.');
+    lines.push('</whizmob-roster>');
 
     return lines.join('\n');
   } finally {
@@ -196,7 +196,7 @@ export function hookRoster(): string {
  */
 export function searchRoster(query: string): string {
   const db = openDb();
-  if (!db) return '# Ronin: No agent database found. Run `ronin scan` first.';
+  if (!db) return '# Whizmob: No agent database found. Run `whizmob scan` first.';
 
   try {
     const term = `%${query}%`;
@@ -209,10 +209,10 @@ export function searchRoster(query: string): string {
          type, name`
     ).all(term, term, term, term, term) as PassportRow[];
 
-    if (rows.length === 0) return `# Ronin: No agents matching "${query}"`;
+    if (rows.length === 0) return `# Whizmob: No agents matching "${query}"`;
 
     const memberships = getConstellationMemberships(db);
-    const lines: string[] = [`# Ronin: ${rows.length} agent(s) matching "${query}"\n`];
+    const lines: string[] = [`# Whizmob: ${rows.length} agent(s) matching "${query}"\n`];
 
     for (const a of rows) {
       lines.push(`### ${a.name}`);

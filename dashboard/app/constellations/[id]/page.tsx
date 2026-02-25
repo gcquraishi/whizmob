@@ -9,6 +9,7 @@ import {
   Shield, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import { toDisplayPath } from '@/lib/paths';
 
 interface ConstellationComponent {
   passport_id: string | null;
@@ -255,7 +256,7 @@ function ComponentRow({ component }: { component: ConstellationComponent }) {
 
   const name = component.passport_name || component.file_path || '(unknown)';
   const displayPath = component.file_path
-    ? component.file_path.replace(/^\/Users\/[^/]+/, '~')
+    ? toDisplayPath(component.file_path)
     : null;
 
   return (

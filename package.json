@@ -1,25 +1,43 @@
 {
-  "name": "ronin",
-  "version": "0.2.0",
-  "description": "Agent inventory and management tool for AI-assisted development",
+  "name": "whizmob",
+  "version": "0.1.0",
+  "description": "Inventory, port, and manage your AI agents across Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
-    "ronin": "./dist/index.js"
+    "whizmob": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "scan": "node dist/index.js scan",
     "start": "node dist/index.js",
-    "dashboard": "cd dashboard && npm run dev"
+    "dashboard": "cd dashboard && npm run dev",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "keywords": [
     "claude-code",
+    "cursor",
+    "codex",
     "agents",
+    "ai-agents",
     "inventory",
-    "cli"
+    "cli",
+    "portability",
+    "constellations"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigheavyio/whizmob"
+  },
+  "homepage": "https://whizmob.dev",
+  "author": "George Quraishi <george@bigheavy.fun>",
   "license": "MIT",
+  "files": [
+    "dist/",
+    "dashboard/",
+    "!dashboard/node_modules",
+    "!dashboard/.next"
+  ],
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "cli-table3": "^0.6.5",
@@ -30,6 +48,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0"
   }
 }

@@ -36,7 +36,7 @@ export async function parseSettings(claudeDir: string): Promise<ProtoPassport[]>
       },
     }];
   } catch {
-    console.warn(`[ronin] Warning: could not read settings at ${settingsPath}`);
+    console.warn(`[whizmob] Warning: could not read settings at ${settingsPath}`);
     return [];
   }
 }

@@ -35,7 +35,7 @@ export function translateSkill(nameOrId: string, opts: TranslateOptions): Transl
   const skill = resolveSkill(nameOrId);
   if (!skill) {
     throw new Error(
-      `Skill "${nameOrId}" not found. Run \`ronin translate --list\` to see available skills.`
+      `Skill "${nameOrId}" not found. Run \`whizmob translate --list\` to see available skills.`
     );
   }
 
@@ -134,7 +134,7 @@ export function translateSkill(nameOrId: string, opts: TranslateOptions): Transl
 export function printListOutput(): void {
   const skills = listTranslatableSkills();
   if (skills.length === 0) {
-    console.log('No translatable skills found. Run `ronin scan` first.');
+    console.log('No translatable skills found. Run `whizmob scan` first.');
     return;
   }
 

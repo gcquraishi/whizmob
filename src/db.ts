@@ -3,82 +3,10 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
 import type { RoninInventory, AgentType, LicenseType } from './types.js';
+import { SCHEMA, MIGRATIONS } from './schema.js';
 
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS passports (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  type TEXT NOT NULL,
-  platform TEXT NOT NULL DEFAULT 'claude-code',
-  scope TEXT NOT NULL,
-  purpose TEXT NOT NULL,
-  model_hint TEXT,
-  invocation TEXT,
-  status TEXT NOT NULL DEFAULT 'active',
-  source_file TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS tags (
-  passport_id TEXT NOT NULL REFERENCES passports(id) ON DELETE CASCADE,
-  tag TEXT NOT NULL,
-  PRIMARY KEY (passport_id, tag)
-);
-
-CREATE TABLE IF NOT EXISTS scans (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  scanned_at TEXT NOT NULL,
-  duration_ms INTEGER NOT NULL,
-  total INTEGER NOT NULL,
-  added INTEGER NOT NULL DEFAULT 0,
-  removed INTEGER NOT NULL DEFAULT 0,
-  summary_json TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS translations (
-  id TEXT PRIMARY KEY,
-  source_passport_id TEXT NOT NULL REFERENCES passports(id),
-  target_platform TEXT NOT NULL,
-  target_file TEXT NOT NULL,
-  canonical_file TEXT NOT NULL,
-  rules_applied TEXT NOT NULL,
-  manual_review_items TEXT NOT NULL DEFAULT '[]',
-  translated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(source_passport_id, target_platform)
-);
-
-CREATE TABLE IF NOT EXISTS constellations (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  author TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS constellation_components (
-  constellation_id TEXT NOT NULL REFERENCES constellations(id) ON DELETE CASCADE,
-  passport_id TEXT REFERENCES passports(id) ON DELETE SET NULL,
-  component_type TEXT NOT NULL DEFAULT 'passport',
-  file_path TEXT,
-  role TEXT,
-  UNIQUE (constellation_id, passport_id, component_type, file_path)
-);
-`;
-
-// Additive migrations — safe to run multiple times
-const MIGRATIONS = `
--- Provenance fields (M3)
-ALTER TABLE passports ADD COLUMN origin TEXT;
-ALTER TABLE passports ADD COLUMN author TEXT;
-ALTER TABLE passports ADD COLUMN license TEXT;
-ALTER TABLE passports ADD COLUMN forked_from TEXT;
-`;
 
 function runMigrations(db: Database.Database): void {
   for (const line of MIGRATIONS.split('\n')) {

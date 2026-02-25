@@ -57,7 +57,7 @@ export async function parseSkills(skillsDir: string, platform: Platform = 'claud
         metadata: {},
       });
     } catch (err) {
-      console.warn(`[ronin] Warning: could not parse skill file ${file}: ${(err as Error).message}`);
+      console.warn(`[whizmob] Warning: could not parse skill file ${file}: ${(err as Error).message}`);
     }
   }
 

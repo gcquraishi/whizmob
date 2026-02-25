@@ -36,7 +36,7 @@ export async function parseCopilot(scanRoot: string): Promise<ProtoPassport[]> {
         metadata: {},
       });
     } catch (err) {
-      console.warn(`[ronin] Warning: could not parse Copilot file ${file}: ${(err as Error).message}`);
+      console.warn(`[whizmob] Warning: could not parse Copilot file ${file}: ${(err as Error).message}`);
     }
   }
 

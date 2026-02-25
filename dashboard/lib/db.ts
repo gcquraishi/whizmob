@@ -10,6 +10,11 @@ const DB_PATH = join(DB_DIR, 'ronin.db');
 
 let db: Database | null = null;
 
+// IMPORTANT: This schema must be kept in sync with src/schema.ts (SCHEMA constant).
+// The dashboard cannot import from src/ directly due to the separate Next.js build
+// context. When updating the schema, update both files.
+//
+// Last synced: 2026-02-24
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS passports (
   id TEXT PRIMARY KEY,
@@ -24,7 +29,11 @@ CREATE TABLE IF NOT EXISTS passports (
   source_file TEXT NOT NULL,
   metadata_json TEXT NOT NULL DEFAULT '{}',
   first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  origin TEXT,
+  author TEXT,
+  license TEXT,
+  forked_from TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -41,6 +50,18 @@ CREATE TABLE IF NOT EXISTS scans (
   added INTEGER NOT NULL DEFAULT 0,
   removed INTEGER NOT NULL DEFAULT 0,
   summary_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS translations (
+  id TEXT PRIMARY KEY,
+  source_passport_id TEXT NOT NULL REFERENCES passports(id),
+  target_platform TEXT NOT NULL,
+  target_file TEXT NOT NULL,
+  canonical_file TEXT NOT NULL,
+  rules_applied TEXT NOT NULL,
+  manual_review_items TEXT NOT NULL DEFAULT '[]',
+  translated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source_passport_id, target_platform)
 );
 
 CREATE TABLE IF NOT EXISTS constellations (
@@ -61,6 +82,30 @@ CREATE TABLE IF NOT EXISTS constellation_components (
   UNIQUE (constellation_id, passport_id, component_type, file_path)
 );
 `;
+
+// Additive migrations — safe to run multiple times.
+// Kept in sync with src/schema.ts (MIGRATIONS constant).
+const MIGRATIONS = `
+-- Provenance fields (M3) — added to passports table
+ALTER TABLE passports ADD COLUMN origin TEXT;
+ALTER TABLE passports ADD COLUMN author TEXT;
+ALTER TABLE passports ADD COLUMN license TEXT;
+ALTER TABLE passports ADD COLUMN forked_from TEXT;
+`;
+
+function runMigrations(database: Database): void {
+  for (const line of MIGRATIONS.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) continue;
+    try {
+      database.run(trimmed);
+    } catch {
+      // "duplicate column name" is expected on repeat runs (provenance columns).
+      // sql.js throws a generic Error; we swallow all errors here since the only
+      // failure mode for these specific ALTER TABLE statements is "already exists".
+    }
+  }
+}
 
 function saveDb() {
   if (!db || IS_VERCEL) return;
@@ -99,6 +144,7 @@ export async function getDb(): Promise<Database> {
   }
 
   db.run(SCHEMA);
+  runMigrations(db);
   saveDb();
   return db;
 }
@@ -266,8 +312,9 @@ export async function getPassports(filters?: PassportFilters): Promise<PassportR
   }
 
   if (filters?.search) {
-    sql += ' AND (name LIKE ? OR purpose LIKE ?)';
-    const term = `%${filters.search}%`;
+    sql += ' AND (name LIKE ? ESCAPE \'|\' OR purpose LIKE ? ESCAPE \'|\')';
+    const escaped = filters.search.replace(/[|%_]/g, '|$&');
+    const term = `%${escaped}%`;
     params.push(term, term);
   }
 
@@ -282,18 +329,52 @@ export async function getPassports(filters?: PassportFilters): Promise<PassportR
   if (result.length === 0) return [];
 
   const columns = result[0].columns;
+
+  // Collect all passport IDs first, then fetch all tags in a single query
+  const passportIds = result[0].values.map(row => {
+    const idIndex = columns.indexOf('id');
+    return row[idIndex] as string;
+  });
+
+  const tagsByPassportId = new Map<string, string[]>();
+  if (passportIds.length > 0) {
+    const placeholders = passportIds.map(() => '?').join(', ');
+    const tagResult = database.exec(
+      `SELECT passport_id, tag FROM tags WHERE passport_id IN (${placeholders})`,
+      passportIds
+    );
+    if (tagResult.length > 0) {
+      for (const [passportId, tag] of tagResult[0].values as [string, string][]) {
+        const existing = tagsByPassportId.get(passportId);
+        if (existing) {
+          existing.push(tag);
+        } else {
+          tagsByPassportId.set(passportId, [tag]);
+        }
+      }
+    }
+  }
+
   const rows: PassportRow[] = result[0].values.map(row => {
     const obj: Record<string, unknown> = {};
     columns.forEach((col, i) => { obj[col] = row[i]; });
-
-    // Fetch tags for this passport
-    const tagResult = database.exec(
-      'SELECT tag FROM tags WHERE passport_id = ?',
-      [obj.id as string]
-    );
-    const tags = tagResult.length > 0 ? tagResult[0].values.map(r => r[0] as string) : [];
-
-    return { ...obj, tags } as unknown as PassportRow;
+    const id = obj.id as string;
+    return {
+      id,
+      name: obj.name as string,
+      type: obj.type as string,
+      platform: obj.platform as string,
+      scope: obj.scope as string,
+      purpose: obj.purpose as string,
+      model_hint: obj.model_hint as string | null,
+      invocation: obj.invocation as string | null,
+      status: obj.status as string,
+      source_file: obj.source_file as string,
+      metadata_json: obj.metadata_json as string,
+      first_seen_at: obj.first_seen_at as string,
+      updated_at: obj.updated_at as string,
+      tags: tagsByPassportId.get(id) ?? [],
+    };
   });
 
   return rows;
@@ -301,21 +382,50 @@ export async function getPassports(filters?: PassportFilters): Promise<PassportR
 
 export async function getPassport(id: string): Promise<PassportRow | null> {
   const database = await getDb();
-  const result = database.exec('SELECT * FROM passports WHERE id = ?', [id]);
+
+  // Fetch passport and all its tags in a single query via LEFT JOIN
+  const result = database.exec(`
+    SELECT p.id, p.name, p.type, p.platform, p.scope, p.purpose,
+           p.model_hint, p.invocation, p.status, p.source_file,
+           p.metadata_json, p.first_seen_at, p.updated_at,
+           t.tag
+    FROM passports p
+    LEFT JOIN tags t ON t.passport_id = p.id
+    WHERE p.id = ?
+    ORDER BY t.tag
+  `, [id]);
+
   if (result.length === 0 || result[0].values.length === 0) return null;
 
   const columns = result[0].columns;
-  const row = result[0].values[0];
-  const obj: Record<string, unknown> = {};
-  columns.forEach((col, i) => { obj[col] = row[i]; });
+  const tagIndex = columns.indexOf('tag');
 
-  const tagResult = database.exec(
-    'SELECT tag FROM tags WHERE passport_id = ?',
-    [id]
-  );
-  const tags = tagResult.length > 0 ? tagResult[0].values.map(r => r[0] as string) : [];
+  // All rows share the same passport columns — collect tags across rows
+  const firstRow = result[0].values[0];
+  const tags: string[] = [];
+  for (const row of result[0].values) {
+    const tag = row[tagIndex];
+    if (tag !== null) tags.push(tag as string);
+  }
 
-  return { ...obj, tags } as unknown as PassportRow;
+  const col = (name: string) => firstRow[columns.indexOf(name)];
+
+  return {
+    id: col('id') as string,
+    name: col('name') as string,
+    type: col('type') as string,
+    platform: col('platform') as string,
+    scope: col('scope') as string,
+    purpose: col('purpose') as string,
+    model_hint: col('model_hint') as string | null,
+    invocation: col('invocation') as string | null,
+    status: col('status') as string,
+    source_file: col('source_file') as string,
+    metadata_json: col('metadata_json') as string,
+    first_seen_at: col('first_seen_at') as string,
+    updated_at: col('updated_at') as string,
+    tags,
+  };
 }
 
 export async function updateTags(id: string, tags: string[]): Promise<void> {

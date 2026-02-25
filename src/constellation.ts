@@ -3,39 +3,40 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
 import type { ComponentType } from './types.js';
+import { SCHEMA, MIGRATIONS } from './schema.js';
 
 const DB_DIR = join(homedir(), '.ronin');
 const DB_PATH = join(DB_DIR, 'ronin.db');
 
-// Re-read SCHEMA is not needed — tables are created by `ronin scan` or importInventory.
-// But we need to ensure constellation tables exist when used standalone.
-const CONSTELLATION_SCHEMA = `
-CREATE TABLE IF NOT EXISTS constellations (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  author TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
+/** Resolve the active DB path — tests can override via RONIN_DB_PATH env var. */
+function resolveDbPath(): string {
+  return process.env.RONIN_DB_PATH || DB_PATH;
+}
 
-CREATE TABLE IF NOT EXISTS constellation_components (
-  constellation_id TEXT NOT NULL REFERENCES constellations(id) ON DELETE CASCADE,
-  passport_id TEXT REFERENCES passports(id) ON DELETE SET NULL,
-  component_type TEXT NOT NULL DEFAULT 'passport',
-  file_path TEXT,
-  role TEXT,
-  UNIQUE (constellation_id, passport_id, component_type, file_path)
-);
-`;
+function runMigrations(db: Database.Database): void {
+  for (const line of MIGRATIONS.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) continue;
+    try {
+      db.exec(trimmed);
+    } catch (err) {
+      // "duplicate column name" is expected on repeat runs (provenance columns)
+      if (!(err instanceof Error) || !err.message.includes('duplicate column')) {
+        throw err;
+      }
+    }
+  }
+}
 
 function openDb(readonly = false): Database.Database {
-  if (!existsSync(DB_PATH)) {
-    throw new Error('No Ronin database found. Run `ronin scan` first.');
+  const dbPath = resolveDbPath();
+  if (!existsSync(dbPath)) {
+    throw new Error('No database found. Run `whizmob scan` first.');
   }
-  const db = new Database(DB_PATH, { readonly });
+  const db = new Database(dbPath, { readonly });
   if (!readonly) {
-    db.exec(CONSTELLATION_SCHEMA);
+    db.exec(SCHEMA);
+    runMigrations(db);
   }
   return db;
 }

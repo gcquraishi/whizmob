@@ -7,6 +7,7 @@ import {
   FolderOpen, Package, Loader2, Play, X
 } from 'lucide-react';
 import clsx from 'clsx';
+import { toDisplayPath } from '@/lib/paths';
 
 interface PlanAction {
   file: {
@@ -194,7 +195,7 @@ export default function ImportPage() {
                     <FileText size={13} className="text-gray-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-mono text-gray-700 truncate" title={action.targetPath}>
-                        {action.targetPath.replace(/^\/Users\/[^/]+/, '~')}
+                        {toDisplayPath(action.targetPath)}
                       </div>
                       {action.file.passport_name && (
                         <div className="text-[10px] text-gray-400">{action.file.passport_name}</div>
