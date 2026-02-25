@@ -35,7 +35,13 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 ## Current State
 _Last updated: 2026-02-25_
 
-**Published on npm as `whizmob@0.1.1`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components.
+**Published on npm as `whizmob@0.1.1`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Content parameterization complete** — CEO OS constellation templatized with 6 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `MEMORY_PATH`, `ENV_SHARED_PATH`, `PANEL_REGISTRY_DIR`). Export detects `{{PARAM}}` tokens in file content; import substitutes them from `--param` flags. 32 tests across 4 suites. Ready for cross-account dog-food test.
+
+### Recent Completions (Content Parameterization)
+- **Content parameter engine** (`src/export.ts`, `src/import.ts`) — Export detects `{{UPPER_SNAKE}}` tokens in bundled file content, catalogs them in `manifest.content_parameters` with descriptions and required flags. Import resolves params from `--param` CLI flags and substitutes in file content before writing to disk. Path params (`{{HOME}}`, `{{CLAUDE_DIR}}`, `{{WHIZMOB_DIR}}`) automatically excluded from content param detection.
+- **CEO OS templatized** — All 10 constellation files (6 skills, 2 agents, 2 panel hooks) stripped of Big Heavy specifics. Hardcoded project lists replaced with dynamic discovery (`{{WORKSPACE_ROOT}}/*/CLAUDE.md`). Hardcoded names/paths replaced with 6 content parameters. Trip-management urgency tiers generalized to revenue-at-risk patterns. Panel hook case statements replaced with basename detection.
+- **E2E verified** — Export → Import round-trip produces 71 substitutions, zero raw tokens in output. `--dry-run` shows all content params with resolution status.
+- **6 new tests** — content param detection, path param exclusion, required defaults, missing param warnings, resolution via --param, end-to-end substitution.
 
 ### Recent Completions (npm Publish — v0.1.0 + v0.1.1)
 - **v0.1.0 published** — first npm release. 558KB package, 164 files. `npx whizmob scan` works.
@@ -53,7 +59,7 @@ _Last updated: 2026-02-25_
 - **LIKE wildcard escaping** — search terms with `%` and `_` are now escaped with `|` prefix + `ESCAPE '|'` clause
 - **Shared schema** — `src/schema.ts` is the single source of truth for all SQLite tables. `src/db.ts` and `src/constellation.ts` import from it. Dashboard copy synced with comment.
 - **Hardcoded paths removed** — hook script resolves dynamically via `BASH_SOURCE`, `/roster` skill uses `command -v whizmob || npx whizmob`, dashboard uses `toDisplayPath()` utility (`dashboard/lib/paths.ts`)
-- **Test suite** — 26 tests across 4 suites (schema, scanner, constellation CRUD, export/import). `node:test` + `tsx`, zero runtime deps. `WHIZMOB_DB_PATH` env var for test isolation.
+- **Test suite** — 32 tests across 4 suites (schema, scanner, constellation CRUD, export/import). `node:test` + `tsx`, zero runtime deps. `WHIZMOB_DB_PATH` env var for test isolation.
 - **Dashboard compat** — `lucide-react` 0.468→0.575 for Next.js 16 Turbopack. Dashboard builds clean with all routes verified.
 - **package.json** — `files` field added for npm publish (`dist/`, `dashboard/`, exclusions for `.next/` and `node_modules/`)
 
@@ -114,7 +120,8 @@ _Last updated: 2026-02-25_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **Dog-food** — port CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.whizmob/exports/ceo-operating-system`.
+- **Dog-food** — port CEO Operating System to work machine. Content parameterization complete; CEO OS is templatized and ready for cross-account import. Blocked on work machine access. Export: `whizmob export ceo-operating-system`. Import: `whizmob import <bundle> --param '{{OWNER_NAME}}=...' --param '{{ORG_NAME}}=...' --param '{{WORKSPACE_ROOT}}=...' --param '{{MEMORY_PATH}}=csuite/cofounder/memory.json' --param '{{ENV_SHARED_PATH}}=.env.shared' --param '{{PANEL_REGISTRY_DIR}}=~/.<org>-panels'`.
+- **M3: Guided install UX** — interactive parameter prompts during import, auto-detection where possible, post-install verification. The `whizmob install` landing page experience.
 - **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `whizmob/translation-test-images/`.
 - **Dashboard translation page** live at `/translation` — awaiting generated images.
 - **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `whizmob stats` recommended before call. Linear: BIG-6.
@@ -141,7 +148,7 @@ _Last updated: 2026-02-25_
 ```bash
 # Pre-publish checklist
 npm run build                    # tsc compile
-npm test                         # 26 tests across 4 suites
+npm test                         # 32 tests across 4 suites
 npm pack --dry-run 2>&1 | grep "unpacked size"  # verify <600KB
 npm whoami                       # verify npm auth
 npm publish                      # ship it
@@ -157,10 +164,13 @@ npm view whizmob                 # verify on registry
 **Active roadmap**: `docs/roadmaps/npm-publish.md` (M2 complete)
 
 ### Immediate
+- **M3: Guided install UX** — interactive parameter prompts during `whizmob import`, auto-detection of workspace structure, post-install verification. Makes the landing page experience real.
+- **Dog-food** — port CEO OS to work machine (blocked on work machine access). Engine and templates are ready.
 - **Post-publish polish** — fix open Linear tickets (BIG-19 through BIG-24), improve test coverage
 
 ### Blocked
-- **Dog-food + Translation** — port CEO system to work machine (blocked on access), run translation image test (needs API access)
+- **Dog-food execution** — blocked on work machine access. Export/import pipeline is complete and tested.
+- **Translation validation** — run translation image test (needs API access)
 
 ### Future (Backlog)
 - Cloud sync + accounts
