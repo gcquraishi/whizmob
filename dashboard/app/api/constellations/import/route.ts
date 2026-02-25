@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Dynamically import the CLI import module
-    const roninRoot = join(process.cwd(), '..');
-    const importModPath = join(roninRoot, 'dist', 'import.js');
+    const whizmobRoot = join(process.cwd(), '..');
+    const importModPath = join(whizmobRoot, 'dist', 'import.js');
     const mod = await import(/* webpackIgnore: true */ importModPath);
     const planImport = mod.planImport as (bundlePath: string, params?: Record<string, string>) => PlanResult;
     const executeImport = mod.executeImport as (bundlePath: string, plan: PlanResult, opts?: { force?: boolean }) => ImportResultShape;

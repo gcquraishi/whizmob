@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 
 const IS_VERCEL = !!process.env.VERCEL;
-const DB_DIR = IS_VERCEL ? join(process.cwd(), 'data') : join(homedir(), '.ronin');
-const DB_PATH = join(DB_DIR, 'ronin.db');
+const DB_DIR = IS_VERCEL ? join(process.cwd(), 'data') : join(homedir(), '.whizmob');
+const DB_PATH = join(DB_DIR, 'whizmob.db');
 
 let db: Database | null = null;
 

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Must stay in sync with the identical function in middleware.ts.
 async function deriveSessionToken(password: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(`ronin-session:${password}`);
+  const data = encoder.encode(`whizmob-session:${password}`);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const sessionToken = await deriveSessionToken(password);
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set('ronin-demo-auth', sessionToken, {
+  response.cookies.set('whizmob-demo-auth', sessionToken, {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',

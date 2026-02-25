@@ -207,12 +207,12 @@ export default function TranslationPage() {
       {/* ── Act 2: The Skill Injection ────────────────────────────── */}
       <section className="mb-16">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight mb-2">
-          Ronin injects your skill into each prompt
+          Whizmob injects your skill into each prompt
         </h1>
         <p className="text-sm text-gray-500 mb-4 max-w-2xl">
           An illustrator skill written for Claude Code defines palette, style, composition, and constraints.{' '}
           <code className="font-mono text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded">
-            ronin translate
+            whizmob translate
           </code>{' '}
           reads it, strips platform-specific references, and generates a tailored prompt for each target
           model — adapting structure and syntax while preserving the creative intent.
@@ -281,8 +281,8 @@ export default function TranslationPage() {
             <p className="text-xs font-semibold text-teal-600 mb-2">DALL-E</p>
             <div className="aspect-[3/4] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
               <img
-                src="/translation-test-images/ronin-dalle.png"
-                alt="Ronin-translated DALL-E output"
+                src="/translation-test-images/whizmob-dalle.png"
+                alt="Whizmob-translated DALL-E output"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -291,8 +291,8 @@ export default function TranslationPage() {
             <p className="text-xs font-semibold text-orange-600 mb-2">Gemini</p>
             <div className="aspect-[3/4] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
               <img
-                src="/translation-test-images/ronin-gemini.png"
-                alt="Ronin-translated Gemini output"
+                src="/translation-test-images/whizmob-gemini.png"
+                alt="Whizmob-translated Gemini output"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -303,7 +303,7 @@ export default function TranslationPage() {
       {/* ── Footer ────────────────────────────────────────────────── */}
       <div className="pt-6 border-t border-gray-200">
         <code className="font-mono text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-lg block w-fit mb-3">
-          ronin translate illustrator --to dalle gemini
+          whizmob translate illustrator --to dalle gemini
         </code>
         <p className="text-sm text-gray-400">
           The skill is written once. The delivery is adapted mechanically.

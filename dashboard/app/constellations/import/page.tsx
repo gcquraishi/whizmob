@@ -142,7 +142,7 @@ export default function ImportPage() {
                 value={bundlePath}
                 onChange={(e) => setBundlePath(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handlePlan()}
-                placeholder="~/.ronin/exports/ceo-operating-system"
+                placeholder="~/.whizmob/exports/ceo-operating-system"
                 className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
               <button
@@ -356,7 +356,7 @@ export default function ImportPage() {
                 </div>
               )}
               <p className="text-xs text-green-600 pt-2">
-                Run <code className="bg-green-100 px-1.5 py-0.5 rounded font-mono">ronin scan</code> to register the imported agents in your inventory.
+                Run <code className="bg-green-100 px-1.5 py-0.5 rounded font-mono">whizmob scan</code> to register the imported agents in your inventory.
               </p>
             </div>
           </div>

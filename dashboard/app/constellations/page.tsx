@@ -77,7 +77,7 @@ export default function ConstellationsPage() {
           </div>
           <h2 className="text-base font-semibold text-gray-900 mb-1">No constellations yet</h2>
           <p className="text-sm text-gray-500">
-            Create one from the CLI: <code className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono">ronin constellation define &quot;my-system&quot;</code>
+            Create one from the CLI: <code className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono">whizmob constellation define &quot;my-system&quot;</code>
           </p>
         </div>
       )}

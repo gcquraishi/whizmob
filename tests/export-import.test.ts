@@ -2,7 +2,7 @@
  * tests/export-import.test.ts
  *
  * Tests the export + import pipeline end-to-end using a temp database and
- * a temp output directory. No real ~/.ronin/ronin.db is touched.
+ * a temp output directory. No real ~/.whizmob/whizmob.db is touched.
  *
  * Flow:
  *   1. Create a temp SQLite DB with SCHEMA
@@ -24,12 +24,12 @@ import { SCHEMA, MIGRATIONS } from '../src/schema.js';
 
 // ── Set env var BEFORE any module-level import from export.ts / constellation.ts ──
 
-const TEST_DIR = join(tmpdir(), `ronin-export-test-${process.pid}`);
+const TEST_DIR = join(tmpdir(), `whizmob-export-test-${process.pid}`);
 const TEST_DB_PATH = join(TEST_DIR, 'test.db');
 const BUNDLE_DIR = join(TEST_DIR, 'bundle');
 const HOOK_FILE = join(TEST_DIR, 'hook.sh');
 
-process.env.RONIN_DB_PATH = TEST_DB_PATH;
+process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 
 import { exportConstellation } from '../src/export.js';
 import { planImport } from '../src/import.js';
@@ -71,7 +71,7 @@ function setup(): void {
 }
 
 function teardown(): void {
-  delete process.env.RONIN_DB_PATH;
+  delete process.env.WHIZMOB_DB_PATH;
   rmSync(TEST_DIR, { recursive: true, force: true });
 }
 
@@ -156,7 +156,7 @@ describe('export / import pipeline', () => {
     const planBundleDir = join(TEST_DIR, 'plan-bundle');
     exportConstellation('Export Test', { outputDir: planBundleDir });
 
-    // planImport does not use RONIN_DB_PATH — it only reads the manifest
+    // planImport does not use WHIZMOB_DB_PATH — it only reads the manifest
     // and checks the local filesystem for conflicts.
     const plan = planImport(planBundleDir);
 

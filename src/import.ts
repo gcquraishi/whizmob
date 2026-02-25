@@ -9,7 +9,7 @@ import type { ExportManifest, ExportFileEntry } from './export.js';
 const DEFAULT_PARAMS: Record<string, string> = {
   '{{HOME}}': homedir(),
   '{{CLAUDE_DIR}}': join(homedir(), '.claude'),
-  '{{RONIN_DIR}}': join(homedir(), '.ronin'),
+  '{{WHIZMOB_DIR}}': join(homedir(), '.whizmob'),
 };
 
 export interface ImportPlan {
@@ -88,13 +88,13 @@ export function planImport(
 ): ImportPlan {
   const manifestPath = join(bundlePath, 'manifest.json');
   if (!existsSync(manifestPath)) {
-    throw new Error(`No manifest.json found in ${bundlePath}. Is this a valid Ronin export bundle?`);
+    throw new Error(`No manifest.json found in ${bundlePath}. Is this a valid Whizmob export bundle?`);
   }
 
   const manifest: ExportManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 
   if (manifest.version !== '1.0') {
-    throw new Error(`Unsupported bundle version: ${manifest.version}. This version of Ronin supports version 1.0.`);
+    throw new Error(`Unsupported bundle version: ${manifest.version}. This version of Whizmob supports version 1.0.`);
   }
 
   const resolvedParams = { ...DEFAULT_PARAMS, ...params };
@@ -180,8 +180,8 @@ export function executeImport(
     installed++;
   }
 
-  // Record provenance in Ronin DB for imported passports
-  const dbPath = join(homedir(), '.ronin', 'ronin.db');
+  // Record provenance in Whizmob DB for imported passports
+  const dbPath = join(homedir(), '.whizmob', 'whizmob.db');
   if (existsSync(dbPath)) {
     const db = new Database(dbPath);
     try {

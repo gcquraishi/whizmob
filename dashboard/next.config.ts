@@ -5,11 +5,11 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/**': [
       './node_modules/sql.js/dist/sql-wasm.wasm',
-      './data/ronin.db',
+      './data/whizmob.db',
     ],
     '/agents/**': [
       './node_modules/sql.js/dist/sql-wasm.wasm',
-      './data/ronin.db',
+      './data/whizmob.db',
     ],
   },
 };

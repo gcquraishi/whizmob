@@ -9,7 +9,7 @@ const HOME = homedir();
 const PARAM_VALUES: Record<string, string> = {
   '{{HOME}}': HOME,
   '{{CLAUDE_DIR}}': join(HOME, '.claude'),
-  '{{RONIN_DIR}}': join(HOME, '.ronin'),
+  '{{WHIZMOB_DIR}}': join(HOME, '.whizmob'),
 };
 
 function deparameterize(paramPath: string): string {
@@ -45,7 +45,7 @@ export interface SyncResult {
 export function syncConstellation(bundlePath: string): SyncResult {
   const manifestPath = join(bundlePath, 'manifest.json');
   if (!existsSync(manifestPath)) {
-    throw new Error(`No manifest.json found in ${bundlePath}. Is this a valid Ronin export bundle?`);
+    throw new Error(`No manifest.json found in ${bundlePath}. Is this a valid Whizmob export bundle?`);
   }
 
   const manifest: ExportManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));

@@ -22,7 +22,7 @@ export default function Nav() {
           <div className="w-6 h-6 rounded bg-gray-900 text-white flex items-center justify-center">
             <Swords size={13} />
           </div>
-          <span className="text-sm font-bold text-gray-900 tracking-tight">Ronin</span>
+          <span className="text-sm font-bold text-gray-900 tracking-tight">Whizmob</span>
         </Link>
 
         {/* Nav links */}

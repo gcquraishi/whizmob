@@ -13,7 +13,7 @@ import { scan } from '../src/scanner.js';
 
 // ── Fixture helpers ──────────────────────────────────────────────────────────
 
-const FIXTURE_DIR = join(tmpdir(), `ronin-test-${process.pid}`);
+const FIXTURE_DIR = join(tmpdir(), `whizmob-test-${process.pid}`);
 
 function createFixtures(): void {
   // ~/.claude/agents/test-agent.md

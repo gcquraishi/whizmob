@@ -23,8 +23,8 @@ export async function POST(
     const constellationId = decodeURIComponent(id);
 
     // Dynamically import the CLI export module (uses better-sqlite3)
-    const roninRoot = join(process.cwd(), '..');
-    const exportPath = join(roninRoot, 'dist', 'export.js');
+    const whizmobRoot = join(process.cwd(), '..');
+    const exportPath = join(whizmobRoot, 'dist', 'export.js');
     const mod = await import(/* webpackIgnore: true */ exportPath);
     const exportFn = mod.exportConstellation as (name: string, opts?: Record<string, unknown>) => ExportResultShape;
 

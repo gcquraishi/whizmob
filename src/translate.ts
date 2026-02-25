@@ -70,7 +70,7 @@ export function translateSkill(nameOrId: string, opts: TranslateOptions): Transl
 
   // 6. Determine output dir
   const slugName = skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const outputDir = opts.outputDir || join(homedir(), '.ronin', 'translations', slugName);
+  const outputDir = opts.outputDir || join(homedir(), '.whizmob', 'translations', slugName);
 
   // 7. Write files (unless dry-run)
   if (!opts.dryRun) {

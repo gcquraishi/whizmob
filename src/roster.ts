@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { CATEGORY_LABELS } from './types.js';
 import type { AgentType } from './types.js';
 
-const DB_PATH = join(homedir(), '.ronin', 'ronin.db');
+const DB_PATH = join(homedir(), '.whizmob', 'whizmob.db');
 
 interface PassportRow {
   id: string;
@@ -84,7 +84,7 @@ export function compactRoster(opts?: { type?: string; platform?: string }): stri
     }
 
     const lines: string[] = [
-      `# Ronin Agent Roster (${rows.length} agents)`,
+      `# Whizmob Agent Roster (${rows.length} agents)`,
     ];
 
     for (const [type, agents] of grouped) {

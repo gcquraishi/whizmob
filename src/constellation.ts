@@ -5,12 +5,12 @@ import { existsSync } from 'node:fs';
 import type { ComponentType } from './types.js';
 import { SCHEMA, MIGRATIONS } from './schema.js';
 
-const DB_DIR = join(homedir(), '.ronin');
-const DB_PATH = join(DB_DIR, 'ronin.db');
+const DB_DIR = join(homedir(), '.whizmob');
+const DB_PATH = join(DB_DIR, 'whizmob.db');
 
-/** Resolve the active DB path — tests can override via RONIN_DB_PATH env var. */
+/** Resolve the active DB path — tests can override via WHIZMOB_DB_PATH env var. */
 function resolveDbPath(): string {
-  return process.env.RONIN_DB_PATH || DB_PATH;
+  return process.env.WHIZMOB_DB_PATH || DB_PATH;
 }
 
 function runMigrations(db: Database.Database): void {

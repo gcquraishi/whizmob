@@ -10,7 +10,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Ronin — Agent Inventory',
+  title: 'Whizmob — Agent Inventory',
   description: 'Agent inventory and management tool for Claude Code users',
 };
 

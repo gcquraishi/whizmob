@@ -2,8 +2,8 @@
  * tests/schema.test.ts
  *
  * Verifies that SCHEMA + MIGRATIONS create all expected tables in a fresh
- * in-memory SQLite database. Uses better-sqlite3 directly — no Ronin modules
- * that touch the real ~/.ronin/ronin.db.
+ * in-memory SQLite database. Uses better-sqlite3 directly — no Whizmob modules
+ * that touch the real ~/.whizmob/whizmob.db.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

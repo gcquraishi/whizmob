@@ -1,7 +1,7 @@
-# Ronin
+# Whizmob
 
 ## Identity
-- **Domain**: None (npm package: `npx ronin scan`)
+- **Domain**: None (npm package: `npx whizmob scan`)
 - **Hosting**: None (local-first CLI + dashboard)
 - **Linear Team**: None
 - **Root Config**: See ../CLAUDE.md for shared infrastructure
@@ -13,7 +13,7 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - **Scanner**: Node.js + TypeScript CLI
 - **Dashboard**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS
 - **Database**: SQLite (local-first, no server required)
-- **Distribution**: npm package (`npx ronin scan`)
+- **Distribution**: npm package (`npx whizmob scan`)
 
 ## Architecture
 - **Scanner** discovers: subagents, skills, project configs, CLAUDE.md files, MCP servers, settings across Claude Code (`~/.claude/`), Codex (`~/.codex/`), Cursor (`~/.cursor/`), and more
@@ -35,15 +35,15 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 ## Current State
 _Last updated: 2026-02-24_
 
-Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `ronin roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `ronin translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components. **Ship-Ready Quality Gate (M1) complete** — N+1 query fixed, shared schema extracted, hardcoded paths removed, test suite added, dashboard builds clean on Next.js 16 + Turbopack. Ready for npm publish (M2).
+Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). CEO Operating System constellation defined with 12 components. **Ship-Ready Quality Gate (M1) complete** — N+1 query fixed, shared schema extracted, hardcoded paths removed, test suite added, dashboard builds clean on Next.js 16 + Turbopack. Ready for npm publish (M2).
 
 ### Recent Completions (Ship-Ready Quality Gate)
 - **N+1 query fixed** (BIG-13) — `getPassports()` now uses single `IN (...)` query + Map grouping instead of 91 per-row tag fetches. `getPassport()` refactored to LEFT JOIN.
 - **Unsafe cast eliminated** — `as unknown as PassportRow` replaced with explicit field mapping in both `getPassports()` and `getPassport()`
 - **LIKE wildcard escaping** — search terms with `%` and `_` are now escaped with `|` prefix + `ESCAPE '|'` clause
 - **Shared schema** — `src/schema.ts` is the single source of truth for all SQLite tables. `src/db.ts` and `src/constellation.ts` import from it. Dashboard copy synced with comment.
-- **Hardcoded paths removed** — hook script resolves dynamically via `BASH_SOURCE`, `/roster` skill uses `command -v ronin || npx ronin`, dashboard uses `toDisplayPath()` utility (`dashboard/lib/paths.ts`)
-- **Test suite** — 26 tests across 4 suites (schema, scanner, constellation CRUD, export/import). `node:test` + `tsx`, zero runtime deps. `RONIN_DB_PATH` env var for test isolation.
+- **Hardcoded paths removed** — hook script resolves dynamically via `BASH_SOURCE`, `/roster` skill uses `command -v whizmob || npx whizmob`, dashboard uses `toDisplayPath()` utility (`dashboard/lib/paths.ts`)
+- **Test suite** — 26 tests across 4 suites (schema, scanner, constellation CRUD, export/import). `node:test` + `tsx`, zero runtime deps. `WHIZMOB_DB_PATH` env var for test isolation.
 - **Dashboard compat** — `lucide-react` 0.468→0.575 for Next.js 16 Turbopack. Dashboard builds clean with all routes verified.
 - **package.json** — `files` field added for npm publish (`dist/`, `dashboard/`, exclusions for `.next/` and `node_modules/`)
 
@@ -53,37 +53,37 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
 - Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
 - Dossier enhancements: collapsible source viewer, Cursor editor link, per-project usage stats
 - Secret redaction in source viewer for `.mcp.json` and `settings.json` files
-- **`ronin roster` CLI** — queries SQLite DB for agent lookups (`--search`, `--type`, `--platform`, `--hook`)
+- **`whizmob roster` CLI** — queries SQLite DB for agent lookups (`--search`, `--type`, `--platform`, `--hook`)
 - **SessionStart hook** — injects compact agent roster into every Claude Code session (startup + compact)
 - **`/roster` skill** — on-demand agent search from within Claude Code sessions
 - **Project-level agent scanning** — discovers `.claude/agents/` within project directories (not just `~/.claude/agents/`)
-- **Auto-import on scan** — `ronin scan` writes directly to `~/.ronin/ronin.db` via `better-sqlite3` (skip with `--no-import`)
+- **Auto-import on scan** — `whizmob scan` writes directly to `~/.whizmob/whizmob.db` via `better-sqlite3` (skip with `--no-import`)
 - Fixed Node 25 compat issue (updated commander to v14, glob 11→13)
 - 91 passports: 57 subagents (21 user + 36 project), 20 skills, 3 MCP, 10 projects, 1 settings
 - **Constellations M1** — data model for grouping agents into systems:
   - Schema: `constellations` + `constellation_components` tables in both CLI and dashboard DBs
   - CRUD: `src/constellation.ts` with define, addComponents, get, list, delete, removeComponent
-  - CLI: `ronin constellation define|list|show|add-component|remove-component|delete`
+  - CLI: `whizmob constellation define|list|show|add-component|remove-component|delete`
   - Component types: `passport`, `hook`, `memory_schema`, `claude_md`, `config`
   - Input validation: component type checking, empty slug guard
 - **Constellations M2** — export/import engine for constellation portability:
-  - **Export** (`src/export.ts`): `ronin export <constellation>` produces a portable bundle with `manifest.json`
+  - **Export** (`src/export.ts`): `whizmob export <constellation>` produces a portable bundle with `manifest.json`
   - Path rewriting: absolute paths → parameterized `{{HOME}}`, `{{CLAUDE_DIR}}`, `{{RONIN_DIR}}`
   - Secret stripping: tokens/keys/passwords redacted, `.mcp.json` env blocks sanitized
   - Memory bootstrapping: exports structure of `memory.json` (empty values, preserved keys)
   - Dependency detection: flags required MCP servers and npm packages
-  - **Import** (`src/import.ts`): `ronin import <bundle>` with `--dry-run`, `--force`, `--param` overrides
+  - **Import** (`src/import.ts`): `whizmob import <bundle>` with `--dry-run`, `--force`, `--param` overrides
   - Conflict detection: warns about existing files, skips unless `--force`
   - Git-friendly bundles: `.gitignore` included, no binaries
 - **Constellations M3** — provenance & licensing metadata:
   - Passport schema extended: `origin`, `author`, `license` (personal/work/open/commercial), `forked_from`
   - Additive migration (ALTER TABLE) safe to run repeatedly
   - Export embeds per-file provenance in manifest; import preserves it in local DB
-  - `ronin constellation sync <bundle>` — read-only diff detection with inline changes
+  - `whizmob constellation sync <bundle>` — read-only diff detection with inline changes
 - **Constellations M5** — constellation-aware roster:
-  - `ronin roster --hook` groups agents by constellation before ungrouped listing
-  - `ronin roster --search` shows constellation membership per result
-  - `ronin stats` includes constellation and component counts
+  - `whizmob roster --hook` groups agents by constellation before ungrouped listing
+  - `whizmob roster --search` shows constellation membership per result
+  - `whizmob stats` includes constellation and component counts
 - **Dashboard constellation UI** — full constellation management in the web dashboard:
   - List page (`/constellations`): card grid with component counts, author, import button
   - Detail page (`/constellations/[id]`): component graph grouped by type, linked to passport dossiers, export button
@@ -95,20 +95,20 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
   - Skills: cofounder, standup, roadmap, debrief, leadership-meeting, sprint
   - Agents: chief-of-staff, sprint-coordinator
   - Non-passport: cofounder memory (bootstrapped), panel-start/stop hooks, CLAUDE.md executive pattern
-- **`ronin translate` CLI** — two-stage skill translation engine:
+- **`whizmob translate` CLI** — two-stage skill translation engine:
   - **Canonical engine** (`src/canonical.ts`): 9-rule pipeline — `STRIP_FRONTMATTER`, `STRIP_DISPATCH_EXAMPLES`, `GENERALIZE_TOOL_REFS`, `GENERALIZE_PATHS`, `FLATTEN_ESCALATION`, `PLATFORM_LOCKED` detection, `ENHANCE_NATIVE_CAPABILITY` flagging
   - **Target adapters** (`src/adapters/`): Gemini (~80% fidelity), DALL-E (~60%, negative rephrasing + color annotation), Midjourney (~30%, vocab expansion + `--no` extraction + reference doc reformat)
   - **Adapter registry** with `getAdapter()`, `listAdapters()`, `isValidTarget()`
   - **`translations` DB table** tracking source passport, target platform, rules applied, review items
-  - **CLI**: `ronin translate illustrator --to dalle midjourney gemini`, `--list`, `--dry-run`, `--output <dir>`
-  - Output: `~/.ronin/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
+  - **CLI**: `whizmob translate illustrator --to dalle midjourney gemini`, `--list`, `--dry-run`, `--output <dir>`
+  - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **M2: npm publish** — M1 quality gate complete. Next: README, `npm publish`, polish `ronin stats` for demo. Needs George for README direction.
-- **Dog-food** — port CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.ronin/exports/ceo-operating-system`.
-- **Translation validation**: Ready-to-run prompts in `ronin/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `ronin/translation-test-images/`.
+- **M2: npm publish** — M1 quality gate complete. Next: README, `npm publish`, polish `whizmob stats` for demo. Needs George for README direction.
+- **Dog-food** — port CEO Operating System to work machine (blocked on work machine access). CEO constellation exported to `~/.whizmob/exports/ceo-operating-system`.
+- **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `whizmob/translation-test-images/`.
 - **Dashboard translation page** live at `/translation` — awaiting generated images.
-- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `ronin stats` recommended before call. Linear: BIG-6.
+- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `whizmob stats` recommended before call. Linear: BIG-6.
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
@@ -130,7 +130,7 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
 **Active roadmap**: `docs/roadmaps/npm-publish.md`
 
 ### Immediate
-- **M2: npm publish** — README, `npm publish`, polish `ronin stats`. Needs George for README direction + publish approval.
+- **M2: npm publish** — README, `npm publish`, polish `whizmob stats`. Needs George for README direction + publish approval.
 
 ### Blocked
 - **M3: Dog-food + Translation** — port CEO system to work machine (blocked on access), run translation image test (needs API access)
@@ -152,7 +152,7 @@ Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), 
 ## Conventions
 - Local-first: privacy by default, no network calls in v1
 - Proto-Passport schema for all agent identity data
-- Ronin metaphor: "warriors without a master" — agents don't belong to a platform
+- Whizmob metaphor: agents don't belong to a platform — they belong to you
 - The Yard (inventory), the Dossier (detail), the Forge (creation)
 
 ## Session Close Protocol

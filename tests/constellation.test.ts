@@ -2,10 +2,10 @@
  * tests/constellation.test.ts
  *
  * Tests constellation CRUD operations (define, addComponents, get, list,
- * delete) against an isolated temp database via the RONIN_DB_PATH env var.
+ * delete) against an isolated temp database via the WHIZMOB_DB_PATH env var.
  *
  * Each test gets a fresh database by writing to a unique temp file path and
- * setting process.env.RONIN_DB_PATH before importing constellation functions.
+ * setting process.env.WHIZMOB_DB_PATH before importing constellation functions.
  */
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +17,7 @@ import { SCHEMA, MIGRATIONS } from '../src/schema.js';
 
 // ── Temp DB helpers ──────────────────────────────────────────────────────────
 
-const TEST_DB_DIR = join(tmpdir(), `ronin-constellation-test-${process.pid}`);
+const TEST_DB_DIR = join(tmpdir(), `whizmob-constellation-test-${process.pid}`);
 const TEST_DB_PATH = join(TEST_DB_DIR, 'test.db');
 
 function initTestDb(): void {
@@ -51,11 +51,11 @@ function cleanupTestDb(): void {
 }
 
 // ── Dynamic import helper ────────────────────────────────────────────────────
-// We must set RONIN_DB_PATH *before* the module's top-level constants are
+// We must set WHIZMOB_DB_PATH *before* the module's top-level constants are
 // resolved. Because Node ESM caches modules, we set the env var once at
 // process start (before any imports from the module), then import lazily.
 
-process.env.RONIN_DB_PATH = TEST_DB_PATH;
+process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 
 // Now we can safely import — the module will capture our env var value.
 import {
@@ -72,7 +72,7 @@ import {
 describe('constellation CRUD', () => {
   before(initTestDb);
   after(() => {
-    delete process.env.RONIN_DB_PATH;
+    delete process.env.WHIZMOB_DB_PATH;
     cleanupTestDb();
   });
   beforeEach(resetTestDb);

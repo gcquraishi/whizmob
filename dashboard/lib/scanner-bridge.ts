@@ -2,8 +2,8 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 
 export async function runScan() {
-  const roninRoot = join(process.cwd(), '..');
-  const scannerPath = join(roninRoot, 'dist', 'scanner.js');
+  const whizmobRoot = join(process.cwd(), '..');
+  const scannerPath = join(whizmobRoot, 'dist', 'scanner.js');
 
   const mod = await import(/* webpackIgnore: true */ scannerPath);
   const scan = mod.scan;

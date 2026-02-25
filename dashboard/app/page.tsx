@@ -130,7 +130,7 @@ export default function YardPage() {
             <Swords size={18} />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Ronin</h1>
+            <h1 className="text-lg font-bold text-gray-900">Whizmob</h1>
             <p className="text-xs text-gray-500">Agent Control Plane</p>
           </div>
         </div>

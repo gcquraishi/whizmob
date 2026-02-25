@@ -5,8 +5,8 @@ import { mkdirSync, existsSync } from 'node:fs';
 import type { RoninInventory, AgentType, LicenseType } from './types.js';
 import { SCHEMA, MIGRATIONS } from './schema.js';
 
-const DB_DIR = join(homedir(), '.ronin');
-const DB_PATH = join(DB_DIR, 'ronin.db');
+const DB_DIR = join(homedir(), '.whizmob');
+const DB_PATH = join(DB_DIR, 'whizmob.db');
 
 function runMigrations(db: Database.Database): void {
   for (const line of MIGRATIONS.split('\n')) {

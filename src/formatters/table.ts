@@ -18,7 +18,7 @@ export function formatTable(inventory: RoninInventory): string {
   const lines: string[] = [];
 
   // Summary header
-  lines.push(`\nRonin Agent Inventory v${inventory.version}`);
+  lines.push(`\nWhizmob Agent Inventory v${inventory.version}`);
   lines.push(`Scanned at: ${inventory.scanned_at}`);
   lines.push(`Duration: ${inventory.scan_duration_ms}ms`);
   lines.push(`Total: ${inventory.summary.total} items\n`);

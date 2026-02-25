@@ -62,7 +62,7 @@ Move constellations between machines. whizmob handles path rewriting, secret str
 ```bash
 # Export (on source machine)
 whizmob export my-review-system
-# -> ~/.ronin/exports/my-review-system/
+# -> ~/.whizmob/exports/my-review-system/
 
 # Transfer via git, USB, whatever
 # ...
@@ -74,7 +74,7 @@ whizmob import ./my-review-system --force    # Overwrite existing files
 ```
 
 What export does for you:
-- Rewrites absolute paths to `{{HOME}}`, `{{CLAUDE_DIR}}`, `{{RONIN_DIR}}`
+- Rewrites absolute paths to `{{HOME}}`, `{{CLAUDE_DIR}}`, `{{WHIZMOB_DIR}}`
 - Strips secrets from `.mcp.json` env blocks and any key matching `password|secret|token|key`
 - Bootstraps memory files (preserves structure, empties values)
 - Flags required MCP servers and npm packages as dependencies
@@ -84,7 +84,7 @@ What export does for you:
 Check if source files have changed since you exported:
 
 ```bash
-whizmob constellation sync ~/.ronin/exports/my-review-system
+whizmob constellation sync ~/.whizmob/exports/my-review-system
 ```
 
 ### Dashboard
@@ -115,7 +115,7 @@ whizmob translate --list  # Show translatable skills
 whizmob is local-first. Everything stays on your machine:
 
 - **Scanner** reads your `~/.claude/`, `~/.cursor/`, and `~/.codex/` directories
-- **SQLite database** at `~/.ronin/ronin.db` stores the inventory
+- **SQLite database** at `~/.whizmob/whizmob.db` stores the inventory
 - **Dashboard** is a local Next.js app — no server, no accounts
 - **Exports** are plain directories with a `manifest.json` — git-friendly, no binaries
 

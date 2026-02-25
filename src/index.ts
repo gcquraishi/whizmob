@@ -44,7 +44,7 @@ program
   .description('Scan development environments and output agent inventory')
   .option('-f, --format <format>', 'Output format: json or table', 'json')
   .option('-o, --output <file>', 'Write output to file instead of stdout')
-  .option('--no-import', 'Skip importing results into the Ronin database')
+  .option('--no-import', 'Skip importing results into the Whizmob database')
   .option('--scan-root <path>', 'Root directory to scan for projects', join(homedir(), 'Documents'))
   .option('--claude-dir <path>', 'Claude config directory', join(homedir(), '.claude'))
   .option('--codex-dir <path>', 'Codex config directory', join(homedir(), '.codex'))
@@ -61,7 +61,7 @@ program
         format,
       });
 
-      // Auto-import into Ronin DB unless --no-import
+      // Auto-import into Whizmob DB unless --no-import
       if (opts.import !== false) {
         const diff = importInventory(inventory);
         console.error(`[whizmob] DB updated: ${diff.total} total, +${diff.added} added, -${diff.removed} removed`);
@@ -88,7 +88,7 @@ program
 
 program
   .command('roster')
-  .description('Query the agent roster from the Ronin database')
+  .description('Query the agent roster from the Whizmob database')
   .option('-s, --search <query>', 'Search agents by name, type, or purpose')
   .option('-t, --type <type>', 'Filter by agent type (subagent, skill, mcp, project, settings)')
   .option('-p, --platform <platform>', 'Filter by platform (claude-code, cursor, codex)')
@@ -111,7 +111,7 @@ program
 
 program
   .command('stats')
-  .description('Show inventory summary from the Ronin database')
+  .description('Show inventory summary from the Whizmob database')
   .option('-v, --verbose', 'Show per-platform breakdown')
   .action((opts) => {
     try {
@@ -207,11 +207,11 @@ program
 
 program
   .command('dashboard')
-  .description('Launch the Ronin web dashboard')
+  .description('Launch the Whizmob web dashboard')
   .option('-p, --port <port>', 'Port to run the dashboard on', '3333')
   .action((opts) => {
     const dashboardDir = join(__dirname, '..', 'dashboard');
-    console.log(`Starting Ronin Dashboard on http://localhost:${opts.port}...`);
+    console.log(`Starting Whizmob Dashboard on http://localhost:${opts.port}...`);
     try {
       execSync(`npm run dev -- -p ${opts.port}`, {
         cwd: dashboardDir,
@@ -445,7 +445,7 @@ constellation
 program
   .command('export <constellation>')
   .description('Export a constellation as a portable bundle')
-  .option('-o, --output <dir>', 'Output directory (default: ~/.ronin/exports/<id>)')
+  .option('-o, --output <dir>', 'Output directory (default: ~/.whizmob/exports/<id>)')
   .option('--dry-run', 'Show what would be exported without writing files')
   .action((constellationName: string, opts) => {
     try {

@@ -6,19 +6,19 @@ import { hostname } from 'node:os';
 import { slugify } from './constellation.js';
 import type { ComponentType, LicenseType } from './types.js';
 
-const DB_DIR = join(homedir(), '.ronin');
-const DB_PATH = join(DB_DIR, 'ronin.db');
+const DB_DIR = join(homedir(), '.whizmob');
+const DB_PATH = join(DB_DIR, 'whizmob.db');
 
-/** Resolve the active DB path — tests can override via RONIN_DB_PATH env var. */
+/** Resolve the active DB path — tests can override via WHIZMOB_DB_PATH env var. */
 function resolveDbPath(): string {
-  return process.env.RONIN_DB_PATH || DB_PATH;
+  return process.env.WHIZMOB_DB_PATH || DB_PATH;
 }
 
 // Path parameters for portability
 const PATH_PARAMS: [string, string][] = [
   // Order matters — most specific first
   ['{{CLAUDE_DIR}}', join(homedir(), '.claude')],
-  ['{{RONIN_DIR}}', DB_DIR],
+  ['{{WHIZMOB_DIR}}', DB_DIR],
   ['{{HOME}}', homedir()],
 ];
 
@@ -393,7 +393,7 @@ export function exportConstellation(
       parameters: {
         '{{HOME}}': 'User home directory',
         '{{CLAUDE_DIR}}': 'Claude Code config directory (~/.claude)',
-        '{{RONIN_DIR}}': 'Ronin data directory (~/.ronin)',
+        '{{WHIZMOB_DIR}}': 'Whizmob data directory (~/.whizmob)',
       },
     };
 
@@ -409,7 +409,7 @@ export function exportConstellation(
       // Write .gitignore for clean git transfer
       writeFileSync(
         join(bundleDir, '.gitignore'),
-        '# Ronin export bundle\n*.db\n.DS_Store\n',
+        '# Whizmob export bundle\n*.db\n.DS_Store\n',
         'utf-8',
       );
     }

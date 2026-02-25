@@ -1,5 +1,5 @@
 /**
- * Shared SQLite schema for Ronin.
+ * Shared SQLite schema for Whizmob.
  *
  * This is the single source of truth for the database structure.
  * Both the CLI (src/db.ts, src/constellation.ts) and the dashboard
@@ -14,7 +14,7 @@
  */
 
 /**
- * Full CREATE TABLE definitions for all Ronin tables.
+ * Full CREATE TABLE definitions for all Whizmob tables.
  * All statements use IF NOT EXISTS so they are safe to run on every startup.
  */
 export const SCHEMA = `
