@@ -256,31 +256,37 @@ export function executeImport(
   // Record provenance in Whizmob DB for imported passports
   const dbPath = process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
   if (existsSync(dbPath)) {
-    const db = new Database(dbPath);
     try {
-      const updateProvenance = db.prepare(`
-        UPDATE passports SET
-          origin = COALESCE(?, origin),
-          author = COALESCE(?, author),
-          license = COALESCE(?, license),
-          forked_from = COALESCE(?, forked_from)
-        WHERE source_file LIKE ?
-      `);
+      const db = new Database(dbPath);
+      try {
+        const updateProvenance = db.prepare(`
+          UPDATE passports SET
+            origin = COALESCE(?, origin),
+            author = COALESCE(?, author),
+            license = COALESCE(?, license),
+            forked_from = COALESCE(?, forked_from)
+          WHERE source_file LIKE ? ESCAPE '|'
+        `);
 
-      for (const action of plan.actions) {
-        const prov = action.file.provenance;
-        if (prov && (prov.origin || prov.author || prov.license || prov.forked_from)) {
-          // Match by the target path (which becomes the source_file after next scan)
-          const sourcePattern = `%${action.targetPath.split('/').slice(-2).join('/')}%`;
-          const result = updateProvenance.run(
-            prov.origin, prov.author, prov.license, prov.forked_from,
-            sourcePattern,
-          );
-          if (result.changes > 0) provenanceRecorded++;
+        for (const action of plan.actions) {
+          const prov = action.file.provenance;
+          if (prov && (prov.origin || prov.author || prov.license || prov.forked_from)) {
+            // Match by the target path (which becomes the source_file after next scan)
+            const pathSuffix = action.targetPath.split('/').slice(-2).join('/');
+            const escaped = pathSuffix.replace(/[|%_]/g, (ch) => `|${ch}`);
+            const sourcePattern = `%${escaped}%`;
+            const result = updateProvenance.run(
+              prov.origin, prov.author, prov.license, prov.forked_from,
+              sourcePattern,
+            );
+            if (result.changes > 0) provenanceRecorded++;
+          }
         }
+      } finally {
+        db.close();
       }
-    } finally {
-      db.close();
+    } catch {
+      warnings.push('Could not record provenance — database may be locked or unavailable.');
     }
   }
 
