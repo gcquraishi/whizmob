@@ -1,0 +1,218 @@
+{
+  "version": "1.0",
+  "constellation": {
+    "id": "ceo-operating-system",
+    "name": "CEO Operating System",
+    "description": "George's executive operating system: cofounder, chief-of-staff, standup, roadmap, debrief, leadership-meeting, sprint, panel hooks, and memory schema",
+    "author": "George Quraishi"
+  },
+  "exported_at": "2026-02-25T21:26:30.425Z",
+  "exported_from": "MacBook-Pro-3.local",
+  "files": [
+    {
+      "bundle_path": "files/claude_md/big-heavy-CLAUDE.md",
+      "original_path": "{{HOME}}/Documents/big-heavy/CLAUDE.md",
+      "component_type": "claude_md",
+      "role": "executive operating model",
+      "passport_name": null,
+      "secrets_stripped": false,
+      "memory_bootstrapped": false
+    },
+    {
+      "bundle_path": "files/hook/panel-start.sh",
+      "original_path": "{{HOME}}/Documents/big-heavy/csuite/hooks/panel-start.sh",
+      "component_type": "hook",
+      "role": "panel start hook",
+      "passport_name": null,
+      "secrets_stripped": false,
+      "memory_bootstrapped": false
+    },
+    {
+      "bundle_path": "files/hook/panel-stop.sh",
+      "original_path": "{{HOME}}/Documents/big-heavy/csuite/hooks/panel-stop.sh",
+      "component_type": "hook",
+      "role": "panel stop hook",
+      "passport_name": null,
+      "secrets_stripped": false,
+      "memory_bootstrapped": false
+    },
+    {
+      "bundle_path": "files/memory_schema/memory.json",
+      "original_path": "{{CLAUDE_DIR}}/cofounder/memory.json",
+      "component_type": "memory_schema",
+      "role": "cofounder memory",
+      "passport_name": null,
+      "secrets_stripped": false,
+      "memory_bootstrapped": true
+    },
+    {
+      "bundle_path": "files/passport_source/chief-of-staff.md",
+      "original_path": "{{CLAUDE_DIR}}/agents/chief-of-staff.md",
+      "component_type": "passport_source",
+      "role": "agent",
+      "passport_name": "Chief Of Staff",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/cofounder-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/cofounder/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Cofounder",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/debrief-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/debrief/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Debrief",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/leadership-meeting-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/leadership-meeting/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Leadership Meeting",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/roadmap-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/roadmap/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Roadmap",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/sprint-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/sprint/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Sprint",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/sprint-coordinator.md",
+      "original_path": "{{CLAUDE_DIR}}/agents/sprint-coordinator.md",
+      "component_type": "passport_source",
+      "role": "agent",
+      "passport_name": "Sprint Coordinator",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    },
+    {
+      "bundle_path": "files/passport_source/standup-SKILL.md",
+      "original_path": "{{CLAUDE_DIR}}/skills/standup/SKILL.md",
+      "component_type": "passport_source",
+      "role": "skill",
+      "passport_name": "Standup",
+      "secrets_stripped": false,
+      "memory_bootstrapped": false,
+      "provenance": {
+        "origin": null,
+        "author": null,
+        "license": null,
+        "forked_from": null
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "type": "npm_package",
+      "name": "vercel",
+      "required": false
+    },
+    {
+      "type": "npm_package",
+      "name": "tsx",
+      "required": false
+    }
+  ],
+  "parameters": {
+    "{{HOME}}": "User home directory",
+    "{{CLAUDE_DIR}}": "Claude Code config directory (~/.claude)",
+    "{{WHIZMOB_DIR}}": "Whizmob data directory (~/.whizmob)"
+  },
+  "content_parameters": {
+    "{{ORG_NAME}}": {
+      "description": "Org name",
+      "required": true,
+      "default_value": null
+    },
+    "{{OWNER_NAME}}": {
+      "description": "Owner name",
+      "required": true,
+      "default_value": null
+    },
+    "{{WORKSPACE_ROOT}}": {
+      "description": "Workspace root",
+      "required": true,
+      "default_value": null
+    },
+    "{{PANEL_REGISTRY_DIR}}": {
+      "description": "Panel registry dir",
+      "required": true,
+      "default_value": null
+    },
+    "{{MEMORY_PATH}}": {
+      "description": "Memory path",
+      "required": true,
+      "default_value": null
+    },
+    "{{ENV_SHARED_PATH}}": {
+      "description": "Env shared path",
+      "required": true,
+      "default_value": null
+    }
+  }
+}

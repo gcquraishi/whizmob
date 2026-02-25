@@ -22,7 +22,8 @@ import {
 } from './constellation.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
 import { exportConstellation } from './export.js';
-import { planImport, executeImport } from './import.js';
+import { planImport, executeImport, loadImportProfile, saveImportProfile } from './import.js';
+import { createInterface } from 'node:readline/promises';
 import { syncConstellation } from './sync.js';
 import type { TargetPlatform } from './adapters/types.js';
 import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
@@ -504,11 +505,13 @@ program
   .description('Import a constellation bundle into the local environment')
   .option('--dry-run', 'Show what would be installed without writing files')
   .option('--force', 'Overwrite existing files without prompting')
+  .option('--no-profile', 'Ignore saved import profile')
+  .option('--no-prompt', 'Skip interactive prompts (fail on missing params)')
   .option('--param <params...>', 'Override parameters as KEY=VALUE (e.g. --param "{{HOME}}=/Users/me")')
-  .action((bundlePath: string, opts) => {
+  .action(async (bundlePath: string, opts) => {
     try {
-      // Parse custom parameters
-      const params: Record<string, string> = {};
+      // Parse custom parameters from --param flags
+      const cliParams: Record<string, string> = {};
       if (opts.param) {
         for (const p of opts.param) {
           const eqIdx = p.indexOf('=');
@@ -516,12 +519,44 @@ program
             console.error(`[whizmob] Invalid parameter: ${p}. Use KEY=VALUE format.`);
             process.exit(1);
           }
-          params[p.slice(0, eqIdx)] = p.slice(eqIdx + 1);
+          cliParams[p.slice(0, eqIdx)] = p.slice(eqIdx + 1);
         }
       }
 
-      const plan = planImport(bundlePath, Object.keys(params).length > 0 ? params : undefined);
+      // Initial plan to discover constellation ID and content params
+      const initialPlan = planImport(bundlePath, Object.keys(cliParams).length > 0 ? cliParams : undefined);
+      const constellationId = initialPlan.manifest.constellation.id;
 
+      // Resolution order: CLI --param > saved profile > interactive prompt > default
+      const profileParams = opts.profile !== false ? loadImportProfile(constellationId) : {};
+      const mergedParams = { ...profileParams, ...cliParams };
+
+      // Re-plan with merged params
+      let plan = planImport(bundlePath, Object.keys(mergedParams).length > 0 ? mergedParams : undefined);
+
+      // Interactive prompting for unresolved required params
+      const unresolvedRequired = plan.contentParams.filter(cp => !cp.resolved && cp.meta.required);
+      if (unresolvedRequired.length > 0 && opts.prompt !== false && !opts.dryRun) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        console.log('');
+        console.log('Content parameters needed:');
+        try {
+          for (const cp of unresolvedRequired) {
+            const defaultHint = cp.meta.default_value ? ` [${cp.meta.default_value}]` : '';
+            const answer = await rl.question(`  ${cp.meta.description} (${cp.token})${defaultHint}: `);
+            const value = answer.trim() || cp.meta.default_value;
+            if (value) {
+              mergedParams[cp.token] = value;
+            }
+          }
+        } finally {
+          rl.close();
+        }
+        // Re-plan with prompted values
+        plan = planImport(bundlePath, mergedParams);
+      }
+
+      console.log('');
       console.log(`Constellation: ${plan.manifest.constellation.name}`);
       console.log(`Exported from: ${plan.manifest.exported_from} at ${plan.manifest.exported_at}`);
       console.log(`Files: ${plan.actions.length}`);
@@ -585,6 +620,20 @@ program
       }
       if (result.skipped > 0 && result.skipped !== result.conflicts) {
         console.log(`Skipped: ${result.skipped - result.conflicts} file(s) (missing from bundle)`);
+      }
+
+      // Save profile for future re-imports
+      if (result.installed > 0) {
+        const contentParamValues: Record<string, string> = {};
+        for (const cp of plan.contentParams) {
+          if (cp.value !== null) {
+            contentParamValues[cp.token] = cp.value;
+          }
+        }
+        if (Object.keys(contentParamValues).length > 0) {
+          saveImportProfile(constellationId, contentParamValues);
+          console.log(`Profile saved to ~/.whizmob/import-profiles/${constellationId}.json`);
+        }
       }
     } catch (err) {
       console.error(`[whizmob] ${(err as Error).message}`);

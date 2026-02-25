@@ -1,0 +1,91 @@
+{
+  "version": null,
+  "lastCheckIn": null,
+  "projects": {
+    "earthly-delights": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "muttered": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "fictotum": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "whizmob": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "quraishi-hq": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "gallery": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    },
+    "accountant": {
+      "decisions": [],
+      "followUps": [],
+      "notes": [],
+      "lastSessionDate": null,
+      "lastSessionSummary": null,
+      "whatNext": null,
+      "blockers": [],
+      "activeRoadmap": null
+    }
+  },
+  "crossProject": {
+    "priorities": [],
+    "notes": [],
+    "strategicDecisions": [],
+    "dependencies": []
+  },
+  "people": {
+    "kyle-mcguffee": {
+      "relationship": null,
+      "lastContact": null,
+      "context": null,
+      "nextAction": null,
+      "projects": []
+    }
+  }
+}

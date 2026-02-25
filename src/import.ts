@@ -12,6 +12,31 @@ const DEFAULT_PARAMS: Record<string, string> = {
   '{{WHIZMOB_DIR}}': join(homedir(), '.whizmob'),
 };
 
+const PROFILES_DIR = join(homedir(), '.whizmob', 'import-profiles');
+
+/**
+ * Load a saved import profile for a constellation.
+ * Returns the saved content param values, or empty object if none.
+ */
+export function loadImportProfile(constellationId: string): Record<string, string> {
+  const profilePath = join(PROFILES_DIR, `${constellationId}.json`);
+  if (!existsSync(profilePath)) return {};
+  try {
+    return JSON.parse(readFileSync(profilePath, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save resolved content params as an import profile for future re-imports.
+ */
+export function saveImportProfile(constellationId: string, params: Record<string, string>): void {
+  mkdirSync(PROFILES_DIR, { recursive: true });
+  const profilePath = join(PROFILES_DIR, `${constellationId}.json`);
+  writeFileSync(profilePath, JSON.stringify(params, null, 2), 'utf-8');
+}
+
 export interface ContentParamStatus {
   token: string;
   meta: ContentParameter;

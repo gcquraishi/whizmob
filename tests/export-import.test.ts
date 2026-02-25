@@ -33,7 +33,7 @@ const TEMPLATIZED_SKILL = join(TEST_DIR, 'templatized-skill.md');
 process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 
 import { exportConstellation } from '../src/export.js';
-import { planImport, executeImport } from '../src/import.js';
+import { planImport, executeImport, loadImportProfile, saveImportProfile } from '../src/import.js';
 
 // ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -289,5 +289,69 @@ describe('export / import pipeline', () => {
     assert.ok(installedContent.includes('~/work'), 'Should contain substituted workspace root');
     assert.ok(!installedContent.includes('{{ORG_NAME}}'), 'Should not contain raw {{ORG_NAME}} token');
     assert.ok(!installedContent.includes('{{OWNER_NAME}}'), 'Should not contain raw {{OWNER_NAME}} token');
+  });
+
+  // ── Import profile tests ──────────────────────────────────────────────
+
+  test('saveImportProfile writes a JSON file and loadImportProfile reads it back', () => {
+    // saveImportProfile uses ~/.whizmob/import-profiles/ by default,
+    // but we can test the round-trip since it writes real files
+    saveImportProfile('test-profile', {
+      '{{ORG_NAME}}': 'test-org',
+      '{{OWNER_NAME}}': 'test-owner',
+    });
+
+    const loaded = loadImportProfile('test-profile');
+    assert.equal(loaded['{{ORG_NAME}}'], 'test-org');
+    assert.equal(loaded['{{OWNER_NAME}}'], 'test-owner');
+  });
+
+  test('loadImportProfile returns empty object for nonexistent profile', () => {
+    const loaded = loadImportProfile('nonexistent-constellation');
+    assert.deepEqual(loaded, {});
+  });
+
+  test('planImport with profile params resolves content params', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+
+    // Save a profile first
+    saveImportProfile('param-test', {
+      '{{ORG_NAME}}': 'profile-org',
+      '{{OWNER_NAME}}': 'profile-owner',
+      '{{WORKSPACE_ROOT}}': '~/profile-work',
+    });
+
+    // Load profile and pass to planImport (simulating CLI behavior)
+    const profileParams = loadImportProfile('param-test');
+    const plan = planImport(paramBundleDir, profileParams);
+
+    const resolved = plan.contentParams.filter(cp => cp.resolved);
+    assert.equal(resolved.length, 3, 'All 3 should be resolved from profile');
+    assert.ok(
+      !plan.warnings.some(w => w.includes('content parameter')),
+      'Should have no content param warnings',
+    );
+  });
+
+  test('CLI params override profile params', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+
+    // Profile has one set of values
+    saveImportProfile('param-test', {
+      '{{ORG_NAME}}': 'profile-org',
+      '{{OWNER_NAME}}': 'profile-owner',
+      '{{WORKSPACE_ROOT}}': '~/profile-work',
+    });
+
+    // CLI overrides one value
+    const profileParams = loadImportProfile('param-test');
+    const mergedParams = { ...profileParams, '{{ORG_NAME}}': 'cli-override-org' };
+    const plan = planImport(paramBundleDir, mergedParams);
+
+    const orgParam = plan.contentParams.find(cp => cp.token === '{{ORG_NAME}}');
+    assert.equal(orgParam?.value, 'cli-override-org', 'CLI should override profile');
+
+    const ownerParam = plan.contentParams.find(cp => cp.token === '{{OWNER_NAME}}');
+    assert.equal(ownerParam?.value, 'profile-owner', 'Profile value should be preserved');
   });
 });
