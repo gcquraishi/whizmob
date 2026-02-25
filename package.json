@@ -36,7 +36,10 @@
     "dist/",
     "dashboard/",
     "!dashboard/node_modules",
-    "!dashboard/.next"
+    "!dashboard/.next",
+    "!dashboard/public/translation-test-images",
+    "!dashboard/tsconfig.tsbuildinfo",
+    "!dashboard/package-lock.json"
   ],
   "dependencies": {
     "better-sqlite3": "^12.6.2",
