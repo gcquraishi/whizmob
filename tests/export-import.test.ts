@@ -34,7 +34,7 @@ process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 process.env.WHIZMOB_PROFILES_DIR = join(TEST_DIR, 'import-profiles');
 
 import { exportConstellation } from '../src/export.js';
-import { planImport, executeImport, loadImportProfile, saveImportProfile } from '../src/import.js';
+import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile } from '../src/import.js';
 
 // ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -383,5 +383,59 @@ describe('export / import pipeline', () => {
 
     const ownerParam = plan.contentParams.find(cp => cp.token === '{{OWNER_NAME}}');
     assert.equal(ownerParam?.value, 'profile-owner', 'Profile value should be preserved');
+  });
+
+  // ── Versioning tests ──────────────────────────────────────────────────
+
+  test('first export produces bundle_version 1 with empty changelog', () => {
+    const versionBundleDir = join(TEST_DIR, 'version-bundle-1');
+
+    const result = exportConstellation('Export Test', { outputDir: versionBundleDir });
+
+    assert.equal(result.manifest.bundle_version, 1, 'First export should be version 1');
+    assert.deepEqual(result.manifest.changelog, [], 'First export should have empty changelog');
+  });
+
+  test('re-export to same directory bumps version', () => {
+    const versionBundleDir = join(TEST_DIR, 'version-bundle-reexport');
+
+    // First export
+    exportConstellation('Export Test', { outputDir: versionBundleDir });
+
+    // Re-export to same dir (no source changes, but re-export should still bump)
+    const result2 = exportConstellation('Export Test', { outputDir: versionBundleDir });
+
+    assert.equal(result2.manifest.bundle_version, 2, 'Re-export should bump to version 2');
+  });
+
+  test('saveImportProfile stores bundle_version and loadFullProfile reads it', () => {
+    saveImportProfile('version-test', {
+      '{{ORG_NAME}}': 'test-org',
+    }, 3);
+
+    const full = loadFullProfile('version-test');
+    assert.equal(full.last_imported_version, 3, 'Should store bundle version');
+    assert.equal(full.params['{{ORG_NAME}}'], 'test-org', 'Should store params');
+  });
+
+  test('loadFullProfile returns null version for nonexistent profile', () => {
+    const full = loadFullProfile('nonexistent-version-test');
+    assert.equal(full.last_imported_version, null);
+    assert.deepEqual(full.params, {});
+  });
+
+  test('loadFullProfile handles v1 format (flat params) gracefully', () => {
+    // Write a v1-format profile (flat object, no params wrapper)
+    const profileDir = join(TEST_DIR, 'import-profiles');
+    mkdirSync(profileDir, { recursive: true });
+    writeFileSync(
+      join(profileDir, 'v1-legacy.json'),
+      JSON.stringify({ '{{ORG_NAME}}': 'legacy-org' }),
+      'utf-8',
+    );
+
+    const full = loadFullProfile('v1-legacy');
+    assert.equal(full.last_imported_version, null, 'v1 format has no version');
+    assert.equal(full.params['{{ORG_NAME}}'], 'legacy-org', 'v1 params should be migrated');
   });
 });

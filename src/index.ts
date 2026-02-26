@@ -22,7 +22,7 @@ import {
 } from './constellation.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
 import { exportConstellation } from './export.js';
-import { planImport, executeImport, loadImportProfile, saveImportProfile } from './import.js';
+import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile } from './import.js';
 import { createInterface } from 'node:readline/promises';
 import { syncConstellation } from './sync.js';
 import type { TargetPlatform } from './adapters/types.js';
@@ -461,6 +461,7 @@ program
         console.log(`Exported "${result.manifest.constellation.name}" to ${result.bundleDir}`);
       }
 
+      console.log(`  Version: ${result.manifest.bundle_version}`);
       console.log(`  Files: ${result.fileCount}`);
       if (result.secretsStripped > 0) {
         console.log(`  Secrets stripped: ${result.secretsStripped} file(s)`);
@@ -486,6 +487,17 @@ program
         if (entry.memory_bootstrapped) flags.push('bootstrapped');
         const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
         console.log(`    ${entry.original_path} → ${entry.bundle_path}${flagStr}`);
+      }
+
+      if (result.manifest.changelog.length > 0) {
+        console.log('');
+        console.log('  Changelog:');
+        for (const entry of result.manifest.changelog) {
+          console.log(`    v${entry.version} (${entry.date.split('T')[0]}): ${entry.summary}`);
+          for (const f of entry.files_changed) {
+            console.log(`      - ${f}`);
+          }
+        }
       }
 
       if (result.warnings.length > 0) {
@@ -528,7 +540,8 @@ program
       const constellationId = initialPlan.manifest.constellation.id;
 
       // Resolution order: CLI --param > saved profile > interactive prompt > default
-      const profileParams = opts.profile !== false ? loadImportProfile(constellationId) : {};
+      const fullProfile = opts.profile !== false ? loadFullProfile(constellationId) : { params: {}, last_imported_version: null };
+      const profileParams = fullProfile.params;
       const mergedParams = { ...profileParams, ...cliParams };
 
       // Re-plan with merged params
@@ -592,6 +605,24 @@ program
         }
       }
 
+      // Show changelog (entries since last import)
+      const changelog = plan.manifest.changelog || [];
+      const newEntries = fullProfile.last_imported_version
+        ? changelog.filter(e => e.version > fullProfile.last_imported_version!)
+        : changelog;
+      if (newEntries.length > 0) {
+        console.log('');
+        console.log(fullProfile.last_imported_version
+          ? `Changes since your last import (v${fullProfile.last_imported_version}):`
+          : 'Changelog:');
+        for (const entry of newEntries) {
+          console.log(`  v${entry.version} (${entry.date.split('T')[0]}): ${entry.summary}`);
+          for (const f of entry.files_changed) {
+            console.log(`    - ${f}`);
+          }
+        }
+      }
+
       // Show warnings
       if (plan.warnings.length > 0) {
         console.log('');
@@ -631,8 +662,8 @@ program
           }
         }
         if (Object.keys(contentParamValues).length > 0) {
-          saveImportProfile(constellationId, contentParamValues);
-          console.log(`Profile saved to ~/.whizmob/import-profiles/${constellationId}.json`);
+          saveImportProfile(constellationId, contentParamValues, plan.manifest.bundle_version);
+          console.log(`Profile saved to ~/.whizmob/import-profiles/${constellationId}.json (v${plan.manifest.bundle_version})`);
         }
       }
     } catch (err) {

@@ -18,28 +18,63 @@ function resolveProfilesDir(): string {
   return join(homedir(), '.whizmob', 'import-profiles');
 }
 
+export interface ImportProfile {
+  params: Record<string, string>;
+  last_imported_version: number | null;
+}
+
 /**
  * Load a saved import profile for a constellation.
- * Returns the saved content param values, or empty object if none.
+ * Handles both v1 (flat params object) and v2 (structured with version) formats.
  */
 export function loadImportProfile(constellationId: string): Record<string, string> {
   const profilePath = join(resolveProfilesDir(), `${constellationId}.json`);
   if (!existsSync(profilePath)) return {};
   try {
-    return JSON.parse(readFileSync(profilePath, 'utf-8'));
+    const data = JSON.parse(readFileSync(profilePath, 'utf-8'));
+    // v2 format: { params: {...}, last_imported_version: N }
+    if (data.params && typeof data.params === 'object') return data.params;
+    // v1 format: flat { "{{TOKEN}}": "value" } — backwards compatible
+    return data;
   } catch {
     return {};
   }
 }
 
 /**
- * Save resolved content params as an import profile for future re-imports.
+ * Load the full profile including version metadata.
  */
-export function saveImportProfile(constellationId: string, params: Record<string, string>): void {
+export function loadFullProfile(constellationId: string): ImportProfile {
+  const profilePath = join(resolveProfilesDir(), `${constellationId}.json`);
+  if (!existsSync(profilePath)) return { params: {}, last_imported_version: null };
+  try {
+    const data = JSON.parse(readFileSync(profilePath, 'utf-8'));
+    if (data.params && typeof data.params === 'object') {
+      return { params: data.params, last_imported_version: data.last_imported_version ?? null };
+    }
+    // v1 format migration
+    return { params: data, last_imported_version: null };
+  } catch {
+    return { params: {}, last_imported_version: null };
+  }
+}
+
+/**
+ * Save resolved content params and version as an import profile for future re-imports.
+ */
+export function saveImportProfile(
+  constellationId: string,
+  params: Record<string, string>,
+  bundleVersion?: number,
+): void {
   const dir = resolveProfilesDir();
   mkdirSync(dir, { recursive: true });
   const profilePath = join(dir, `${constellationId}.json`);
-  writeFileSync(profilePath, JSON.stringify(params, null, 2), 'utf-8');
+  const profile: ImportProfile = {
+    params,
+    last_imported_version: bundleVersion ?? null,
+  };
+  writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf-8');
 }
 
 export interface ContentParamStatus {

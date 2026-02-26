@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { slugify } from './constellation.js';
+import { syncConstellation } from './sync.js';
 import type { ComponentType, LicenseType } from './types.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
@@ -28,8 +29,16 @@ export interface ContentParameter {
   default_value: string | null;
 }
 
+export interface ChangelogEntry {
+  version: number;
+  date: string;
+  summary: string;
+  files_changed: string[];
+}
+
 export interface ExportManifest {
   version: '1.0';
+  bundle_version: number;
   constellation: {
     id: string;
     name: string;
@@ -42,6 +51,7 @@ export interface ExportManifest {
   dependencies: ExportDependency[];
   parameters: Record<string, string>; // path param name → description
   content_parameters: Record<string, ContentParameter>; // content param name → metadata
+  changelog: ChangelogEntry[];
 }
 
 export interface ExportFileEntry {
@@ -430,9 +440,45 @@ export function exportConstellation(
     // Detect content parameters ({{UPPER_SNAKE}} tokens in file content)
     const contentParameters = detectContentParameters(bundledContents);
 
+    // Build changelog from previous manifest (if re-exporting to same dir)
+    let changelog: ChangelogEntry[] = [];
+    let bundleVersion = 1;
+    const previousManifestPath = join(bundleDir, 'manifest.json');
+    if (existsSync(previousManifestPath)) {
+      try {
+        const prev: ExportManifest = JSON.parse(readFileSync(previousManifestPath, 'utf-8'));
+        changelog = prev.changelog || [];
+        bundleVersion = (prev.bundle_version || 1) + 1;
+
+        // Detect what changed since last export using sync engine
+        const syncResult = syncConstellation(bundleDir);
+        const changedFiles = syncResult.entries
+          .filter(e => e.status === 'modified')
+          .map(e => e.passportName || basename(e.originalPath));
+
+        if (changedFiles.length > 0 || fileEntries.length !== prev.files.length) {
+          const added = fileEntries.length - prev.files.length;
+          const parts: string[] = [];
+          if (changedFiles.length > 0) parts.push(`${changedFiles.length} file(s) modified`);
+          if (added > 0) parts.push(`${added} file(s) added`);
+          if (added < 0) parts.push(`${Math.abs(added)} file(s) removed`);
+
+          changelog.push({
+            version: bundleVersion,
+            date: new Date().toISOString(),
+            summary: parts.join(', '),
+            files_changed: changedFiles,
+          });
+        }
+      } catch {
+        // Previous manifest unreadable — start fresh
+      }
+    }
+
     // Build manifest
     const manifest: ExportManifest = {
       version: '1.0',
+      bundle_version: bundleVersion,
       constellation: {
         id: constellation.id,
         name: constellation.name,
@@ -449,6 +495,7 @@ export function exportConstellation(
         '{{WHIZMOB_DIR}}': 'Whizmob data directory (~/.whizmob)',
       },
       content_parameters: contentParameters,
+      changelog,
     };
 
     // Write manifest
