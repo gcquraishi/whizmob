@@ -33,9 +33,17 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-02-25_
+_Last updated: 2026-02-26_
 
-**Published on npm as `whizmob@0.1.1`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Content parameterization complete** — CEO OS constellation templatized with 6 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `MEMORY_PATH`, `ENV_SHARED_PATH`, `PANEL_REGISTRY_DIR`). Export detects `{{PARAM}}` tokens in file content; import substitutes them from `--param` flags. 32 tests across 4 suites. Ready for cross-account dog-food test.
+**Published on npm as `whizmob@0.1.1`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Content parameterization complete** — CEO OS constellation templatized with 6 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `MEMORY_PATH`, `ENV_SHARED_PATH`, `PANEL_REGISTRY_DIR`). Export detects `{{PARAM}}` tokens in file content; import substitutes them from `--param` flags. 38 tests across 4 suites. Ready for cross-account dog-food test.
+
+### Recent Completions (Cleanup Sprint — 2026-02-26)
+- **RoninInventory → WhizmobInventory rename** (BIG-19) — `RoninInventory` and `RoninStats` types renamed to `WhizmobInventory` and `WhizmobStats` across 6 source files. Zero remaining Ronin references in TypeScript.
+- **`--param` key validation** (BIG-23) — `planImport()` now warns when `--param` keys don't match manifest content parameters or built-in path params. 2 new tests.
+- **Import profile test isolation** — `resolveProfilesDir()` respects `WHIZMOB_PROFILES_DIR` env var (same pattern as `resolveDbPath()`). Tests no longer write to real `~/.whizmob/import-profiles/`.
+- **package-lock.json regenerated** (BIG-20) — was still referencing old "ronin" name and version.
+- **LINEAR_API_KEY cleanup** (BIG-25) — removed stale key from `fictotum/.env.local` that was shadowing the shared key from `.env.shared`.
+- **Linear ticket cleanup** — closed 12 tickets: BIG-10/11/12/13 (already fixed), BIG-5 (test), BIG-14/15 (duplicates), BIG-16/17 (standup improvements), BIG-19/20/23/25 (completed this session).
 
 ### Recent Completions (Content Parameterization)
 - **Content parameter engine** (`src/export.ts`, `src/import.ts`) — Export detects `{{UPPER_SNAKE}}` tokens in bundled file content, catalogs them in `manifest.content_parameters` with descriptions and required flags. Import resolves params from `--param` CLI flags and substitutes in file content before writing to disk. Path params (`{{HOME}}`, `{{CLAUDE_DIR}}`, `{{WHIZMOB_DIR}}`) automatically excluded from content param detection.
@@ -125,7 +133,7 @@ _Last updated: 2026-02-25_
 - **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `whizmob/translation-test-images/`.
 - **Dashboard translation page** live at `/translation` — awaiting generated images.
 - **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `whizmob stats` recommended before call. Linear: BIG-6.
-- **Open Linear tickets**: BIG-19 (rename RoninInventory types), BIG-20 (regen package-lock), BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts + migration errors), BIG-23 (validate --param keys), BIG-24 (test coverage gaps), BIG-25 (LINEAR_API_KEY cleanup).
+- **Open Linear tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts + migration errors), BIG-24 (test coverage gaps).
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
@@ -166,7 +174,7 @@ npm view whizmob                 # verify on registry
 ### Immediate
 - **M3: Guided install UX** — interactive parameter prompts during `whizmob import`, auto-detection of workspace structure, post-install verification. Makes the landing page experience real.
 - **Dog-food** — port CEO OS to work machine (blocked on work machine access). Engine and templates are ready.
-- **Post-publish polish** — fix open Linear tickets (BIG-19 through BIG-24), improve test coverage
+- **Post-publish polish** — remaining open tickets: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps)
 
 ### Blocked
 - **Dog-food execution** — blocked on work machine access. Export/import pipeline is complete and tested.
@@ -192,6 +200,7 @@ npm view whizmob                 # verify on registry
 - Whizmob metaphor: agents don't belong to a platform — they belong to you
 - The Yard (inventory), the Dossier (detail), the Forge (creation)
 - **`resolveDbPath()` pattern**: All modules that open the SQLite DB must check `process.env.WHIZMOB_DB_PATH` first, falling back to `~/.whizmob/whizmob.db`. This enables test isolation. Applies to: `src/db.ts`, `src/constellation.ts`, `src/export.ts`, `src/import.ts`, `src/roster.ts`.
+- **`resolveProfilesDir()` pattern**: Import profile storage checks `process.env.WHIZMOB_PROFILES_DIR` first, falling back to `~/.whizmob/import-profiles/`. Tests must set this env var to avoid writing to the real directory.
 - **LIKE escaping**: Any LIKE query on user input must escape `%`, `_`, and `|` with the `|` prefix and `ESCAPE '|'` clause. Apply in both CLI (`src/`) and dashboard (`dashboard/lib/db.ts`).
 
 ## Session Close Protocol

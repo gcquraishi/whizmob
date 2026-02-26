@@ -31,6 +31,7 @@ const HOOK_FILE = join(TEST_DIR, 'hook.sh');
 const TEMPLATIZED_SKILL = join(TEST_DIR, 'templatized-skill.md');
 
 process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
+process.env.WHIZMOB_PROFILES_DIR = join(TEST_DIR, 'import-profiles');
 
 import { exportConstellation } from '../src/export.js';
 import { planImport, executeImport, loadImportProfile, saveImportProfile } from '../src/import.js';
@@ -93,6 +94,7 @@ function setup(): void {
 
 function teardown(): void {
   delete process.env.WHIZMOB_DB_PATH;
+  delete process.env.WHIZMOB_PROFILES_DIR;
   rmSync(TEST_DIR, { recursive: true, force: true });
 }
 
@@ -330,6 +332,34 @@ describe('export / import pipeline', () => {
     assert.ok(
       !plan.warnings.some(w => w.includes('content parameter')),
       'Should have no content param warnings',
+    );
+  });
+
+  test('planImport warns about unknown --param keys', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+
+    const plan = planImport(paramBundleDir, {
+      '{{ORG_NAME}}': 'acme-corp',
+      '{{BOGUS_PARAM}}': 'should-warn',
+    });
+
+    assert.ok(
+      plan.warnings.some(w => w.includes('{{BOGUS_PARAM}}') && w.includes('Unknown parameter')),
+      'Should warn about unknown parameter {{BOGUS_PARAM}}',
+    );
+  });
+
+  test('planImport does not warn about valid path params like {{HOME}}', () => {
+    const paramBundleDir = join(TEST_DIR, 'param-bundle');
+
+    const plan = planImport(paramBundleDir, {
+      '{{HOME}}': '/custom/home',
+      '{{ORG_NAME}}': 'acme-corp',
+    });
+
+    assert.ok(
+      !plan.warnings.some(w => w.includes('{{HOME}}') && w.includes('Unknown')),
+      'Should NOT warn about {{HOME}} — it is a valid path param',
     );
   });
 

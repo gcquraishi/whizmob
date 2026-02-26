@@ -35,7 +35,7 @@ export interface ProtoPassport {
   metadata: Record<string, unknown>;
 }
 
-export interface RoninInventory {
+export interface WhizmobInventory {
   version: string;
   scanned_at: string;
   scan_duration_ms: number;

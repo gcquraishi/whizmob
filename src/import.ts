@@ -12,14 +12,18 @@ const DEFAULT_PARAMS: Record<string, string> = {
   '{{WHIZMOB_DIR}}': join(homedir(), '.whizmob'),
 };
 
-const PROFILES_DIR = join(homedir(), '.whizmob', 'import-profiles');
+function resolveProfilesDir(): string {
+  const override = process.env.WHIZMOB_PROFILES_DIR;
+  if (override) return override;
+  return join(homedir(), '.whizmob', 'import-profiles');
+}
 
 /**
  * Load a saved import profile for a constellation.
  * Returns the saved content param values, or empty object if none.
  */
 export function loadImportProfile(constellationId: string): Record<string, string> {
-  const profilePath = join(PROFILES_DIR, `${constellationId}.json`);
+  const profilePath = join(resolveProfilesDir(), `${constellationId}.json`);
   if (!existsSync(profilePath)) return {};
   try {
     return JSON.parse(readFileSync(profilePath, 'utf-8'));
@@ -32,8 +36,9 @@ export function loadImportProfile(constellationId: string): Record<string, strin
  * Save resolved content params as an import profile for future re-imports.
  */
 export function saveImportProfile(constellationId: string, params: Record<string, string>): void {
-  mkdirSync(PROFILES_DIR, { recursive: true });
-  const profilePath = join(PROFILES_DIR, `${constellationId}.json`);
+  const dir = resolveProfilesDir();
+  mkdirSync(dir, { recursive: true });
+  const profilePath = join(dir, `${constellationId}.json`);
   writeFileSync(profilePath, JSON.stringify(params, null, 2), 'utf-8');
 }
 
@@ -167,9 +172,22 @@ export function planImport(
     warnings.push(`Required dependency missing: ${dep.type} "${dep.name}"`);
   }
 
+  // Validate --param keys against manifest
+  const manifestContentParams = manifest.content_parameters || {};
+  const validTokens = new Set([
+    ...Object.keys(manifestContentParams),
+    ...Object.keys(DEFAULT_PARAMS),
+  ]);
+  if (params) {
+    for (const key of Object.keys(params)) {
+      if (!validTokens.has(key)) {
+        warnings.push(`Unknown parameter ${key} — not defined in manifest. Valid content parameters: ${Object.keys(manifestContentParams).join(', ') || '(none)'}`);
+      }
+    }
+  }
+
   // Resolve content parameters
   const contentParams: ContentParamStatus[] = [];
-  const manifestContentParams = manifest.content_parameters || {};
   for (const [token, meta] of Object.entries(manifestContentParams)) {
     const userValue = resolvedParams[token] ?? null;
     const resolved = userValue !== null;

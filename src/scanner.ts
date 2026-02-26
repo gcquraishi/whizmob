@@ -1,4 +1,4 @@
-import type { AgentType, ProtoPassport, RoninInventory, ScanOptions } from './types.js';
+import type { AgentType, ProtoPassport, WhizmobInventory, ScanOptions } from './types.js';
 import { parseAgents } from './parsers/agents.js';
 import { parseSkills } from './parsers/skills.js';
 import { parseMcp } from './parsers/mcp.js';
@@ -11,7 +11,7 @@ import { parseCopilot } from './parsers/copilot.js';
 import { parseAider } from './parsers/aider.js';
 import { join } from 'node:path';
 
-export async function scan(options: ScanOptions): Promise<RoninInventory> {
+export async function scan(options: ScanOptions): Promise<WhizmobInventory> {
   const start = Date.now();
   const { scanRoot, claudeDir, codexDir, cursorDir } = options;
   const scanRoots = [scanRoot];

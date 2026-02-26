@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
-import type { RoninInventory, AgentType, LicenseType } from './types.js';
+import type { WhizmobInventory, AgentType, LicenseType } from './types.js';
 import { SCHEMA, MIGRATIONS } from './schema.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
@@ -53,7 +53,7 @@ export interface ScanDiff {
   removed_names: string[];
 }
 
-export function importInventory(inventory: RoninInventory): ScanDiff {
+export function importInventory(inventory: WhizmobInventory): ScanDiff {
   mkdirSync(DB_DIR, { recursive: true });
 
   const db = new Database(resolveDbPath());
@@ -144,7 +144,7 @@ export function importInventory(inventory: RoninInventory): ScanDiff {
   };
 }
 
-export interface RoninStats {
+export interface WhizmobStats {
   total: number;
   byType: Record<string, number>;
   byPlatform: Record<string, number>;
@@ -294,7 +294,7 @@ export function listTranslatableSkills(): PassportRow[] {
   }
 }
 
-export function getStats(): RoninStats | null {
+export function getStats(): WhizmobStats | null {
   if (!existsSync(resolveDbPath())) return null;
   const db = new Database(resolveDbPath(), { readonly: true });
 

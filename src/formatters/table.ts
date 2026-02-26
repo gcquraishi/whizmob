@@ -1,5 +1,5 @@
 import Table from 'cli-table3';
-import type { RoninInventory } from '../types.js';
+import type { WhizmobInventory } from '../types.js';
 
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
@@ -14,7 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
   extension: 'Extension',
 };
 
-export function formatTable(inventory: RoninInventory): string {
+export function formatTable(inventory: WhizmobInventory): string {
   const lines: string[] = [];
 
   // Summary header
