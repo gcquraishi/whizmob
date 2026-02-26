@@ -3,7 +3,7 @@
 ## Identity
 - **Domain**: None (npm package: `npx whizmob scan`)
 - **Hosting**: None (local-first CLI + dashboard)
-- **Linear Team**: None
+- **Ticket Prefix**: BIG
 - **Root Config**: See ../CLAUDE.md for shared infrastructure
 
 ## Overview
@@ -43,6 +43,14 @@ _Last updated: 2026-02-26_
 - **CLI integration** — export shows version + changelog; import filters changelog to entries since last imported version.
 - **Cross-account portability roadmap** — 4 milestones: M1 dog-food, M2 versioning (done), M3 smart update with sync agent, M4 reverse flow.
 - **5 new tests** — first export version, re-export bumps version, profile version storage, nonexistent profile, v1 format migration.
+
+### Recent Completions (Linear → Obsidian Migration — 2026-02-26)
+- **Migrated all 487 Linear issues** to `~/Documents/brain/tickets/` as markdown files with YAML frontmatter. Migration script: `csuite/scripts/migrate-linear-to-obsidian.py`.
+- **Updated 12+ skills and agents** to use direct file ops (Glob/Grep/Read/Write) instead of Linear GraphQL API.
+- **All project CLAUDE.md files** updated: `Linear Team:` → `Ticket Prefix:`.
+- **Prefix rename**: QHQ → MAJ for majordomo, CHR → FIC for fictotum.
+- **Archive split**: done/cancelled tickets in `tickets/done/`, active/backlog in `tickets/`.
+- **4 review tickets created** (BIG-36 through BIG-39) for remaining cleanup items.
 
 ### Recent Completions (Cleanup Sprint — 2026-02-26)
 - **RoninInventory → WhizmobInventory rename** (BIG-19) — `RoninInventory` and `RoninStats` types renamed to `WhizmobInventory` and `WhizmobStats` across 6 source files. Zero remaining Ronin references in TypeScript.
@@ -140,7 +148,7 @@ _Last updated: 2026-02-26_
 - **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `whizmob/translation-test-images/`.
 - **Dashboard translation page** live at `/translation` — awaiting generated images.
 - **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `whizmob stats` recommended before call. Linear: BIG-6.
-- **Open Linear tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts + migration errors), BIG-24 (test coverage gaps).
+- **Open tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts + migration errors), BIG-24 (test coverage gaps).
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
