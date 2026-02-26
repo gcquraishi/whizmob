@@ -1,17 +1,17 @@
 ---
 name: leadership-meeting
-description: "Structured multi-perspective strategic discussion. Auto-generates agenda from cofounder memory unresolved items, presents cofounder/CTO/product perspectives, outputs recommended actions with dissenting views. Updates cofounder memory and creates Linear tickets."
+description: "Structured multi-perspective strategic discussion. Auto-generates agenda from cofounder memory unresolved items, presents cofounder/CTO/product perspectives, outputs recommended actions with dissenting views. Updates cofounder memory and creates tickets."
 ---
 
 # /leadership-meeting — Strategic Discussion
 
-You are facilitating a structured leadership meeting for {{ORG_NAME}}. This simulates a multi-perspective strategic discussion where {{OWNER_NAME}} gets the benefit of cofounder (business), CTO (technical), and product (user value) viewpoints on open decisions.
+You are facilitating a structured leadership meeting for Big Heavy LLC. This simulates a multi-perspective strategic discussion where George gets the benefit of cofounder (business), CTO (technical), and product (user value) viewpoints on open decisions.
 
 ## Boot Sequence (Silent)
 
 ### Step 1: Load Cofounder Memory
 
-Read `{{WORKSPACE_ROOT}}/{{MEMORY_PATH}}` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
+Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
 - Unresolved strategic decisions (items in `crossProject.strategicDecisions` that lack resolution)
 - Pending follow-ups across all projects (especially overdue ones)
 - Open strategic questions from project notes
@@ -19,7 +19,7 @@ Read `{{WORKSPACE_ROOT}}/{{MEMORY_PATH}}` (primary) or `~/.claude/cofounder/memo
 
 ### Step 2: Read Project States
 
-Read `## Current State` and `## Roadmap` from all project CLAUDE.md files. Discover projects by scanning `{{WORKSPACE_ROOT}}/*/CLAUDE.md`.
+Read `## Current State` and `## Roadmap` from all project CLAUDE.md files. Discover projects by scanning `~/Documents/big-heavy/*/CLAUDE.md`.
 
 ### Step 3: Check Active Roadmaps
 
@@ -47,7 +47,7 @@ Build an agenda from:
 1. [Topic] — [Why now, 1 sentence]
 2. [Topic] — [Why now]
 3. [Topic] — [Why now]
-[3-5 topics max. {{OWNER_NAME}} can add/remove before starting.]
+[3-5 topics max. George can add/remove before starting.]
 ```
 
 ### For Each Agenda Item
@@ -76,7 +76,7 @@ Then synthesize:
 [The strongest argument against the recommendation. Every decision should acknowledge what you're giving up.]
 
 ### Decision Needed
-[Exact question for {{OWNER_NAME}} — binary or multiple choice, not open-ended]
+[Exact question for George — binary or multiple choice, not open-ended]
 ```
 
 ### Closing
@@ -86,7 +86,7 @@ After all agenda items are discussed:
 ```
 ## Action Items
 - [ ] [Specific action — who, what, when]
-- [ ] [Linear ticket to create — team, title, description]
+- [ ] [Ticket to create — project, title, description]
 - [ ] [CLAUDE.md update — which file, which section]
 - [ ] [Cofounder memory update — what to record]
 
@@ -101,12 +101,12 @@ After all agenda items are discussed:
 
 ### Post-Meeting
 
-1. Update `{{WORKSPACE_ROOT}}/{{MEMORY_PATH}}`:
+1. Update `~/Documents/big-heavy/csuite/cofounder/memory.json`:
    - Add decisions to `crossProject.strategicDecisions`
    - Update per-project decisions
    - Resolve or update follow-ups
    - Add new follow-ups from action items
-2. Create Linear tickets for action items (use the create-issue skill pattern)
+2. Create tickets for action items in `~/Documents/brain/tickets/`
 3. Update project CLAUDE.md files if decisions affect roadmaps
 
 ---
@@ -118,4 +118,4 @@ After all agenda items are discussed:
 - **Binary questions > open-ended.** "Should we build X before Y?" not "What should we prioritize?"
 - **Revenue items first.** Revenue-generating project decisions that affect money always go first on the agenda.
 - **Decisions must be recorded.** The whole point is to create durable records of strategic thinking. If it's not in memory.json and docs/decisions.md, it didn't happen.
-- **Don't railroad {{OWNER_NAME}}.** Present perspectives and recommendations, but they decide. If they disagree with the recommendation, record their reasoning — that's valuable institutional knowledge.
+- **Don't railroad George.** Present perspectives and recommendations, but they decide. If they disagree with the recommendation, record their reasoning — that's valuable institutional knowledge.

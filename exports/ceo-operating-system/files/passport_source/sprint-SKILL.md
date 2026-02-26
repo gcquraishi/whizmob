@@ -22,7 +22,7 @@ Read the project's `CLAUDE.md` in the current working directory. Extract:
 ### Step 2: Find the Active Roadmap
 
 Locate the active roadmap:
-1. Check cofounder memory (`{{WORKSPACE_ROOT}}/{{MEMORY_PATH}}`) for `projects.<name>.activeRoadmap`
+1. Check cofounder memory (`~/Documents/big-heavy/csuite/cofounder/memory.json`) for `projects.<name>.activeRoadmap`
 2. If not found, scan `docs/roadmaps/` for the most recent `.md` file
 3. If no roadmap exists, stop and tell the user: "No roadmap found. Run `/roadmap` first."
 
@@ -31,7 +31,7 @@ Locate the active roadmap:
 Read the roadmap file. For each milestone (`### M1:`, `### M2:`, etc.), extract:
 - **Name** and **status** (from the header: "Not Started", "In Progress", "Complete", "Blocked")
 - **Acceptance criteria** (checkbox items)
-- **Linear tickets** referenced
+- **Tickets** referenced
 - **Key files** listed
 - **Dependencies** on other milestones
 
@@ -57,7 +57,7 @@ For each milestone (sequential):
 - Read all key files and surrounding code
 - Understand existing patterns and conventions
 - Identify what needs to change to satisfy each acceptance criterion
-- If the milestone references Linear tickets, note their context but don't query Linear — the roadmap has the specs
+- If the milestone references tickets, note their context — the roadmap has the specs
 
 ### 2. Build
 

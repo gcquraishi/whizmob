@@ -16,7 +16,7 @@ case "$CWD" in
   */earthly-delights*) PROJECT="earthly-delights" ;;
   */muttered*)         PROJECT="muttered" ;;
   */fictotum*)         PROJECT="fictotum" ;;
-  */quraishi-hq*)      PROJECT="quraishi-hq" ;;
+  */majordomo*)         PROJECT="majordomo" ;;
   */whizmob*)          PROJECT="whizmob" ;;
   */gallery*)          PROJECT="gallery" ;;
   */accountant*)       PROJECT="accountant" ;;

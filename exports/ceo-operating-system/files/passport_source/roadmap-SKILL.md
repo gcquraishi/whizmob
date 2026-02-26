@@ -5,7 +5,7 @@ description: "Roadmap planning session per project. Run as `/roadmap <project>` 
 
 # /roadmap — Roadmap Planning
 
-You are facilitating a roadmap planning session for a {{ORG_NAME}} project. {{OWNER_NAME}} is the PM — you provide multi-perspective analysis and they make the final calls.
+You are facilitating a roadmap planning session for a Big Heavy LLC project. George is the PM — you provide multi-perspective analysis and they make the final calls.
 
 ## Invocation
 
@@ -23,15 +23,28 @@ Read the project's CLAUDE.md — full file, focusing on `## Current State`, `## 
 
 ### Step 2: Read Cofounder Memory
 
-Read `{{WORKSPACE_ROOT}}/{{MEMORY_PATH}}` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
+Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
 - Strategic decisions for this project
 - What's next / blockers
 - Cross-project dependencies
 - Relevant follow-ups
 
-### Step 3: Query Linear
+### Step 3: Query Obsidian Tickets
 
-If a `LINEAR_API_KEY` is available (check `{{WORKSPACE_ROOT}}/{{ENV_SHARED_PATH}}` or environment), query open tickets for this project's team. Use the Linear GraphQL API to fetch teams and match by project name.
+Scan `~/Documents/brain/tickets/` for markdown files matching the project's team prefix. Use this mapping:
+
+| Project | Prefix |
+|---------|--------|
+| muttered | MUT |
+| fictotum | FIC |
+| majordomo (quraishi-hq) | MAJ |
+| earthly-delights | EARTH |
+| big-heavy (org-level) | BIG |
+
+1. Glob `~/Documents/brain/tickets/PREFIX-*.md` for the relevant team prefix
+2. Read/Grep each file's YAML frontmatter to extract `status`, `priority`, and `title`
+3. Group into **Active** (status: in-progress, todo) and **Backlog** (status: backlog, triage) buckets
+4. Sort by priority within each bucket
 
 ### Step 4: Read Previous Roadmap
 
@@ -41,13 +54,13 @@ Check for the active roadmap referenced in cofounder memory (`projects.<name>.ac
 
 ## Planning Process
 
-### Phase 1: State of Play (Present to {{OWNER_NAME}})
+### Phase 1: State of Play (Present to George)
 
 Summarize:
 - What was accomplished since the last roadmap
 - What's in flight
 - What's blocked
-- Open Linear tickets
+- Open Obsidian tickets
 - Strategic context from cofounder memory
 
 ### Phase 2: Multi-Perspective Analysis
@@ -80,7 +93,7 @@ Each milestone should be:
 
 ### Phase 4: Conversation
 
-{{OWNER_NAME}} refines through conversation. Adjust milestones based on their input. They may:
+George refines through conversation. Adjust milestones based on their input. They may:
 - Reprioritize
 - Add/remove milestones
 - Change acceptance criteria
@@ -88,7 +101,7 @@ Each milestone should be:
 
 ### Phase 5: Save Roadmap
 
-After {{OWNER_NAME}} approves, save to `<project>/docs/roadmaps/<name>.md`. Use a descriptive name, not a date — the roadmap lives until its milestones are done, not until a calendar flips.
+After George approves, save to `<project>/docs/roadmaps/<name>.md`. Use a descriptive name, not a date — the roadmap lives until its milestones are done, not until a calendar flips.
 
 ```markdown
 # [Project] — [Roadmap Name]
@@ -102,7 +115,7 @@ After {{OWNER_NAME}} approves, save to `<project>/docs/roadmaps/<name>.md`. Use 
 - **Acceptance criteria**:
   - [ ] [Specific, testable — describes a user experience or verifiable outcome]
   - [ ] [Specific, testable]
-- **Linear tickets**: [XXX-NNN, XXX-NNN]
+- **Tickets**: [XXX-NNN, XXX-NNN]
 - **Key files**: [paths]
 
 ### M2: [Outcome Name] — Not Started
@@ -129,11 +142,11 @@ After saving the roadmap:
 
 ## Behavior Notes
 
-- **{{OWNER_NAME}} is PM.** You propose, they decide. Don't railroad.
+- **George is PM.** You propose, they decide. Don't railroad.
 - **3-5 milestones max.** More than 5 means you haven't prioritized hard enough.
 - **Milestones are outcomes, not tasks.** If a milestone can be completed by running one command or writing one migration, it's too small. Bundle tasks into the outcome they serve.
 - **Revenue projects get priority framing.** Revenue-generating project milestones should always tie back to revenue impact.
-- **Reference Linear tickets.** Every milestone should reference existing tickets or create new ones.
+- **Reference tickets.** Every milestone should reference existing Obsidian ticket IDs (e.g., BIG-36) or note new ones to create.
 - **Create the docs/roadmaps directory** if it doesn't exist.
 - **Deferred section is required.** Explicitly stating what you're NOT doing is as important as what you are doing.
 - **No calendar cadence.** Roadmaps are replaced when their milestones are done (or obsolete), not when a month ends. A roadmap might last 2 days or 2 months.
