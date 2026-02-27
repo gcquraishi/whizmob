@@ -33,9 +33,19 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-02-26_
+_Last updated: 2026-02-27_
 
-**Published on npm as `whizmob@0.1.1`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Content parameterization complete** — CEO OS constellation templatized with 6 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `MEMORY_PATH`, `ENV_SHARED_PATH`, `PANEL_REGISTRY_DIR`). Export detects `{{PARAM}}` tokens in file content; import substitutes them from `--param` flags. **Constellation versioning complete** — re-exports auto-detect changes via sync diff, bump `bundle_version`, and append changelog entries. Import profiles track `last_imported_version` so `whizmob import` shows only new changelog entries since last import. 43 tests across 4 suites. Ready for cross-account dog-food test.
+**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Named bundle resolution** — `whizmob import ceo-operating-system` resolves to bundled exports shipped with the npm package; `whizmob import --list` shows available bundles. **Content parameterization verified** — CEO OS constellation (v3) templatized with 5 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `VAULT_PATH`, `PANEL_REGISTRY_DIR`). All 11 files stripped of hardcoded org references; import substitutes from `--param` flags. **Constellation versioning complete** — re-exports auto-detect changes via sync diff, bump `bundle_version`, and append changelog entries. Import profiles track `last_imported_version`. Dashboard removed from npm tarball (was 90% of package size). 43 tests across 4 suites. Dog-food tested on work machine — dry-run succeeds, blocked on GitHub repo going public for full trust.
+
+### Recent Completions (Named Bundles + Templatization v3 — 2026-02-27)
+- **Named bundle resolution** (`src/import.ts`) — `resolveBundlePath()` detects whether import argument is a filesystem path or named bundle, resolves named bundles from `<package-root>/exports/<name>/`. `listBundledExports()` reads all bundled manifests for `--list` output.
+- **CLI wiring** (`src/index.ts`) — import command accepts optional `[bundle]` arg, added `--list` flag, logs resolved path for named bundles.
+- **CEO OS v3 templatization** — all 11 bundled files (8 skills/agents, 2 hooks, 1 memory schema) stripped of 68+ hardcoded references. Removed org-specific CLAUDE.md from bundle. Panel hooks rewritten to use `basename` detection instead of hardcoded case statements. Ticket prefix tables replaced with dynamic discovery. Memory schema bootstrapped empty.
+- **5 content parameters** — `OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `VAULT_PATH`, `PANEL_REGISTRY_DIR` (with default `~/.ceo-os-panels`).
+- **Tilde expansion** — `expandTilde()` added to `deparameterizePath()` since Node.js `existsSync('~/...')` doesn't expand `~`.
+- **Dashboard removed from npm tarball** — was shipping `dashboard/` including personal `whizmob.db` snapshot. Package size 653KB → 377KB.
+- **Published v0.1.2 + v0.1.3** — v0.1.2 added named resolution; v0.1.3 added templatized bundle.
+- **BIG-50 created** — GitHub org migration (`bigheavyio`, owned by `george@bigheavy.fun`).
 
 ### Recent Completions (Constellation Versioning — M2)
 - **`bundle_version` + `changelog[]`** in `ExportManifest` — re-export to same directory auto-increments version and appends changelog entry with timestamp, summary, and files changed. Sync engine detects modified files.
@@ -143,12 +153,12 @@ _Last updated: 2026-02-26_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **Cross-account portability roadmap** — `docs/roadmaps/cross-account-portability.md`. M2 (versioning) complete. Next: M3 (smart update with sync agent — three-way change classification + semantic conflict resolution). M1 (dog-food on work machine) blocked on access.
-- **Dog-food** — port CEO Operating System to work machine. Export bundle committed at `exports/ceo-operating-system/`. Interactive prompts + saved profiles ready. Blocked on work machine access.
-- **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md` — generate 6 images (3 baseline + 3 translated) across DALL-E, Midjourney, Gemini. Output goes to `whizmob/translation-test-images/`.
-- **Dashboard translation page** live at `/translation` — awaiting generated images.
-- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete, `whizmob stats` recommended before call. Linear: BIG-6.
-- **Open tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts + migration errors), BIG-24 (test coverage gaps).
+- **GitHub repo migration (BIG-50)** — Create `bigheavyio` org owned by `george@bigheavy.fun`, scrub `seed-inventory.json` + `dashboard/data/whizmob.db` from history, make repo public. Blocked on George creating GitHub account with business email.
+- **Dog-food** — CEO OS dry-run succeeds on work machine. Blocked on BIG-50 (Claude Code refuses to install packages without public repo). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' --param '{{ORG_NAME}}=CONEX' ...`
+- **Cross-account portability roadmap** — `docs/roadmaps/cross-account-portability.md`. M2 (versioning) complete. Next: M3 (smart update with sync agent). M1 (dog-food) blocked on BIG-50.
+- **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md`. Dashboard page at `/translation` awaiting images.
+- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete. BIG-6.
+- **Open tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps), BIG-50 (GitHub migration).
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
