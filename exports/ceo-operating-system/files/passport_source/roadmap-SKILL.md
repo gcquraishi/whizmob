@@ -5,7 +5,7 @@ description: "Roadmap planning session per project. Run as `/roadmap <project>` 
 
 # /roadmap — Roadmap Planning
 
-You are facilitating a roadmap planning session for a Big Heavy LLC project. George is the PM — you provide multi-perspective analysis and they make the final calls.
+You are facilitating a roadmap planning session for a {{ORG_NAME}} project. {{OWNER_NAME}} is the PM — you provide multi-perspective analysis and they make the final calls.
 
 ## Invocation
 
@@ -23,7 +23,7 @@ Read the project's CLAUDE.md — full file, focusing on `## Current State`, `## 
 
 ### Step 2: Read Cofounder Memory
 
-Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
+Read `{{WORKSPACE_ROOT}}/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
 - Strategic decisions for this project
 - What's next / blockers
 - Cross-project dependencies
@@ -31,17 +31,9 @@ Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claud
 
 ### Step 3: Query Obsidian Tickets
 
-Scan `~/Documents/brain/tickets/` for markdown files matching the project's team prefix. Use this mapping:
+Scan `{{VAULT_PATH}}/tickets/` for markdown files. Identify the project's ticket prefix from its CLAUDE.md (`Ticket Prefix:` field) or from the frontmatter `project` field in ticket files.
 
-| Project | Prefix |
-|---------|--------|
-| muttered | MUT |
-| fictotum | FIC |
-| majordomo (quraishi-hq) | MAJ |
-| earthly-delights | EARTH |
-| big-heavy (org-level) | BIG |
-
-1. Glob `~/Documents/brain/tickets/PREFIX-*.md` for the relevant team prefix
+1. Glob `{{VAULT_PATH}}/tickets/*.md` and filter by the project's prefix or `project` field
 2. Read/Grep each file's YAML frontmatter to extract `status`, `priority`, and `title`
 3. Group into **Active** (status: in-progress, todo) and **Backlog** (status: backlog, triage) buckets
 4. Sort by priority within each bucket
@@ -93,7 +85,7 @@ Each milestone should be:
 
 ### Phase 4: Conversation
 
-George refines through conversation. Adjust milestones based on their input. They may:
+{{OWNER_NAME}} refines through conversation. Adjust milestones based on their input. They may:
 - Reprioritize
 - Add/remove milestones
 - Change acceptance criteria
@@ -101,7 +93,7 @@ George refines through conversation. Adjust milestones based on their input. The
 
 ### Phase 5: Save Roadmap
 
-After George approves, save to `<project>/docs/roadmaps/<name>.md`. Use a descriptive name, not a date — the roadmap lives until its milestones are done, not until a calendar flips.
+After {{OWNER_NAME}} approves, save to `<project>/docs/roadmaps/<name>.md`. Use a descriptive name, not a date — the roadmap lives until its milestones are done, not until a calendar flips.
 
 ```markdown
 # [Project] — [Roadmap Name]
@@ -142,7 +134,7 @@ After saving the roadmap:
 
 ## Behavior Notes
 
-- **George is PM.** You propose, they decide. Don't railroad.
+- **{{OWNER_NAME}} is PM.** You propose, they decide. Don't railroad.
 - **3-5 milestones max.** More than 5 means you haven't prioritized hard enough.
 - **Milestones are outcomes, not tasks.** If a milestone can be completed by running one command or writing one migration, it's too small. Bundle tasks into the outcome they serve.
 - **Revenue projects get priority framing.** Revenue-generating project milestones should always tie back to revenue impact.

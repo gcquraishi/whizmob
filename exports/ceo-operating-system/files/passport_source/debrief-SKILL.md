@@ -19,7 +19,7 @@ You are reviewing the current conversation to extract learnings that make George
 
 Scan the full conversation history. Look for:
 
-1. **Prompt quality**: Places where George's instructions were vague, ambiguous, or required clarification. Also places where they were excellent and led to great results.
+1. **Prompt quality**: Places where {{OWNER_NAME}}'s instructions were vague, ambiguous, or required clarification. Also places where they were excellent and led to great results.
 2. **Discovered knowledge**: Things learned during the session that aren't documented anywhere — configuration quirks, API gotchas, debugging techniques, architectural insights.
 3. **Repeated patterns**: Steps that were done multiple times, friction points, workflows that could be standardized.
 4. **Mistakes**: Where the model went wrong and why. What instructions would have prevented the mistake.
@@ -33,7 +33,7 @@ Output the following format:
 # Session Debrief — [DATE]
 
 ## Prompt Coaching
-[2-3 specific examples from THIS session where George's prompts could have been more effective. If George's prompts were excellent, say so and explain what made them effective.]
+[2-3 specific examples from THIS session where {{OWNER_NAME}}'s prompts could have been more effective. If {{OWNER_NAME}}'s prompts were excellent, say so and explain what made them effective.]
 
 - **What you said**: "[exact quote or close paraphrase]"
 - **What would have worked better**: "[improved version]"
@@ -62,7 +62,7 @@ Output the following format:
 
 ### Step 3: Save the Artifact
 
-Write the debrief to `~/Documents/big-heavy/docs/debriefs/YYYY-MM-DD.md`.
+Write the debrief to `{{WORKSPACE_ROOT}}/docs/debriefs/YYYY-MM-DD.md`.
 
 If a debrief already exists for today (multiple sessions), append with a `## Session 2` header rather than overwriting.
 
@@ -81,7 +81,7 @@ Report any patterns found:
 
 ## Behavior Notes
 
-- **Be honest, not flattering.** If George's prompts were great, say so briefly and move on. If they were poor, be specific about why.
+- **Be honest, not flattering.** If {{OWNER_NAME}}'s prompts were great, say so briefly and move on. If they were poor, be specific about why.
 - **Concrete over abstract.** "Add PORT=3001 to earthly-delights onboarding checklist" not "Consider documenting port configuration."
 - **This is a playbook builder.** Every debrief makes the next session better. Treat it as institutional knowledge capture.
 - **Don't pad.** If the session was short or uneventful, say "Light session — no significant learnings to capture" and skip the full format.

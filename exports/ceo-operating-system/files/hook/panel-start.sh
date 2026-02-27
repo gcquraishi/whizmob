@@ -1,28 +1,18 @@
 #!/bin/bash
 # Panel awareness hook — runs on SessionStart
-# Registers the current project panel in ~/.big-heavy-panels/
+# Registers the current project panel in {{PANEL_REGISTRY_DIR}}/
 # Must be zero-dependency and < 100ms
 
-PANELS_DIR="$HOME/.big-heavy-panels"
+PANELS_DIR="{{PANEL_REGISTRY_DIR}}"
 mkdir -p "$PANELS_DIR"
 
 # Detect project from working directory
+# Uses the directory basename — works for any project layout
 CWD="$(pwd)"
-PROJECT=""
+PROJECT="$(basename "$CWD")"
 
-case "$CWD" in
-  */earthly-delights*) PROJECT="earthly-delights" ;;
-  */muttered*)         PROJECT="muttered" ;;
-  */fictotum*)         PROJECT="fictotum" ;;
-  */majordomo*)         PROJECT="majordomo" ;;
-  */whizmob*)           PROJECT="whizmob" ;;
-  */gallery*)          PROJECT="gallery" ;;
-  */accountant*)       PROJECT="accountant" ;;
-  */big-heavy)         PROJECT="big-heavy-root" ;;
-esac
-
-# Skip if we couldn't detect a project
-if [ -z "$PROJECT" ]; then
+# Skip if we're in the home directory or root
+if [ "$PROJECT" = "$(basename "$HOME")" ] || [ "$PROJECT" = "/" ]; then
   exit 0
 fi
 

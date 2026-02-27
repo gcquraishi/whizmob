@@ -1,27 +1,18 @@
 {
   "version": "1.0",
-  "bundle_version": 2,
+  "bundle_version": 3,
   "constellation": {
     "id": "ceo-operating-system",
     "name": "CEO Operating System",
-    "description": "George's executive operating system: cofounder, chief-of-staff, standup, roadmap, debrief, leadership-meeting, sprint, panel hooks, and memory schema",
+    "description": "Executive operating system: cofounder, chief-of-staff, standup, roadmap, debrief, leadership-meeting, sprint, panel hooks, and memory schema. Fully parameterized for any org.",
     "author": "George Quraishi"
   },
-  "exported_at": "2026-02-26T21:31:44.555Z",
+  "exported_at": "2026-02-27T04:30:00.000Z",
   "exported_from": "MacBook-Pro-3.local",
   "files": [
     {
-      "bundle_path": "files/claude_md/big-heavy-CLAUDE.md",
-      "original_path": "{{HOME}}/Documents/big-heavy/CLAUDE.md",
-      "component_type": "claude_md",
-      "role": "executive operating model",
-      "passport_name": null,
-      "secrets_stripped": false,
-      "memory_bootstrapped": false
-    },
-    {
       "bundle_path": "files/hook/panel-start.sh",
-      "original_path": "{{HOME}}/Documents/big-heavy/csuite/hooks/panel-start.sh",
+      "original_path": "{{WORKSPACE_ROOT}}/csuite/hooks/panel-start.sh",
       "component_type": "hook",
       "role": "panel start hook",
       "passport_name": null,
@@ -30,7 +21,7 @@
     },
     {
       "bundle_path": "files/hook/panel-stop.sh",
-      "original_path": "{{HOME}}/Documents/big-heavy/csuite/hooks/panel-stop.sh",
+      "original_path": "{{WORKSPACE_ROOT}}/csuite/hooks/panel-stop.sh",
       "component_type": "hook",
       "role": "panel stop hook",
       "passport_name": null,
@@ -53,13 +44,7 @@
       "role": "agent",
       "passport_name": "Chief Of Staff",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/cofounder-SKILL.md",
@@ -68,13 +53,7 @@
       "role": "skill",
       "passport_name": "Cofounder",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/debrief-SKILL.md",
@@ -83,13 +62,7 @@
       "role": "skill",
       "passport_name": "Debrief",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/leadership-meeting-SKILL.md",
@@ -98,13 +71,7 @@
       "role": "skill",
       "passport_name": "Leadership Meeting",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/roadmap-SKILL.md",
@@ -113,13 +80,7 @@
       "role": "skill",
       "passport_name": "Roadmap",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/sprint-SKILL.md",
@@ -128,13 +89,7 @@
       "role": "skill",
       "passport_name": "Sprint",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/sprint-coordinator.md",
@@ -143,13 +98,7 @@
       "role": "agent",
       "passport_name": "Sprint Coordinator",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     },
     {
       "bundle_path": "files/passport_source/standup-SKILL.md",
@@ -158,13 +107,7 @@
       "role": "skill",
       "passport_name": "Standup",
       "secrets_stripped": false,
-      "memory_bootstrapped": false,
-      "provenance": {
-        "origin": null,
-        "author": null,
-        "license": null,
-        "forked_from": null
-      }
+      "memory_bootstrapped": false
     }
   ],
   "dependencies": [
@@ -177,9 +120,36 @@
   "parameters": {
     "{{HOME}}": "User home directory",
     "{{CLAUDE_DIR}}": "Claude Code config directory (~/.claude)",
-    "{{WHIZMOB_DIR}}": "Whizmob data directory (~/.whizmob)"
+    "{{WHIZMOB_DIR}}": "Whizmob data directory (~/.whizmob)",
+    "{{WORKSPACE_ROOT}}": "Workspace root directory (e.g. ~/Documents/my-org)"
   },
-  "content_parameters": {},
+  "content_parameters": {
+    "{{OWNER_NAME}}": {
+      "description": "Your name (used in agent prompts, e.g. 'George')",
+      "required": true,
+      "default_value": null
+    },
+    "{{ORG_NAME}}": {
+      "description": "Organization name (e.g. 'Big Heavy LLC')",
+      "required": true,
+      "default_value": null
+    },
+    "{{WORKSPACE_ROOT}}": {
+      "description": "Workspace root directory containing project subdirectories (e.g. ~/Documents/my-org)",
+      "required": true,
+      "default_value": null
+    },
+    "{{VAULT_PATH}}": {
+      "description": "Obsidian vault path for tickets, notes, and dumps (e.g. ~/Documents/brain)",
+      "required": true,
+      "default_value": null
+    },
+    "{{PANEL_REGISTRY_DIR}}": {
+      "description": "Directory for panel status JSON files (e.g. ~/.my-org-panels)",
+      "required": true,
+      "default_value": "~/.ceo-os-panels"
+    }
+  },
   "changelog": [
     {
       "version": 2,
@@ -187,6 +157,25 @@
       "summary": "1 file(s) modified",
       "files_changed": [
         "memory.json"
+      ]
+    },
+    {
+      "version": 3,
+      "date": "2026-02-27T04:30:00.000Z",
+      "summary": "Full content parameterization — all hardcoded names, paths, and project references replaced with {{PARAM}} tokens. Removed org-specific CLAUDE.md. Panel hooks use dynamic basename detection. Ticket prefix tables replaced with dynamic discovery. Memory schema bootstrapped empty.",
+      "files_changed": [
+        "cofounder-SKILL.md",
+        "standup-SKILL.md",
+        "chief-of-staff.md",
+        "roadmap-SKILL.md",
+        "leadership-meeting-SKILL.md",
+        "debrief-SKILL.md",
+        "sprint-SKILL.md",
+        "sprint-coordinator.md",
+        "panel-start.sh",
+        "panel-stop.sh",
+        "memory.json",
+        "manifest.json"
       ]
     }
   ]

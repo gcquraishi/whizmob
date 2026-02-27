@@ -5,7 +5,7 @@ description: "Portfolio standup briefing. Silently collects data from 10 sources
 
 # /standup — Portfolio Standup Briefing
 
-You are producing George's standup briefing across the Big Heavy LLC portfolio. This replaces 15 minutes of context-rebuilding with a 3-minute automated briefing. Can be run anytime — start of a work session, after a break, or when switching context.
+You are producing {{OWNER_NAME}}'s standup briefing across the {{ORG_NAME}} portfolio. This replaces 15 minutes of context-rebuilding with a 3-minute automated briefing. Can be run anytime — start of a work session, after a break, or when switching context.
 
 ## Boot Sequence (Silent)
 
@@ -15,7 +15,7 @@ Run all of these silently. Do NOT narrate the data collection — just present t
 
 Discover projects by scanning for CLAUDE.md files under the workspace root:
 ```bash
-find ~/Documents/big-heavy -maxdepth 2 -name CLAUDE.md -not -path '*/node_modules/*' 2>/dev/null
+find {{WORKSPACE_ROOT}} -maxdepth 2 -name CLAUDE.md -not -path '*/node_modules/*' 2>/dev/null
 ```
 
 Read the `## Current State` section from each discovered project CLAUDE.md.
@@ -27,19 +27,15 @@ For each project directory discovered above, run:
 git -C <project-dir> log --oneline --since="yesterday" 2>/dev/null
 ```
 
-**Separate git repos**: Some projects are independent git repos, not monorepo subdirectories. `git -C <project-dir>` works correctly for both — it enters the directory and uses whatever git repo that directory belongs to.
-
-**CRITICAL**: Do NOT run `git log -- <subdir>/` from the monorepo root for separate repos — it returns nothing because those directories have their own `.git`. Always use `git -C <project-dir>` for every project.
-
-Known separate repos: `majordomo`, `gallery`. All others are monorepo subdirectories.
+**CRITICAL**: Always use `git -C <project-dir>` for every project. Some projects may be independent git repos (they have their own `.git`), while others may be monorepo subdirectories. `git -C` works correctly for both. Do NOT run `git log -- <subdir>/` from a parent directory — it returns nothing for separate repos.
 
 ### Source 3: Panel Status
 
-Read all files in `~/.big-heavy-panels/*.json`. These show which project panels are active/ended and when they last had activity.
+Read all files in `{{PANEL_REGISTRY_DIR}}/*.json`. These show which project panels are active/ended and when they last had activity.
 
 ### Source 4: Cofounder Memory
 
-Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
+Read `{{WORKSPACE_ROOT}}/csuite/cofounder/memory.json` (primary) or `~/.claude/cofounder/memory.json` (fallback symlink). Extract:
 - Cross-project priorities
 - Overdue follow-ups (any followUp where `dueDate` < today and `status` = "pending")
 - Per-project decisions and notes
@@ -47,25 +43,25 @@ Read `~/Documents/big-heavy/csuite/cofounder/memory.json` (primary) or `~/.claud
 
 ### Source 5: Obsidian Tickets
 
-Read tickets from George's Obsidian vault at `~/Documents/brain/tickets/`.
+Read tickets from George's Obsidian vault at `{{VAULT_PATH}}/tickets/`.
 
-1. **Discover ticket files**: Use Glob to find all `~/Documents/brain/tickets/*.md` files.
+1. **Discover ticket files**: Use Glob to find all `{{VAULT_PATH}}/tickets/*.md` files.
 
 2. **Parse YAML frontmatter** from each file. Expected frontmatter fields:
    ```yaml
    ---
-   title: "Fix N+1 query in getPassports"
-   team: BIG          # Team prefix: BIG, MUT, FIC, EARTH, MAJ
+   title: "Short descriptive title"
+   id: PREFIX-NNN
    status: active     # backlog | active | done | cancelled
    priority: 2        # 1=urgent, 2=high, 3=normal, 4=low
+   project: project-name
    updated: 2026-02-20
-   assignee: George
    ---
    ```
 
 3. **Filter**: Only show tickets with `status: backlog` or `status: active`. Skip `done` and `cancelled`.
 
-4. **Categorize by team prefix** (BIG, MUT, FIC, EARTH, MAJ). The ticket identifier is the filename without `.md` extension (e.g., `BIG-19.md` → `BIG-19`).
+4. **Categorize by project** (from frontmatter `project` field, or derive from filename prefix). The ticket identifier is the filename without `.md` extension (e.g., `PROJ-19.md` → `PROJ-19`).
 
 5. **Stale detection**: Flag any ticket as "stale" if `status: active` and the `updated` date is older than 7 days from today.
 
@@ -105,7 +101,7 @@ This section should use a warning tone — uncommitted work means a session ende
 
 ### Source 9: Unprocessed Dump Content
 
-Scan George's Obsidian vault dump folder at `~/Documents/brain/dump/`:
+Scan the Obsidian vault dump folder at `{{VAULT_PATH}}/dump/`:
 
 1. **`dump/notes.md`** — count non-empty bullet lines (`-` or `*` prefixed)
 2. **`dump/canvas.canvas`** — parse JSON, count non-empty nodes (skip nodes where `text` is `""`)
@@ -119,13 +115,13 @@ If the dump has content, report it in the briefing. If everything is empty, omit
 Check if yesterday's daily briefing exists and has feedback:
 
 ```bash
-cat ~/Documents/brain/daily-briefing/$(date -v-1d +%Y-%m-%d).md 2>/dev/null
+cat {{VAULT_PATH}}/daily-briefing/$(date -v-1d +%Y-%m-%d).md 2>/dev/null
 ```
 
 If the file exists, parse the **Priority Decisions** section for `[Y]`, `[N]`, `[L]`, or `[]` markers:
 
-- **`[Y]` items**: George wants to work on these today. Prioritize them in Recommended Focus and Panel Prompts. Check `git log --since="yesterday"` for evidence of progress.
-- **`[N]` items**: George wants these removed. Flag for ticket cancellation or cofounder memory cleanup. Do NOT include in today's recommendations.
+- **`[Y]` items**: {{OWNER_NAME}} wants to work on these today. Prioritize them in Recommended Focus and Panel Prompts. Check `git log --since="yesterday"` for evidence of progress.
+- **`[N]` items**: {{OWNER_NAME}} wants these removed. Flag for ticket cancellation or cofounder memory cleanup. Do NOT include in today's recommendations.
 - **`[L]` items**: Keep on the list but not today. Carry forward to the next briefing but deprioritize.
 - **`[]` items (unreviewed)**: Carry forward. If an item has been `[]` for 3+ consecutive days, flag it: "Unreviewed for N days — still relevant?"
 
@@ -133,7 +129,7 @@ Incorporate this feedback into the standup output — `[Y]` items should appear 
 
 ### Briefing Awareness
 
-If today's daily briefing already exists at `~/Documents/brain/daily-briefing/$(date +%Y-%m-%d).md`, note it at the top of the standup:
+If today's daily briefing already exists at `{{VAULT_PATH}}/daily-briefing/$(date +%Y-%m-%d).md`, note it at the top of the standup:
 
 > **Daily briefing generated today.** Review it in Obsidian or regenerate with `/generate-briefing`.
 
@@ -171,7 +167,7 @@ After collecting all data, output this briefing:
 [From cofounder memory — name the person, the action, how overdue it is]
 
 ## Unprocessed Dump
-[ONLY if dump has content. Show: N bullets in notes.md, N nodes in canvas, N images. Prompt George to run /dump. Omit section entirely if dump is empty.]
+[ONLY if dump has content. Show: N bullets in notes.md, N nodes in canvas, N images. Prompt {{OWNER_NAME}} to run /dump. Omit section entirely if dump is empty.]
 
 ## Yesterday's Briefing Feedback
 [ONLY if yesterday's briefing had responses. Show what happened with Y/N/L items.]
@@ -233,6 +229,6 @@ WHEN DONE:
 
 - **Revenue urgency**: Revenue-generating projects always get called out if payments are unpaid or deadlines are approaching. Money at risk = top priority.
 - **Dormant projects**: Skip projects with no recent git activity unless they have open blockers.
-- **Be opinionated**: "The One Thing" should be a recommendation, not a question. George is the CEO — tell them what matters most.
-- **Panel prompts must be specific**: Reference actual file paths, actual ticket numbers, actual git commits. Vague prompts waste George's time.
+- **Be opinionated**: "The One Thing" should be a recommendation, not a question. {{OWNER_NAME}} is the CEO — tell them what matters most.
+- **Panel prompts must be specific**: Reference actual file paths, actual ticket numbers, actual git commits. Vague prompts waste {{OWNER_NAME}}'s time.
 - **Stale ticket detection**: Any ticket with `status: active` and `updated` date older than 7 days gets flagged. Priority 1-2 stale tickets get extra attention.

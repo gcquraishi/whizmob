@@ -6,24 +6,14 @@
 # Git state capture enables standup Source 8 (uncommitted work detection).
 # If a session ends without committing, standup will flag the orphaned changes.
 
-PANELS_DIR="$HOME/.big-heavy-panels"
+PANELS_DIR="{{PANEL_REGISTRY_DIR}}"
 
 # Detect project from working directory
 CWD="$(pwd)"
-PROJECT=""
+PROJECT="$(basename "$CWD")"
 
-case "$CWD" in
-  */earthly-delights*) PROJECT="earthly-delights" ;;
-  */muttered*)         PROJECT="muttered" ;;
-  */fictotum*)         PROJECT="fictotum" ;;
-  */majordomo*)         PROJECT="majordomo" ;;
-  */whizmob*)          PROJECT="whizmob" ;;
-  */gallery*)          PROJECT="gallery" ;;
-  */accountant*)       PROJECT="accountant" ;;
-  */big-heavy)         PROJECT="big-heavy-root" ;;
-esac
-
-if [ -z "$PROJECT" ]; then
+# Skip if we're in the home directory or root
+if [ "$PROJECT" = "$(basename "$HOME")" ] || [ "$PROJECT" = "/" ]; then
   exit 0
 fi
 

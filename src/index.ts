@@ -22,7 +22,7 @@ import {
 } from './constellation.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
 import { exportConstellation } from './export.js';
-import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile } from './import.js';
+import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile, resolveBundlePath, listBundledExports } from './import.js';
 import { createInterface } from 'node:readline/promises';
 import { syncConstellation } from './sync.js';
 import type { TargetPlatform } from './adapters/types.js';
@@ -513,15 +513,44 @@ program
   });
 
 program
-  .command('import <bundle>')
+  .command('import [bundle]')
   .description('Import a constellation bundle into the local environment')
+  .option('--list', 'List available bundled constellations')
   .option('--dry-run', 'Show what would be installed without writing files')
   .option('--force', 'Overwrite existing files without prompting')
   .option('--no-profile', 'Ignore saved import profile')
   .option('--no-prompt', 'Skip interactive prompts (fail on missing params)')
   .option('--param <params...>', 'Override parameters as KEY=VALUE (e.g. --param "{{HOME}}=/Users/me")')
-  .action(async (bundlePath: string, opts) => {
+  .action(async (bundleArg: string | undefined, opts) => {
     try {
+      // --list: show available bundled exports
+      if (opts.list) {
+        const bundles = listBundledExports();
+        if (bundles.length === 0) {
+          console.log('No bundled constellations available.');
+          return;
+        }
+        console.log('Available bundled constellations:');
+        for (const b of bundles) {
+          console.log(`  ${b.id} — ${b.name} (v${b.version})${b.description ? ` — ${b.description}` : ''}`);
+        }
+        console.log('');
+        console.log('Usage: whizmob import <name> [--dry-run] [--param ...]');
+        return;
+      }
+
+      if (!bundleArg) {
+        console.error('[whizmob] Provide a bundle name or path. Use --list to see available bundles.');
+        process.exit(1);
+      }
+
+      // Resolve named bundle or filesystem path
+      const resolved = resolveBundlePath(bundleArg);
+      const bundlePath = resolved.path;
+      if (resolved.named) {
+        console.log(`[whizmob] Resolved bundle "${bundleArg}" → ${bundlePath}`);
+      }
+
       // Parse custom parameters from --param flags
       const cliParams: Record<string, string> = {};
       if (opts.param) {

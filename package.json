@@ -1,6 +1,6 @@
 {
   "name": "whizmob",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "Inventory, port, and manage your AI agents across Claude Code, Cursor, and Codex",
   "type": "module",
   "bin": {
@@ -34,12 +34,7 @@
   "license": "MIT",
   "files": [
     "dist/",
-    "dashboard/",
-    "!dashboard/node_modules",
-    "!dashboard/.next",
-    "!dashboard/public/translation-test-images",
-    "!dashboard/tsconfig.tsbuildinfo",
-    "!dashboard/package-lock.json"
+    "exports/"
   ],
   "dependencies": {
     "better-sqlite3": "^12.6.2",

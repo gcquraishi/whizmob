@@ -1,9 +1,12 @@
 import Database from 'better-sqlite3';
 import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import type { ExportManifest, ExportFileEntry, ContentParameter } from './export.js';
+
+const __importDirname = dirname(fileURLToPath(import.meta.url));
 
 // Default parameter values for the current machine
 const DEFAULT_PARAMS: Record<string, string> = {
@@ -11,6 +14,67 @@ const DEFAULT_PARAMS: Record<string, string> = {
   '{{CLAUDE_DIR}}': join(homedir(), '.claude'),
   '{{WHIZMOB_DIR}}': join(homedir(), '.whizmob'),
 };
+
+/**
+ * Resolve a bundle argument to a filesystem path.
+ * If the argument looks like a path (contains / ~ or .), treat it as-is.
+ * Otherwise, look for a named bundle in <package-root>/exports/<name>/.
+ */
+export function resolveBundlePath(bundleArg: string): { path: string; named: boolean } {
+  // Looks like a filesystem path — pass through
+  if (bundleArg.includes('/') || bundleArg.startsWith('~') || bundleArg.startsWith('.')) {
+    const resolved = bundleArg.startsWith('~')
+      ? join(homedir(), bundleArg.slice(1))
+      : bundleArg;
+    return { path: resolved, named: false };
+  }
+
+  // Try to resolve as a named bundle from <package-root>/exports/
+  const packageRoot = join(__importDirname, '..');
+  const namedPath = join(packageRoot, 'exports', bundleArg);
+  const manifestPath = join(namedPath, 'manifest.json');
+  if (existsSync(manifestPath)) {
+    return { path: namedPath, named: true };
+  }
+
+  // Fall back to treating as relative path (existing error handling will fire)
+  return { path: bundleArg, named: false };
+}
+
+/**
+ * List all bundled exports shipped with the package.
+ * Reads exports/{name}/manifest.json from the package root.
+ */
+export function listBundledExports(): Array<{ name: string; id: string; version: number; description: string }> {
+  const exportsDir = join(__importDirname, '..', 'exports');
+  if (!existsSync(exportsDir)) return [];
+
+  const results: Array<{ name: string; id: string; version: number; description: string }> = [];
+  let entries: string[];
+  try {
+    entries = readdirSync(exportsDir);
+  } catch {
+    return [];
+  }
+
+  for (const entry of entries) {
+    const manifestPath = join(exportsDir, entry, 'manifest.json');
+    if (!existsSync(manifestPath)) continue;
+    try {
+      const manifest: ExportManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+      results.push({
+        name: manifest.constellation.name,
+        id: entry,
+        version: manifest.bundle_version,
+        description: manifest.constellation.description || '',
+      });
+    } catch {
+      // Skip malformed manifests
+    }
+  }
+
+  return results;
+}
 
 function resolveProfilesDir(): string {
   const override = process.env.WHIZMOB_PROFILES_DIR;
@@ -112,6 +176,12 @@ export interface DependencyCheck {
   available: boolean;
 }
 
+function expandTilde(p: string): string {
+  if (p.startsWith('~/')) return join(homedir(), p.slice(2));
+  if (p === '~') return homedir();
+  return p;
+}
+
 function deparameterizePath(paramPath: string, params: Record<string, string>): string {
   let result = paramPath;
   for (const [param, value] of Object.entries(params)) {
@@ -119,7 +189,7 @@ function deparameterizePath(paramPath: string, params: Record<string, string>): 
       result = result.replace(param, value);
     }
   }
-  return result;
+  return expandTilde(result);
 }
 
 function checkDependency(dep: { type: string; name: string }): boolean {
