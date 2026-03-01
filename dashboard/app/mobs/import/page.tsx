@@ -27,7 +27,7 @@ interface PlanAction {
 interface ImportPlan {
   manifest: {
     version: string;
-    constellation: { id: string; name: string; description: string };
+    mob: { id: string; name: string; description: string };
     exported_at: string;
     exported_from: string;
     files: Array<Record<string, unknown>>;
@@ -65,7 +65,7 @@ export default function ImportPage() {
     setImportResult(null);
     setImportError(null);
     try {
-      const res = await fetch('/api/constellations/import', {
+      const res = await fetch('/api/mobs/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bundlePath: bundlePath.trim(), action: 'plan' }),
@@ -88,7 +88,7 @@ export default function ImportPage() {
     setImportError(null);
     setImportResult(null);
     try {
-      const res = await fetch('/api/constellations/import', {
+      const res = await fetch('/api/mobs/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bundlePath: bundlePath.trim(), action: 'execute', force }),
@@ -176,9 +176,9 @@ export default function ImportPage() {
             {/* Mob info */}
             <Section title="Mob">
               <div className="space-y-1">
-                <div className="text-sm font-semibold text-gray-900">{plan.manifest.constellation.name}</div>
-                {plan.manifest.constellation.description && (
-                  <p className="text-xs text-gray-500">{plan.manifest.constellation.description}</p>
+                <div className="text-sm font-semibold text-gray-900">{plan.manifest.mob.name}</div>
+                {plan.manifest.mob.description && (
+                  <p className="text-xs text-gray-500">{plan.manifest.mob.description}</p>
                 )}
                 <div className="flex gap-4 text-[11px] text-gray-400 mt-2">
                   <span>Exported from: {plan.manifest.exported_from}</span>

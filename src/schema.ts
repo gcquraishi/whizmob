@@ -2,7 +2,7 @@
  * Shared SQLite schema for Whizmob.
  *
  * This is the single source of truth for the database structure.
- * Both the CLI (src/db.ts, src/constellation.ts) and the dashboard
+ * Both the CLI (src/db.ts, src/mob.ts) and the dashboard
  * (dashboard/lib/db.ts) execute these SQL strings — the only difference
  * is the driver:
  *   - CLI:       better-sqlite3 (sync)  → db.exec(SCHEMA)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS translations (
   UNIQUE(source_passport_id, target_platform)
 );
 
-CREATE TABLE IF NOT EXISTS constellations (
+CREATE TABLE IF NOT EXISTS mobs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
@@ -75,13 +75,13 @@ CREATE TABLE IF NOT EXISTS constellations (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS constellation_components (
-  constellation_id TEXT NOT NULL REFERENCES constellations(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS mob_components (
+  mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
   passport_id TEXT REFERENCES passports(id) ON DELETE SET NULL,
   component_type TEXT NOT NULL DEFAULT 'passport',
   file_path TEXT,
   role TEXT,
-  UNIQUE (constellation_id, passport_id, component_type, file_path)
+  UNIQUE (mob_id, passport_id, component_type, file_path)
 );
 `;
 

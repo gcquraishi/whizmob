@@ -6,7 +6,7 @@
  *
  * Flow:
  *   1. Create a temp SQLite DB with SCHEMA
- *   2. Insert a constellation + a passport as a non-passport file_path component
+ *   2. Insert a mob + a passport as a non-passport file_path component
  *      (avoids needing a real file on disk for the passport source)
  *   3. Export with dryRun=true → verify manifest structure
  *   4. Export to a real temp bundle dir → verify manifest.json written
@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { SCHEMA, MIGRATIONS } from '../src/schema.js';
 
-// ── Set env var BEFORE any module-level import from export.ts / constellation.ts ──
+// ── Set env var BEFORE any module-level import from export.ts / mob.ts ──
 
 const TEST_DIR = join(tmpdir(), `whizmob-export-test-${process.pid}`);
 const TEST_DB_PATH = join(TEST_DIR, 'test.db');
@@ -33,7 +33,7 @@ const TEMPLATIZED_SKILL = join(TEST_DIR, 'templatized-skill.md');
 process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 process.env.WHIZMOB_PROFILES_DIR = join(TEST_DIR, 'import-profiles');
 
-import { exportConstellation } from '../src/export.js';
+import { exportMob } from '../src/export.js';
 import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile } from '../src/import.js';
 
 // ── Setup ────────────────────────────────────────────────────────────────────
@@ -69,23 +69,23 @@ function setup(): void {
     }
   }
 
-  // Insert a constellation
+  // Insert a mob
   db.prepare(
-    `INSERT INTO constellations (id, name, description, author) VALUES ('export-test', 'Export Test', 'Testing the export pipeline', 'test-author')`
+    `INSERT INTO mobs (id, name, description, author) VALUES ('export-test', 'Export Test', 'Testing the export pipeline', 'test-author')`
   ).run();
 
   // Insert a non-passport component with a real file_path (the hook file we wrote above)
   db.prepare(
-    `INSERT INTO constellation_components (constellation_id, component_type, file_path, role)
+    `INSERT INTO mob_components (mob_id, component_type, file_path, role)
      VALUES ('export-test', 'hook', ?, 'session-start')`
   ).run(HOOK_FILE);
 
-  // Insert a second constellation with templatized content
+  // Insert a second mob with templatized content
   db.prepare(
-    `INSERT INTO constellations (id, name, description, author) VALUES ('param-test', 'Param Test', 'Testing content parameters', 'test-author')`
+    `INSERT INTO mobs (id, name, description, author) VALUES ('param-test', 'Param Test', 'Testing content parameters', 'test-author')`
   ).run();
   db.prepare(
-    `INSERT INTO constellation_components (constellation_id, component_type, file_path, role)
+    `INSERT INTO mob_components (mob_id, component_type, file_path, role)
      VALUES ('param-test', 'claude_md', ?, 'skill')`
   ).run(TEMPLATIZED_SKILL);
 
@@ -104,13 +104,13 @@ describe('export / import pipeline', () => {
   before(setup);
   after(teardown);
 
-  test('exportConstellation (dryRun) returns a manifest with correct structure', () => {
-    const result = exportConstellation('Export Test', { dryRun: true });
+  test('exportMob (dryRun) returns a manifest with correct structure', () => {
+    const result = exportMob('Export Test', { dryRun: true });
 
     assert.equal(result.manifest.version, '1.0');
-    assert.equal(result.manifest.constellation.id, 'export-test');
-    assert.equal(result.manifest.constellation.name, 'Export Test');
-    assert.equal(result.manifest.constellation.author, 'test-author');
+    assert.equal(result.manifest.mob.id, 'export-test');
+    assert.equal(result.manifest.mob.name, 'Export Test');
+    assert.equal(result.manifest.mob.author, 'test-author');
 
     // The hook file we added should appear in files[]
     assert.equal(result.fileCount, 1, 'Expected exactly one file in the export');
@@ -121,8 +121,8 @@ describe('export / import pipeline', () => {
     assert.equal(entry.memory_bootstrapped, false);
   });
 
-  test('exportConstellation (dryRun) does not write files to disk', () => {
-    const result = exportConstellation('Export Test', {
+  test('exportMob (dryRun) does not write files to disk', () => {
+    const result = exportMob('Export Test', {
       dryRun: true,
       outputDir: BUNDLE_DIR,
     });
@@ -136,27 +136,27 @@ describe('export / import pipeline', () => {
     );
   });
 
-  test('exportConstellation writes manifest.json when not dry-run', () => {
+  test('exportMob writes manifest.json when not dry-run', () => {
     const realBundleDir = join(TEST_DIR, 'real-bundle');
 
-    exportConstellation('Export Test', { outputDir: realBundleDir });
+    exportMob('Export Test', { outputDir: realBundleDir });
 
     const manifestPath = join(realBundleDir, 'manifest.json');
     assert.ok(existsSync(manifestPath), 'manifest.json should exist after a real export');
 
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
     assert.equal(manifest.version, '1.0');
-    assert.equal(manifest.constellation.id, 'export-test');
+    assert.equal(manifest.mob.id, 'export-test');
     assert.ok(Array.isArray(manifest.files));
     assert.ok(Array.isArray(manifest.dependencies));
     assert.ok(typeof manifest.exported_at === 'string');
     assert.ok(typeof manifest.exported_from === 'string');
   });
 
-  test('exportConstellation writes the actual hook file into the bundle', () => {
+  test('exportMob writes the actual hook file into the bundle', () => {
     const realBundleDir = join(TEST_DIR, 'real-bundle-2');
 
-    const result = exportConstellation('Export Test', { outputDir: realBundleDir });
+    const result = exportMob('Export Test', { outputDir: realBundleDir });
 
     assert.equal(result.fileCount, 1);
     const entry = result.manifest.files[0];
@@ -167,9 +167,9 @@ describe('export / import pipeline', () => {
     assert.ok(content.includes('echo "panel start"'), 'Bundled file should contain hook content');
   });
 
-  test('exportConstellation throws when constellation does not exist', () => {
+  test('exportMob throws when mob does not exist', () => {
     assert.throws(
-      () => exportConstellation('Nonexistent Constellation', { dryRun: true }),
+      () => exportMob('Nonexistent Mob', { dryRun: true }),
       /not found/i,
     );
   });
@@ -177,7 +177,7 @@ describe('export / import pipeline', () => {
   test('planImport reads a valid bundle and produces import actions', () => {
     // First create a real bundle to plan from
     const planBundleDir = join(TEST_DIR, 'plan-bundle');
-    exportConstellation('Export Test', { outputDir: planBundleDir });
+    exportMob('Export Test', { outputDir: planBundleDir });
 
     // planImport does not use WHIZMOB_DB_PATH — it only reads the manifest
     // and checks the local filesystem for conflicts.
@@ -208,7 +208,7 @@ describe('export / import pipeline', () => {
   // ── Content parameter tests ─────────────────────────────────────────────
 
   test('export detects content parameters in templatized files', () => {
-    const result = exportConstellation('Param Test', { dryRun: true });
+    const result = exportMob('Param Test', { dryRun: true });
 
     assert.ok(result.contentParamsDetected > 0, 'Should detect content parameters');
     const cp = result.manifest.content_parameters;
@@ -219,7 +219,7 @@ describe('export / import pipeline', () => {
   });
 
   test('export does not flag path parameters as content parameters', () => {
-    const result = exportConstellation('Param Test', { dryRun: true });
+    const result = exportMob('Param Test', { dryRun: true });
     const cp = result.manifest.content_parameters;
 
     // {{HOME}}, {{CLAUDE_DIR}}, {{WHIZMOB_DIR}} are path params, not content params
@@ -229,7 +229,7 @@ describe('export / import pipeline', () => {
   });
 
   test('content parameters are required by default', () => {
-    const result = exportConstellation('Param Test', { dryRun: true });
+    const result = exportMob('Param Test', { dryRun: true });
     for (const meta of Object.values(result.manifest.content_parameters)) {
       assert.equal(meta.required, true, 'Content params should be required by default');
       assert.equal(meta.default_value, null, 'Content params should have no default');
@@ -238,7 +238,7 @@ describe('export / import pipeline', () => {
 
   test('planImport warns about missing required content params', () => {
     const paramBundleDir = join(TEST_DIR, 'param-bundle');
-    exportConstellation('Param Test', { outputDir: paramBundleDir });
+    exportMob('Param Test', { outputDir: paramBundleDir });
 
     const plan = planImport(paramBundleDir);
 
@@ -309,7 +309,7 @@ describe('export / import pipeline', () => {
   });
 
   test('loadImportProfile returns empty object for nonexistent profile', () => {
-    const loaded = loadImportProfile('nonexistent-constellation');
+    const loaded = loadImportProfile('nonexistent-mob');
     assert.deepEqual(loaded, {});
   });
 
@@ -390,7 +390,7 @@ describe('export / import pipeline', () => {
   test('first export produces bundle_version 1 with empty changelog', () => {
     const versionBundleDir = join(TEST_DIR, 'version-bundle-1');
 
-    const result = exportConstellation('Export Test', { outputDir: versionBundleDir });
+    const result = exportMob('Export Test', { outputDir: versionBundleDir });
 
     assert.equal(result.manifest.bundle_version, 1, 'First export should be version 1');
     assert.deepEqual(result.manifest.changelog, [], 'First export should have empty changelog');
@@ -400,10 +400,10 @@ describe('export / import pipeline', () => {
     const versionBundleDir = join(TEST_DIR, 'version-bundle-reexport');
 
     // First export
-    exportConstellation('Export Test', { outputDir: versionBundleDir });
+    exportMob('Export Test', { outputDir: versionBundleDir });
 
     // Re-export to same dir (no source changes, but re-export should still bump)
-    const result2 = exportConstellation('Export Test', { outputDir: versionBundleDir });
+    const result2 = exportMob('Export Test', { outputDir: versionBundleDir });
 
     assert.equal(result2.manifest.bundle_version, 2, 'Re-export should bump to version 2');
   });

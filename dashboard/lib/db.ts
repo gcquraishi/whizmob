@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS translations (
   UNIQUE(source_passport_id, target_platform)
 );
 
-CREATE TABLE IF NOT EXISTS constellations (
+CREATE TABLE IF NOT EXISTS mobs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
@@ -73,13 +73,13 @@ CREATE TABLE IF NOT EXISTS constellations (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS constellation_components (
-  constellation_id TEXT NOT NULL REFERENCES constellations(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS mob_components (
+  mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
   passport_id TEXT REFERENCES passports(id) ON DELETE SET NULL,
   component_type TEXT NOT NULL DEFAULT 'passport',
   file_path TEXT,
   role TEXT,
-  UNIQUE (constellation_id, passport_id, component_type, file_path)
+  UNIQUE (mob_id, passport_id, component_type, file_path)
 );
 `;
 
@@ -452,9 +452,9 @@ export async function getAllTags(): Promise<Array<{ tag: string; count: number }
   }));
 }
 
-// --- Constellation queries ---
+// --- Mob queries ---
 
-export interface ConstellationRow {
+export interface MobRow {
   id: string;
   name: string;
   description: string;
@@ -464,7 +464,7 @@ export interface ConstellationRow {
   updated_at: string;
 }
 
-export interface ConstellationComponentRow {
+export interface MobComponentRow {
   passport_id: string | null;
   passport_name: string | null;
   passport_type: string | null;
@@ -477,17 +477,17 @@ export interface ConstellationComponentRow {
   tags: string[];
 }
 
-export interface ConstellationDetailRow extends ConstellationRow {
-  components: ConstellationComponentRow[];
+export interface MobDetailRow extends MobRow {
+  components: MobComponentRow[];
 }
 
-export async function getConstellations(): Promise<ConstellationRow[]> {
+export async function getMobs(): Promise<MobRow[]> {
   const database = await getDb();
   const result = database.exec(`
     SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
-           COUNT(cc.constellation_id) as component_count
-    FROM constellations c
-    LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+           COUNT(cc.mob_id) as component_count
+    FROM mobs c
+    LEFT JOIN mob_components cc ON c.id = cc.mob_id
     GROUP BY c.id
     ORDER BY c.name
   `);
@@ -508,13 +508,13 @@ export async function getConstellations(): Promise<ConstellationRow[]> {
   });
 }
 
-export async function getConstellation(id: string): Promise<ConstellationDetailRow | null> {
+export async function getMob(id: string): Promise<MobDetailRow | null> {
   const database = await getDb();
   const result = database.exec(`
     SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
-           COUNT(cc.constellation_id) as component_count
-    FROM constellations c
-    LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+           COUNT(cc.mob_id) as component_count
+    FROM mobs c
+    LEFT JOIN mob_components cc ON c.id = cc.mob_id
     WHERE c.id = ?
     GROUP BY c.id
   `, [id]);
@@ -530,13 +530,13 @@ export async function getConstellation(id: string): Promise<ConstellationDetailR
     SELECT cc.passport_id, p.name as passport_name, p.type as passport_type,
            cc.component_type, cc.file_path, cc.role,
            p.purpose, p.invocation, p.scope
-    FROM constellation_components cc
+    FROM mob_components cc
     LEFT JOIN passports p ON cc.passport_id = p.id
-    WHERE cc.constellation_id = ?
+    WHERE cc.mob_id = ?
     ORDER BY cc.component_type, COALESCE(p.name, cc.file_path)
   `, [id]);
 
-  let components: ConstellationComponentRow[] = [];
+  let components: MobComponentRow[] = [];
   if (compResult.length > 0) {
     const compCols = compResult[0].columns;
 
@@ -582,7 +582,7 @@ export async function getConstellation(id: string): Promise<ConstellationDetailR
         invocation: (c.invocation as string | null) ?? null,
         scope: (c.scope as string | null) ?? null,
         tags: passportId ? (tagsByPassportId.get(passportId) ?? []) : [],
-      };
+      } as MobComponentRow;
     });
   }
 
@@ -626,9 +626,9 @@ export async function getMobGraphData(): Promise<MobGraphData> {
   const edges: MobGraphEdge[] = [];
   const nodeIds = new Set<string>();
 
-  // Get all constellations as mob nodes
+  // Get all mobs as mob nodes
   const mobResult = database.exec(`
-    SELECT id, name FROM constellations ORDER BY name
+    SELECT id, name FROM mobs ORDER BY name
   `);
   if (mobResult.length > 0) {
     for (const row of mobResult[0].values) {
@@ -638,13 +638,13 @@ export async function getMobGraphData(): Promise<MobGraphData> {
     }
   }
 
-  // Get all components with their constellation membership
+  // Get all components with their mob membership
   const compResult = database.exec(`
-    SELECT cc.constellation_id, cc.passport_id, cc.component_type, cc.file_path,
+    SELECT cc.mob_id, cc.passport_id, cc.component_type, cc.file_path,
            p.name as passport_name, p.type as passport_type
-    FROM constellation_components cc
+    FROM mob_components cc
     LEFT JOIN passports p ON cc.passport_id = p.id
-    ORDER BY cc.constellation_id, cc.component_type
+    ORDER BY cc.mob_id, cc.component_type
   `);
 
   if (compResult.length > 0) {
@@ -652,7 +652,7 @@ export async function getMobGraphData(): Promise<MobGraphData> {
     const componentMobs = new Map<string, string[]>();
 
     for (const row of compResult[0].values) {
-      const constellationId = row[0] as string;
+      const mobId = row[0] as string;
       const passportId = row[1] as string | null;
       const componentType = row[2] as string;
       const filePath = row[3] as string | null;
@@ -677,11 +677,11 @@ export async function getMobGraphData(): Promise<MobGraphData> {
 
       // Track which mobs this component belongs to
       const mobs = componentMobs.get(compNodeId) || [];
-      mobs.push(constellationId);
+      mobs.push(mobId);
       componentMobs.set(compNodeId, mobs);
 
       // Edge: mob → component
-      edges.push({ source: constellationId, target: compNodeId, type: 'contains' });
+      edges.push({ source: mobId, target: compNodeId, type: 'contains' });
     }
 
     // Add "shared" edges between mobs that share components

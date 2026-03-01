@@ -20,15 +20,15 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const constellationId = decodeURIComponent(id);
+    const mobId = decodeURIComponent(id);
 
     // Dynamically import the CLI export module (uses better-sqlite3)
     const whizmobRoot = join(process.cwd(), '..');
     const exportPath = join(whizmobRoot, 'dist', 'export.js');
     const mod = await import(/* webpackIgnore: true */ exportPath);
-    const exportFn = mod.exportConstellation as (name: string, opts?: Record<string, unknown>) => ExportResultShape;
+    const exportFn = mod.exportMob as (name: string, opts?: Record<string, unknown>) => ExportResultShape;
 
-    const result = exportFn(constellationId);
+    const result = exportFn(mobId);
 
     return NextResponse.json({
       bundleDir: result.bundleDir,

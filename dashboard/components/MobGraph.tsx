@@ -342,7 +342,7 @@ export default function MobGraph({ nodes: rawNodes, edges }: MobGraphProps) {
     if (!node) return;
 
     if (node.type === 'mob') {
-      router.push(`/constellations/${encodeURIComponent(node.id)}`);
+      router.push(`/mobs/${encodeURIComponent(node.id)}`);
     } else if (node.id && !node.id.startsWith('file:')) {
       router.push(`/agents/${encodeURIComponent(node.id)}`);
     }

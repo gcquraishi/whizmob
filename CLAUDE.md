@@ -39,7 +39,7 @@ _Last updated: 2026-03-01_
 
 ### Recent Completions (Mob Graph View — 2026-03-01)
 - **Force-directed graph visualization** (`dashboard/components/MobGraph.tsx`) — canvas-based graph with vanilla JS force simulation (no external deps). Mob nodes (large, indigo) connect to component nodes (small, color-coded by type). Shared components create dashed cross-links between mobs.
-- **Dual view** (`dashboard/app/mobs/page.tsx`) — toggle between card grid (existing) and interactive graph view. Graph supports drag-to-reposition, hover tooltips, click-to-navigate (mob → detail, component → dossier).
+- **Dual view** (`dashboard/app/mobs/page.tsx`) — toggle between card grid (existing) and interactive graph view. Graph supports drag-to-reposition, hover tooltips, click-to-navigate (mob → detail, component → detail).
 - **Graph data API** (`dashboard/app/api/mobs/graph/route.ts`, `dashboard/lib/db.ts`) — `getMobGraphData()` returns nodes + edges with shared-component detection.
 - **Constellation → Mob rename** — all dashboard UI labels (nav, page titles, back buttons, descriptions, import page) say "Mob" instead of "Constellation". Internal code/DB unchanged.
 - **Old /constellations path redirects to /mobs**.
@@ -106,8 +106,8 @@ _Last updated: 2026-03-01_
 ### Recent Completions (Prior)
 - M1: Scanner CLI — parses agents, skills, CLAUDE.md, .mcp.json, settings into Proto-Passport JSON
 - M2.5: Multi-platform scanner — Cursor support, platform filter, Codex parser added
-- Dashboard with Yard view, search/filter, Dossier detail, SQLite persistence
-- Dossier enhancements: collapsible source viewer, Cursor editor link, per-project usage stats
+- Dashboard with inventory view, search/filter, detail pages, SQLite persistence
+- Detail page enhancements: collapsible source viewer, Cursor editor link, per-project usage stats
 - Secret redaction in source viewer for `.mcp.json` and `settings.json` files
 - **`whizmob roster` CLI** — queries SQLite DB for agent lookups (`--search`, `--type`, `--platform`, `--hook`)
 - **SessionStart hook** — injects compact agent roster into every Claude Code session (startup + compact)
@@ -142,7 +142,7 @@ _Last updated: 2026-03-01_
   - `whizmob stats` includes constellation and component counts
 - **Dashboard constellation UI** — full constellation management in the web dashboard:
   - List page (`/constellations`): card grid with component counts, author, import button
-  - Detail page (`/constellations/[id]`): component graph grouped by type, linked to passport dossiers, export button
+  - Detail page (`/constellations/[id]`): component graph grouped by type, linked to passport detail pages, export button
   - Export from UI: calls CLI `exportConstellation()` via dynamic import, shows bundle contents, secrets stripped, dependencies
   - Import page (`/constellations/import`): enter bundle path, dry-run preview (files, conflicts, dependencies, warnings), install with optional force-overwrite
   - API routes: `GET /api/constellations`, `GET /api/constellations/[id]`, `POST /api/constellations/[id]/export`, `POST /api/constellations/import`
@@ -214,13 +214,13 @@ npm view whizmob                 # verify on registry
 
 ### Future (Backlog)
 - Cloud sync + accounts
-- Team Yards with role-based access
+- Team inventories with role-based access
 - Gallery (public agent marketplace)
 - Improve roster search relevance scoring
 - Codex agents parser (beyond skills — if Codex adds agent-like configs)
 
 ## Security Notes
-- **Source viewer reads files at request time** from the local filesystem. This is safe for local-only use but **must not ship to multi-user without rearchitecting**. When cloud sync / Team Yards are built:
+- **Source viewer reads files at request time** from the local filesystem. This is safe for local-only use but **must not ship to multi-user without rearchitecting**. When cloud sync / team inventories are built:
   1. Snapshot source content at scan time instead of reading live files on demand
   2. Add auth to all API routes (currently zero auth — acceptable local-only, fatal multi-user)
   3. Sandbox file reads to known scan roots, not arbitrary paths under homedir
@@ -230,7 +230,7 @@ npm view whizmob                 # verify on registry
 - Local-first: privacy by default, no network calls in v1
 - Proto-Passport schema for all agent identity data
 - Whizmob metaphor: agents don't belong to a platform — they belong to you
-- The Yard (inventory), the Dossier (detail), the Forge (creation)
+- Inventory (home page listing), Detail (passport view)
 - **`resolveDbPath()` pattern**: All modules that open the SQLite DB must check `process.env.WHIZMOB_DB_PATH` first, falling back to `~/.whizmob/whizmob.db`. This enables test isolation. Applies to: `src/db.ts`, `src/constellation.ts`, `src/export.ts`, `src/import.ts`, `src/roster.ts`.
 - **`resolveProfilesDir()` pattern**: Import profile storage checks `process.env.WHIZMOB_PROFILES_DIR` first, falling back to `~/.whizmob/import-profiles/`. Tests must set this env var to avoid writing to the real directory.
 - **LIKE escaping**: Any LIKE query on user input must escape `%`, `_`, and `|` with the `|` prefix and `ESCAPE '|'` clause. Apply in both CLI (`src/`) and dashboard (`dashboard/lib/db.ts`).

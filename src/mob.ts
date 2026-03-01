@@ -48,7 +48,7 @@ export function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export interface ConstellationSummary {
+export interface MobSummary {
   id: string;
   name: string;
   description: string;
@@ -58,7 +58,7 @@ export interface ConstellationSummary {
   updated_at: string;
 }
 
-export interface ConstellationComponent {
+export interface MobComponent {
   passport_id: string | null;
   passport_name: string | null;
   component_type: ComponentType;
@@ -66,11 +66,11 @@ export interface ConstellationComponent {
   role: string | null;
 }
 
-export interface ConstellationDetail extends ConstellationSummary {
-  components: ConstellationComponent[];
+export interface MobDetail extends MobSummary {
+  components: MobComponent[];
 }
 
-export function defineConstellation(
+export function defineMob(
   name: string,
   description: string,
   author?: string,
@@ -82,7 +82,7 @@ export function defineConstellation(
   const db = openDb();
   try {
     db.prepare(
-      `INSERT INTO constellations (id, name, description, author)
+      `INSERT INTO mobs (id, name, description, author)
        VALUES (?, ?, ?, ?)`
     ).run(id, name, description, author || null);
     return id;
@@ -98,17 +98,17 @@ export interface ComponentInput {
   role?: string | null;
 }
 
-export function addComponents(constellationId: string, components: ComponentInput[]): number {
+export function addComponents(mobId: string, components: ComponentInput[]): number {
   const db = openDb();
   try {
-    // Verify constellation exists
-    const exists = db.prepare('SELECT id FROM constellations WHERE id = ?').get(constellationId);
+    // Verify mob exists
+    const exists = db.prepare('SELECT id FROM mobs WHERE id = ?').get(mobId);
     if (!exists) {
-      throw new Error(`Constellation "${constellationId}" not found.`);
+      throw new Error(`Mob "${mobId}" not found.`);
     }
 
     const stmt = db.prepare(
-      `INSERT OR IGNORE INTO constellation_components (constellation_id, passport_id, component_type, file_path, role)
+      `INSERT OR IGNORE INTO mob_components (mob_id, passport_id, component_type, file_path, role)
        VALUES (?, ?, ?, ?, ?)`
     );
 
@@ -116,7 +116,7 @@ export function addComponents(constellationId: string, components: ComponentInpu
     const insertAll = db.transaction(() => {
       for (const c of components) {
         const result = stmt.run(
-          constellationId,
+          mobId,
           c.passport_id || null,
           c.component_type,
           c.file_path || null,
@@ -126,8 +126,8 @@ export function addComponents(constellationId: string, components: ComponentInpu
       }
       // Touch updated_at
       db.prepare(
-        `UPDATE constellations SET updated_at = datetime('now') WHERE id = ?`
-      ).run(constellationId);
+        `UPDATE mobs SET updated_at = datetime('now') WHERE id = ?`
+      ).run(mobId);
     });
 
     insertAll();
@@ -137,43 +137,43 @@ export function addComponents(constellationId: string, components: ComponentInpu
   }
 }
 
-export function getConstellations(): ConstellationSummary[] {
+export function getMobs(): MobSummary[] {
   const db = openDb(true);
   try {
     return db.prepare(`
       SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
-             COUNT(cc.constellation_id) as component_count
-      FROM constellations c
-      LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+             COUNT(cc.mob_id) as component_count
+      FROM mobs c
+      LEFT JOIN mob_components cc ON c.id = cc.mob_id
       GROUP BY c.id
       ORDER BY c.name
-    `).all() as ConstellationSummary[];
+    `).all() as MobSummary[];
   } finally {
     db.close();
   }
 }
 
-export function getConstellation(id: string): ConstellationDetail | null {
+export function getMob(id: string): MobDetail | null {
   const db = openDb(true);
   try {
     const row = db.prepare(`
       SELECT c.id, c.name, c.description, c.author, c.created_at, c.updated_at,
-             COUNT(cc.constellation_id) as component_count
-      FROM constellations c
-      LEFT JOIN constellation_components cc ON c.id = cc.constellation_id
+             COUNT(cc.mob_id) as component_count
+      FROM mobs c
+      LEFT JOIN mob_components cc ON c.id = cc.mob_id
       WHERE c.id = ?
       GROUP BY c.id
-    `).get(id) as ConstellationSummary | undefined;
+    `).get(id) as MobSummary | undefined;
 
     if (!row) return null;
 
     const components = db.prepare(`
       SELECT cc.passport_id, p.name as passport_name, cc.component_type, cc.file_path, cc.role
-      FROM constellation_components cc
+      FROM mob_components cc
       LEFT JOIN passports p ON cc.passport_id = p.id
-      WHERE cc.constellation_id = ?
+      WHERE cc.mob_id = ?
       ORDER BY cc.component_type, COALESCE(p.name, cc.file_path)
-    `).all(id) as ConstellationComponent[];
+    `).all(id) as MobComponent[];
 
     return { ...row, components };
   } finally {
@@ -181,10 +181,10 @@ export function getConstellation(id: string): ConstellationDetail | null {
   }
 }
 
-export function deleteConstellation(id: string): boolean {
+export function deleteMob(id: string): boolean {
   const db = openDb();
   try {
-    const result = db.prepare('DELETE FROM constellations WHERE id = ?').run(id);
+    const result = db.prepare('DELETE FROM mobs WHERE id = ?').run(id);
     return result.changes > 0;
   } finally {
     db.close();
@@ -192,16 +192,16 @@ export function deleteConstellation(id: string): boolean {
 }
 
 export function removeComponent(
-  constellationId: string,
+  mobId: string,
   passportIdOrPath: string,
 ): boolean {
   const db = openDb();
   try {
     // Try removing by passport_id first
     let result = db.prepare(
-      `DELETE FROM constellation_components
-       WHERE constellation_id = ? AND passport_id = ?`
-    ).run(constellationId, passportIdOrPath);
+      `DELETE FROM mob_components
+       WHERE mob_id = ? AND passport_id = ?`
+    ).run(mobId, passportIdOrPath);
 
     if (result.changes === 0) {
       // Try by passport name (case-insensitive)
@@ -211,24 +211,24 @@ export function removeComponent(
 
       if (passport) {
         result = db.prepare(
-          `DELETE FROM constellation_components
-           WHERE constellation_id = ? AND passport_id = ?`
-        ).run(constellationId, passport.id);
+          `DELETE FROM mob_components
+           WHERE mob_id = ? AND passport_id = ?`
+        ).run(mobId, passport.id);
       }
     }
 
     if (result.changes === 0) {
       // Try by file_path
       result = db.prepare(
-        `DELETE FROM constellation_components
-         WHERE constellation_id = ? AND file_path = ?`
-      ).run(constellationId, passportIdOrPath);
+        `DELETE FROM mob_components
+         WHERE mob_id = ? AND file_path = ?`
+      ).run(mobId, passportIdOrPath);
     }
 
     if (result.changes > 0) {
       db.prepare(
-        `UPDATE constellations SET updated_at = datetime('now') WHERE id = ?`
-      ).run(constellationId);
+        `UPDATE mobs SET updated_at = datetime('now') WHERE id = ?`
+      ).run(mobId);
     }
 
     return result.changes > 0;

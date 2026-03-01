@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "bundle_version": 3,
-  "constellation": {
+  "mob": {
     "id": "ceo-operating-system",
     "name": "CEO Operating System",
     "description": "Executive operating system: cofounder, chief-of-staff, standup, roadmap, debrief, leadership-meeting, sprint, panel hooks, and memory schema. Fully parameterized for any org.",

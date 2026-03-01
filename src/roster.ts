@@ -19,30 +19,30 @@ interface PassportRow {
   source_file: string;
 }
 
-interface ConstellationMembership {
+interface MobMembership {
   passport_id: string;
-  constellation_name: string;
+  mob_name: string;
 }
 
-function getConstellationMemberships(db: Database.Database): Map<string, string[]> {
+function getMobMemberships(db: Database.Database): Map<string, string[]> {
   const map = new Map<string, string[]>();
   try {
     const rows = db.prepare(`
-      SELECT cc.passport_id, c.name as constellation_name
-      FROM constellation_components cc
-      JOIN constellations c ON cc.constellation_id = c.id
+      SELECT cc.passport_id, c.name as mob_name
+      FROM mob_components cc
+      JOIN mobs c ON cc.mob_id = c.id
       WHERE cc.passport_id IS NOT NULL
-    `).all() as ConstellationMembership[];
+    `).all() as MobMembership[];
     for (const row of rows) {
       const list = map.get(row.passport_id) || [];
-      list.push(row.constellation_name);
+      list.push(row.mob_name);
       map.set(row.passport_id, list);
     }
   } catch (err) {
-    // Table may not exist yet on first run before constellation schema is created
+    // Table may not exist yet on first run before mob schema is created
     const msg = (err as Error).message || '';
     if (!msg.includes('no such table')) {
-      console.warn('[whizmob] Failed to load constellation memberships:', msg);
+      console.warn('[whizmob] Failed to load mob memberships:', msg);
     }
   }
   return map;
@@ -128,19 +128,19 @@ export function hookRoster(): string {
 
     if (rows.length === 0) return '';
 
-    const memberships = getConstellationMemberships(db);
+    const memberships = getMobMemberships(db);
 
-    // Collect constellation-grouped agents
-    const constellationAgents = new Map<string, PassportRow[]>();
+    // Collect mob-grouped agents
+    const mobAgents = new Map<string, PassportRow[]>();
     const ungrouped: PassportRow[] = [];
 
     for (const row of rows) {
-      const constellations = memberships.get(row.id);
-      if (constellations && constellations.length > 0) {
-        for (const cName of constellations) {
-          const list = constellationAgents.get(cName) || [];
+      const mobs = memberships.get(row.id);
+      if (mobs && mobs.length > 0) {
+        for (const mName of mobs) {
+          const list = mobAgents.get(mName) || [];
           list.push(row);
-          constellationAgents.set(cName, list);
+          mobAgents.set(mName, list);
         }
       } else {
         ungrouped.push(row);
@@ -151,9 +151,9 @@ export function hookRoster(): string {
       `<whizmob-roster agents="${rows.length}">`,
     ];
 
-    // Show constellation groups first
-    for (const [cName, agents] of constellationAgents) {
-      lines.push(`Constellation: ${cName}`);
+    // Show mob groups first
+    for (const [mName, agents] of mobAgents) {
+      lines.push(`Mob: ${mName}`);
       for (const a of agents) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         const invoke = a.invocation ? ` (${a.invocation})` : '';
@@ -216,7 +216,7 @@ export function searchRoster(query: string): string {
 
     if (rows.length === 0) return `# Whizmob: No agents matching "${query}"`;
 
-    const memberships = getConstellationMemberships(db);
+    const memberships = getMobMemberships(db);
     const lines: string[] = [`# Whizmob: ${rows.length} agent(s) matching "${query}"\n`];
 
     for (const a of rows) {
@@ -227,9 +227,9 @@ export function searchRoster(query: string): string {
       lines.push(`- **Purpose**: ${a.purpose}`);
       if (a.model_hint) lines.push(`- **Model**: ${a.model_hint}`);
       if (a.invocation) lines.push(`- **Invocation**: ${a.invocation}`);
-      const constellations = memberships.get(a.id);
-      if (constellations && constellations.length > 0) {
-        lines.push(`- **Constellations**: ${constellations.join(', ')}`);
+      const mobs = memberships.get(a.id);
+      if (mobs && mobs.length > 0) {
+        lines.push(`- **Mobs**: ${mobs.join(', ')}`);
       }
       lines.push(`- **Source**: ${a.source_file}`);
       lines.push('');

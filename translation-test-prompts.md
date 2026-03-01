@@ -1,6 +1,6 @@
 # Translation Test Prompts — Roman Statesman
 
-Generated 2026-02-19. Run these to produce a 2x3 comparison grid demonstrating ronin's translation value.
+Generated 2026-02-19. Run these to produce a 2x3 comparison grid demonstrating whizmob's translation value.
 
 ## Subject
 Ancient Roman statesman, Palette #1 (Burgundy & Olive), commanding mood.
@@ -41,10 +41,10 @@ Simplified graphic illustration style. Bold flat color shapes with thick chunky 
 
 ## Output
 
-Save generated images to `ronin/translation-test-images/`:
+Save generated images to `whizmob/translation-test-images/`:
 - `raw-dalle.png`
 - `raw-midjourney.png`
 - `raw-gemini.png`
-- `ronin-dalle.png`
-- `ronin-midjourney.png`
-- `ronin-gemini.png`
+- `whizmob-dalle.png`
+- `whizmob-midjourney.png`
+- `whizmob-gemini.png`

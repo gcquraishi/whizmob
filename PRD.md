@@ -1,4 +1,4 @@
-# Project Ronin — MVP PRD
+# Whizmob — MVP PRD
 ## Agent Inventory for Claude Code Users
 
 **Version:** 0.1
@@ -76,9 +76,9 @@ This schema is deliberately extensible. The `metadata` field is where future Pas
 
 **Usage:**
 ```bash
-npx ronin scan                    # Scan and output to stdout
-npx ronin scan --output inventory.json  # Save to file
-npx ronin scan --format table     # Pretty-print as table
+npx whizmob scan                    # Scan and output to stdout
+npx whizmob scan --output inventory.json  # Save to file
+npx whizmob scan --format table     # Pretty-print as table
 ```
 
 **Behavior:**
@@ -88,7 +88,7 @@ npx ronin scan --format table     # Pretty-print as table
 4. Read `~/.claude/settings.json` for global config.
 5. Count sessions per project from `~/.claude/projects/*/` directory contents.
 6. Normalize everything into Proto-Passport format.
-7. Output as JSON, table, or push to Ronin dashboard.
+7. Output as JSON, table, or push to Whizmob dashboard.
 
 **Constraints:**
 - Must complete in < 5 seconds for a typical setup (< 100 agents, < 20 projects).
@@ -101,19 +101,19 @@ npx ronin scan --format table     # Pretty-print as table
 
 **Core screens:**
 
-#### Home — The Yard
+#### Home — Inventory
 - Card grid of all agents, grouped by type (subagents, skills, MCP, projects).
 - Each card: name, type icon, purpose (one line), tags, model badge.
 - Search bar with instant filtering by name, purpose, or tag.
 - Sort by: name, type, last modified, project.
 - Summary stats at top: total agents, by type, by project.
 
-#### Agent Detail — The Dossier
+#### Agent Detail
 - Full agent info: name, purpose, description, model, invocation, tags.
 - Source file path (clickable to open in editor).
 - Raw markdown preview of the agent definition.
 - Project associations (which projects use this agent).
-- Edit tags (stored in Ronin, not in the source file).
+- Edit tags (stored in Whizmob, not in the source file).
 
 #### Import / Sync
 - "Scan Now" button that triggers the CLI scanner.
@@ -136,7 +136,7 @@ For each one, provide:
 Format as JSON array.
 ```
 
-The user pastes the output into Ronin's "Manual Import" field. Ronin parses it into Proto-Passports.
+The user pastes the output into Whizmob's "Manual Import" field. Whizmob parses it into Proto-Passports.
 
 ## 5. Tech Stack
 
@@ -147,7 +147,7 @@ The user pastes the output into Ronin's "Manual Import" field. Ronin parses it i
 | Styling | Tailwind CSS | George knows it. |
 | Database | SQLite (local-first) | No account required for v1. Data stays on user's machine. |
 | Auth | None (v1) | Local-first. No server. |
-| Hosting | None (v1) — runs locally | `npx ronin dashboard` starts a local server. |
+| Hosting | None (v1) — runs locally | `npx whizmob dashboard` starts a local server. |
 
 ### Why Local-First?
 
@@ -170,7 +170,7 @@ The user pastes the output into Ronin's "Manual Import" field. Ronin parses it i
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Time to first inventory | < 60 seconds from install | `time npx ronin scan` |
+| Time to first inventory | < 60 seconds from install | `time npx whizmob scan` |
 | Agents discovered | > 90% of actual agents | Compare scan output to manual count |
 | User return rate | User runs scan again within 7 days | Local telemetry (opt-in) |
 | Word of mouth | 3+ people ask "how do I get this?" after seeing George's | Social signal |
@@ -195,9 +195,9 @@ The user pastes the output into Ronin's "Manual Import" field. Ronin parses it i
 - [ ] Handle edge cases (missing files, malformed YAML, empty dirs)
 
 ### M2: Dashboard (2-3 sessions)
-- [ ] Next.js app with Yard view (card grid)
+- [ ] Next.js app with inventory view (card grid)
 - [ ] Search and filter
-- [ ] Agent detail view (Dossier)
+- [ ] Agent detail view
 - [ ] "Scan Now" trigger from dashboard
 - [ ] SQLite local persistence
 - [ ] Manual import for non-Claude-Code agents
@@ -209,7 +209,7 @@ The user pastes the output into Ronin's "Manual Import" field. Ronin parses it i
 - [ ] Record demo for social proof
 
 ### M4: Distribution (1 session)
-- [ ] npm package published (`npx ronin scan`)
+- [ ] npm package published (`npx whizmob scan`)
 - [ ] Post to Claude Code community, Twitter/X, relevant Discords
 - [ ] Collect feedback
 
@@ -218,8 +218,8 @@ The user pastes the output into Ronin's "Manual Import" field. Ronin parses it i
 In priority order, based on what we learn from v1:
 
 1. **Cloud sync + accounts** — Share your inventory, access from anywhere
-2. **Team Yards** — Company-wide agent libraries with role-based access
+2. **Team inventories** — Company-wide agent libraries with role-based access
 3. **Tuning Engine** — Platform-specific optimization (the compiler)
-4. **MCP deployment** — Deploy Ronin agents to Claude Desktop, Cursor, etc.
+4. **MCP deployment** — Deploy Whizmob agents to Claude Desktop, Cursor, etc.
 5. **Gallery** — Public agent marketplace with forking and licensing
 6. **Cross-platform scan** — OpenAI API, Gemini API auto-discovery (when APIs exist)

@@ -57,8 +57,8 @@ Example from George's environment:
 |---|---|---|
 | `/` | Mob Inspector | Master-detail: mob list (left) + per-mob graph (top right) + linked component detail (bottom right) |
 | `/mobs/[id]` | Deep-link | Selects a specific mob in the inspector |
-| `/agents` | Component Inventory | Flat searchable catalog (today's Yard). All components, including islands. |
-| `/agents/[id]` | Component Detail | Full detail for a single component (today's Dossier) |
+| `/agents` | Component Inventory | Flat searchable catalog (today's inventory). All components, including islands. |
+| `/agents/[id]` | Component Detail | Full detail for a single component (today's detail page) |
 | `/mobs/import` | Import | Import a mob bundle |
 | `/translate` | Translation | Demo/utility page (low priority, static) |
 
@@ -134,5 +134,5 @@ Example from George's environment:
 4. **Edge inference from file content** — scanner reads files, detects references to other components, builds dependency graph
 5. **Graph ↔ detail linked** — clicking a graph node scrolls to and highlights the component detail card
 6. **Islands in inventory only** — standalone components don't appear in the mob inspector, only in /agents
-7. **Yard demoted to /agents** — flat inventory moves from homepage to secondary route
+7. **Inventory demoted to /agents** — flat inventory moves from homepage to secondary route
 8. **Manually-defined mobs coexist eventually** — but out of scope for MVP, which focuses on discovery

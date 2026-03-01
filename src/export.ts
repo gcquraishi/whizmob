@@ -3,8 +3,8 @@ import { join, basename, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import { slugify } from './constellation.js';
-import { syncConstellation } from './sync.js';
+import { slugify } from './mob.js';
+import { syncMob } from './sync.js';
 import type { ComponentType, LicenseType } from './types.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
@@ -39,7 +39,7 @@ export interface ChangelogEntry {
 export interface ExportManifest {
   version: '1.0';
   bundle_version: number;
-  constellation: {
+  mob: {
     id: string;
     name: string;
     description: string;
@@ -59,7 +59,7 @@ export interface ExportFileEntry {
   bundle_path: string;
   /** Parameterized original path (e.g. {{CLAUDE_DIR}}/skills/foo/SKILL.md) */
   original_path: string;
-  /** Component type from the constellation */
+  /** Component type from the mob */
   component_type: ComponentType | 'passport_source';
   /** Role label if set */
   role: string | null;
@@ -279,8 +279,8 @@ function inferParamDescription(paramName: string): string {
     .join(' ');
 }
 
-export function exportConstellation(
-  constellationName: string,
+export function exportMob(
+  mobName: string,
   options: { outputDir?: string; dryRun?: boolean } = {},
 ): ExportResult {
   const activeDbPath = resolveDbPath();
@@ -292,15 +292,15 @@ export function exportConstellation(
   const warnings: string[] = [];
 
   try {
-    const id = slugify(constellationName);
+    const id = slugify(mobName);
 
-    // Fetch constellation
-    const constellation = db.prepare(`
-      SELECT id, name, description, author FROM constellations WHERE id = ?
+    // Fetch mob
+    const mob = db.prepare(`
+      SELECT id, name, description, author FROM mobs WHERE id = ?
     `).get(id) as { id: string; name: string; description: string; author: string | null } | undefined;
 
-    if (!constellation) {
-      throw new Error(`Constellation "${constellationName}" not found. Use \`whizmob constellation list\` to see available constellations.`);
+    if (!mob) {
+      throw new Error(`Mob "${mobName}" not found. Use \`whizmob mob list\` to see available mobs.`);
     }
 
     // Fetch components with passport details and provenance
@@ -308,9 +308,9 @@ export function exportConstellation(
       SELECT cc.passport_id, cc.component_type, cc.file_path, cc.role,
              p.name as passport_name, p.source_file as passport_source,
              p.origin, p.author as passport_author, p.license, p.forked_from
-      FROM constellation_components cc
+      FROM mob_components cc
       LEFT JOIN passports p ON cc.passport_id = p.id
-      WHERE cc.constellation_id = ?
+      WHERE cc.mob_id = ?
       ORDER BY cc.component_type, COALESCE(p.name, cc.file_path)
     `).all(id) as {
       passport_id: string | null;
@@ -326,7 +326,7 @@ export function exportConstellation(
     }[];
 
     if (components.length === 0) {
-      throw new Error(`Constellation "${constellation.name}" has no components. Add some with \`whizmob constellation add-component\`.`);
+      throw new Error(`Mob "${mob.name}" has no components. Add some with \`whizmob mob add-component\`.`);
     }
 
     // Collect files to export
@@ -460,7 +460,7 @@ export function exportConstellation(
         bundleVersion = (prev.bundle_version || 1) + 1;
 
         // Detect what changed since last export using sync engine
-        const syncResult = syncConstellation(bundleDir);
+        const syncResult = syncMob(bundleDir);
         const changedFiles = syncResult.entries
           .filter(e => e.status === 'modified')
           .map(e => e.passportName || basename(e.originalPath));
@@ -488,11 +488,11 @@ export function exportConstellation(
     const manifest: ExportManifest = {
       version: '1.0',
       bundle_version: bundleVersion,
-      constellation: {
-        id: constellation.id,
-        name: constellation.name,
-        description: constellation.description,
-        author: constellation.author,
+      mob: {
+        id: mob.id,
+        name: mob.name,
+        description: mob.description,
+        author: mob.author,
       },
       exported_at: new Date().toISOString(),
       exported_from: hostname(),

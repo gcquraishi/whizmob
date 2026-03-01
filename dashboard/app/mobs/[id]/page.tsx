@@ -21,7 +21,7 @@ const groupPluralLabels: Record<string, string> = {
   passport_source: 'Sources',
 };
 
-interface ConstellationComponent {
+interface MobComponent {
   passport_id: string | null;
   passport_name: string | null;
   passport_type: string | null;
@@ -34,7 +34,7 @@ interface ConstellationComponent {
   tags: string[];
 }
 
-interface ConstellationDetail {
+interface MobDetail {
   id: string;
   name: string;
   description: string;
@@ -42,7 +42,7 @@ interface ConstellationDetail {
   component_count: number;
   created_at: string;
   updated_at: string;
-  components: ConstellationComponent[];
+  components: MobComponent[];
 }
 
 interface ExportResult {
@@ -53,7 +53,7 @@ interface ExportResult {
   warnings: string[];
   manifest: {
     version: string;
-    constellation: { id: string; name: string };
+    mob: { id: string; name: string };
     exported_at: string;
     exported_from: string;
     files: Array<{
@@ -85,35 +85,35 @@ const passportTypeConfig: Record<string, { icon: typeof Bot; color: string; bg: 
   settings: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100' },
 };
 
-export default function ConstellationDetailPage() {
+export default function MobDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [constellation, setConstellation] = useState<ConstellationDetail | null>(null);
+  const [mob, setMob] = useState<MobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState<ExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const fetchConstellation = useCallback(async () => {
-    const res = await fetch(`/api/constellations/${encodeURIComponent(id)}`);
+  const fetchMob = useCallback(async () => {
+    const res = await fetch(`/api/mobs/${encodeURIComponent(id)}`);
     if (res.ok) {
-      setConstellation(await res.json());
+      setMob(await res.json());
     }
     setLoading(false);
   }, [id]);
 
   useEffect(() => {
-    fetchConstellation();
-  }, [fetchConstellation]);
+    fetchMob();
+  }, [fetchMob]);
 
   async function handleExport() {
     setExporting(true);
     setExportError(null);
     setExportResult(null);
     try {
-      const res = await fetch(`/api/constellations/${encodeURIComponent(id)}/export`, {
+      const res = await fetch(`/api/mobs/${encodeURIComponent(id)}/export`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -140,10 +140,10 @@ export default function ConstellationDetailPage() {
     );
   }
 
-  if (!constellation) {
+  if (!mob) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-        <button onClick={() => router.push('/constellations')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <button onClick={() => router.push('/mobs')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
           <ArrowLeft size={14} /> Back to Mobs
         </button>
         <p className="text-sm text-gray-500">Mob not found.</p>
@@ -152,7 +152,7 @@ export default function ConstellationDetailPage() {
   }
 
   // Group components by type
-  const grouped = constellation.components.reduce<Record<string, ConstellationComponent[]>>((acc, c) => {
+  const grouped = mob.components.reduce<Record<string, MobComponent[]>>((acc, c) => {
     const key = c.component_type;
     if (!acc[key]) acc[key] = [];
     acc[key].push(c);
@@ -173,13 +173,13 @@ export default function ConstellationDetailPage() {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold text-gray-900">{constellation.name}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{mob.name}</h1>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
-              {constellation.component_count} component{constellation.component_count !== 1 ? 's' : ''}
+              {mob.component_count} component{mob.component_count !== 1 ? 's' : ''}
             </span>
           </div>
-          {constellation.description && (
-            <p className="text-sm text-gray-600 leading-relaxed">{constellation.description}</p>
+          {mob.description && (
+            <p className="text-sm text-gray-600 leading-relaxed">{mob.description}</p>
           )}
         </div>
       </div>
@@ -187,10 +187,10 @@ export default function ConstellationDetailPage() {
       <div className="space-y-6">
         {/* Meta */}
         <Section title="Details">
-          <Field label="ID" value={constellation.id} mono />
-          {constellation.author && <Field label="Author" value={constellation.author} />}
-          <Field label="Created" value={new Date(constellation.created_at).toLocaleDateString()} />
-          <Field label="Updated" value={new Date(constellation.updated_at).toLocaleDateString()} />
+          <Field label="ID" value={mob.id} mono />
+          {mob.author && <Field label="Author" value={mob.author} />}
+          <Field label="Created" value={new Date(mob.created_at).toLocaleDateString()} />
+          <Field label="Updated" value={new Date(mob.updated_at).toLocaleDateString()} />
         </Section>
 
         {/* Components by type */}
@@ -262,7 +262,7 @@ export default function ConstellationDetailPage() {
   );
 }
 
-function ComponentRow({ component }: { component: ConstellationComponent }) {
+function ComponentRow({ component }: { component: MobComponent }) {
   const isPassport = component.component_type === 'passport' && component.passport_id;
   const pCfg = isPassport && component.passport_type
     ? passportTypeConfig[component.passport_type] || passportTypeConfig.subagent

@@ -43,7 +43,7 @@ Whizmob ships as an npm package that any Claude Code user can run, get value fro
 
 ## Deferred
 - **Cloud sync / accounts** — local-first for v1
-- **Team Yards / role-based access** — enterprise, premature
+- **Team inventories / role-based access** — enterprise, premature
 - **Gallery (marketplace)** — needs users first
 - **`whizmob constellation detect`** — auto-detection heuristics, manual `define` works
 - **Linear team for whizmob** — when there are external contributors

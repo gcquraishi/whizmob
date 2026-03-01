@@ -12,19 +12,19 @@ import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
 import { importInventory, getStats, resolveSkill } from './db.js';
 import {
-  defineConstellation,
+  defineMob,
   addComponents,
-  getConstellations,
-  getConstellation,
-  deleteConstellation,
+  getMobs,
+  getMob,
+  deleteMob,
   removeComponent,
   slugify,
-} from './constellation.js';
+} from './mob.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
-import { exportConstellation } from './export.js';
+import { exportMob } from './export.js';
 import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile, resolveBundlePath, listBundledExports } from './import.js';
 import { createInterface } from 'node:readline/promises';
-import { syncConstellation } from './sync.js';
+import { syncMob } from './sync.js';
 import type { TargetPlatform } from './adapters/types.js';
 import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
 
@@ -144,8 +144,8 @@ program
 
       console.log(`${stats.total} items across ${stats.platformCount} platform${stats.platformCount !== 1 ? 's' : ''}: ${parts.join(', ')}.${lastScanStr ? ` Last scan: ${lastScanStr}.` : ''}`);
 
-      if (stats.constellationCount > 0) {
-        console.log(`${stats.constellationCount} constellation${stats.constellationCount !== 1 ? 's' : ''} (${stats.constellationComponentCount} components)`);
+      if (stats.mobCount > 0) {
+        console.log(`${stats.mobCount} mob${stats.mobCount !== 1 ? 's' : ''} (${stats.mobComponentCount} components)`);
       }
 
       if (opts.verbose) {
@@ -223,20 +223,20 @@ program
     }
   });
 
-const constellation = program
-  .command('constellation')
-  .description('Manage constellations — groups of agents that work together');
+const mob = program
+  .command('mob')
+  .description('Manage mobs — groups of agents that work together');
 
-constellation
+mob
   .command('define <name>')
-  .description('Define a new constellation')
-  .option('--desc <description>', 'Description of the constellation', '')
+  .description('Define a new mob')
+  .option('--desc <description>', 'Description of the mob', '')
   .option('--author <author>', 'Author name')
   .option('--add <passports...>', 'Passport names to add as initial components')
   .action((name: string, opts) => {
     try {
-      const id = defineConstellation(name, opts.desc, opts.author);
-      console.log(`Created constellation: ${id}`);
+      const id = defineMob(name, opts.desc, opts.author);
+      console.log(`Created mob: ${id}`);
 
       if (opts.add && opts.add.length > 0) {
         const components = [];
@@ -270,14 +270,14 @@ constellation
     }
   });
 
-constellation
+mob
   .command('list')
-  .description('List all constellations')
+  .description('List all mobs')
   .action(() => {
     try {
-      const items = getConstellations();
+      const items = getMobs();
       if (items.length === 0) {
-        console.log('No constellations defined. Use `whizmob constellation define <name>` to create one.');
+        console.log('No mobs defined. Use `whizmob mob define <name>` to create one.');
         return;
       }
       for (const c of items) {
@@ -292,15 +292,15 @@ constellation
     }
   });
 
-constellation
+mob
   .command('show <name>')
-  .description('Show constellation details')
+  .description('Show mob details')
   .action((name: string) => {
     try {
       const id = slugify(name);
-      const detail = getConstellation(id);
+      const detail = getMob(id);
       if (!detail) {
-        console.error(`[whizmob] Constellation "${name}" not found.`);
+        console.error(`[whizmob] Mob "${name}" not found.`);
         process.exit(1);
       }
 
@@ -323,14 +323,14 @@ constellation
     }
   });
 
-constellation
-  .command('add-component <constellation> <passport-or-path>')
-  .description('Add a component to a constellation')
+mob
+  .command('add-component <mob> <passport-or-path>')
+  .description('Add a component to a mob')
   .option('--type <type>', 'Component type: passport, hook, memory_schema, claude_md, config', 'passport')
   .option('--role <role>', 'Role label for display')
-  .action((constellationName: string, passportOrPath: string, opts) => {
+  .action((mobName: string, passportOrPath: string, opts) => {
     try {
-      const constellationId = slugify(constellationName);
+      const mobId = slugify(mobName);
       if (!VALID_COMPONENT_TYPES.includes(opts.type)) {
         console.error(`[whizmob] Invalid type: ${opts.type}. Valid: ${VALID_COMPONENT_TYPES.join(', ')}`);
         process.exit(1);
@@ -343,26 +343,26 @@ constellation
           console.error(`[whizmob] Passport "${passportOrPath}" not found in DB.`);
           process.exit(1);
         }
-        const added = addComponents(constellationId, [{
+        const added = addComponents(mobId, [{
           passport_id: passport.id,
           component_type: 'passport',
           role: opts.role,
         }]);
         if (added > 0) {
-          console.log(`Added ${passport.name} to ${constellationName}.`);
+          console.log(`Added ${passport.name} to ${mobName}.`);
         } else {
-          console.log(`${passport.name} is already in ${constellationName}.`);
+          console.log(`${passport.name} is already in ${mobName}.`);
         }
       } else {
-        const added = addComponents(constellationId, [{
+        const added = addComponents(mobId, [{
           file_path: passportOrPath,
           component_type: componentType,
           role: opts.role,
         }]);
         if (added > 0) {
-          console.log(`Added ${passportOrPath} [${componentType}] to ${constellationName}.`);
+          console.log(`Added ${passportOrPath} [${componentType}] to ${mobName}.`);
         } else {
-          console.log(`${passportOrPath} is already in ${constellationName}.`);
+          console.log(`${passportOrPath} is already in ${mobName}.`);
         }
       }
     } catch (err) {
@@ -371,17 +371,17 @@ constellation
     }
   });
 
-constellation
-  .command('remove-component <constellation> <passport-or-path>')
-  .description('Remove a component from a constellation')
-  .action((constellationName: string, passportOrPath: string) => {
+mob
+  .command('remove-component <mob> <passport-or-path>')
+  .description('Remove a component from a mob')
+  .action((mobName: string, passportOrPath: string) => {
     try {
-      const constellationId = slugify(constellationName);
-      const removed = removeComponent(constellationId, passportOrPath);
+      const mobId = slugify(mobName);
+      const removed = removeComponent(mobId, passportOrPath);
       if (removed) {
-        console.log(`Removed ${passportOrPath} from ${constellationName}.`);
+        console.log(`Removed ${passportOrPath} from ${mobName}.`);
       } else {
-        console.error(`[whizmob] Component "${passportOrPath}" not found in constellation "${constellationName}".`);
+        console.error(`[whizmob] Component "${passportOrPath}" not found in mob "${mobName}".`);
         process.exit(1);
       }
     } catch (err) {
@@ -390,14 +390,14 @@ constellation
     }
   });
 
-constellation
+mob
   .command('sync <bundle>')
   .description('Detect changes between source files and an export bundle (read-only)')
   .action((bundlePath: string) => {
     try {
-      const result = syncConstellation(bundlePath);
+      const result = syncMob(bundlePath);
 
-      console.log(`Constellation: ${result.constellation}`);
+      console.log(`Mob: ${result.mob}`);
       console.log(`Exported: ${result.exportedAt} from ${result.exportedFrom}`);
       console.log(`Status: ${result.unchanged} unchanged, ${result.modified} modified, ${result.missingSrc} missing source, ${result.missingBundle} missing bundle`);
       console.log('');
@@ -424,17 +424,17 @@ constellation
     }
   });
 
-constellation
+mob
   .command('delete <name>')
-  .description('Delete a constellation and all its component links')
+  .description('Delete a mob and all its component links')
   .action((name: string) => {
     try {
       const id = slugify(name);
-      const deleted = deleteConstellation(id);
+      const deleted = deleteMob(id);
       if (deleted) {
-        console.log(`Deleted constellation: ${name}`);
+        console.log(`Deleted mob: ${name}`);
       } else {
-        console.error(`[whizmob] Constellation "${name}" not found.`);
+        console.error(`[whizmob] Mob "${name}" not found.`);
         process.exit(1);
       }
     } catch (err) {
@@ -444,21 +444,21 @@ constellation
   });
 
 program
-  .command('export <constellation>')
-  .description('Export a constellation as a portable bundle')
+  .command('export <mob>')
+  .description('Export a mob as a portable bundle')
   .option('-o, --output <dir>', 'Output directory (default: ~/.whizmob/exports/<id>)')
   .option('--dry-run', 'Show what would be exported without writing files')
-  .action((constellationName: string, opts) => {
+  .action((mobName: string, opts) => {
     try {
-      const result = exportConstellation(constellationName, {
+      const result = exportMob(mobName, {
         outputDir: opts.output,
         dryRun: opts.dryRun,
       });
 
       if (opts.dryRun) {
-        console.log(`[dry-run] Would export constellation "${result.manifest.constellation.name}":`);
+        console.log(`[dry-run] Would export mob "${result.manifest.mob.name}":`);
       } else {
-        console.log(`Exported "${result.manifest.constellation.name}" to ${result.bundleDir}`);
+        console.log(`Exported "${result.manifest.mob.name}" to ${result.bundleDir}`);
       }
 
       console.log(`  Version: ${result.manifest.bundle_version}`);
@@ -514,8 +514,8 @@ program
 
 program
   .command('import [bundle]')
-  .description('Import a constellation bundle into the local environment')
-  .option('--list', 'List available bundled constellations')
+  .description('Import a mob bundle into the local environment')
+  .option('--list', 'List available bundled mobs')
   .option('--dry-run', 'Show what would be installed without writing files')
   .option('--force', 'Overwrite existing files without prompting')
   .option('--no-profile', 'Ignore saved import profile')
@@ -527,10 +527,10 @@ program
       if (opts.list) {
         const bundles = listBundledExports();
         if (bundles.length === 0) {
-          console.log('No bundled constellations available.');
+          console.log('No bundled mobs available.');
           return;
         }
-        console.log('Available bundled constellations:');
+        console.log('Available bundled mobs:');
         for (const b of bundles) {
           console.log(`  ${b.id} — ${b.name} (v${b.version})${b.description ? ` — ${b.description}` : ''}`);
         }
@@ -564,12 +564,13 @@ program
         }
       }
 
-      // Initial plan to discover constellation ID and content params
+      // Initial plan to discover mob ID and content params
       const initialPlan = planImport(bundlePath, Object.keys(cliParams).length > 0 ? cliParams : undefined);
-      const constellationId = initialPlan.manifest.constellation.id;
+      const mobMeta = initialPlan.manifest.mob || (initialPlan.manifest as any).constellation;
+      const mobId = mobMeta.id;
 
       // Resolution order: CLI --param > saved profile > interactive prompt > default
-      const fullProfile = opts.profile !== false ? loadFullProfile(constellationId) : { params: {}, last_imported_version: null };
+      const fullProfile = opts.profile !== false ? loadFullProfile(mobId) : { params: {}, last_imported_version: null };
       const profileParams = fullProfile.params;
       const mergedParams = { ...profileParams, ...cliParams };
 
@@ -599,7 +600,8 @@ program
       }
 
       console.log('');
-      console.log(`Constellation: ${plan.manifest.constellation.name}`);
+      const planMobMeta = plan.manifest.mob || (plan.manifest as any).constellation;
+      console.log(`Mob: ${planMobMeta.name}`);
       console.log(`Exported from: ${plan.manifest.exported_from} at ${plan.manifest.exported_at}`);
       console.log(`Files: ${plan.actions.length}`);
       console.log('');
@@ -691,8 +693,8 @@ program
           }
         }
         if (Object.keys(contentParamValues).length > 0) {
-          saveImportProfile(constellationId, contentParamValues, plan.manifest.bundle_version);
-          console.log(`Profile saved to ~/.whizmob/import-profiles/${constellationId}.json (v${plan.manifest.bundle_version})`);
+          saveImportProfile(mobId, contentParamValues, plan.manifest.bundle_version);
+          console.log(`Profile saved to ~/.whizmob/import-profiles/${mobId}.json (v${plan.manifest.bundle_version})`);
         }
       }
     } catch (err) {

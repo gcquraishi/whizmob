@@ -27,7 +27,7 @@ function runMigrations(db: Database.Database): void {
   }
 }
 
-export interface ConstellationRow {
+export interface MobRow {
   id: string;
   name: string;
   description: string;
@@ -36,8 +36,8 @@ export interface ConstellationRow {
   updated_at: string;
 }
 
-export interface ConstellationComponentRow {
-  constellation_id: string;
+export interface MobComponentRow {
+  mob_id: string;
   passport_id: string | null;
   component_type: string;
   file_path: string | null;
@@ -149,8 +149,8 @@ export interface WhizmobStats {
   byType: Record<string, number>;
   byPlatform: Record<string, number>;
   platformCount: number;
-  constellationCount: number;
-  constellationComponentCount: number;
+  mobCount: number;
+  mobComponentCount: number;
   lastScan: { scanned_at: string; duration_ms: number; total: number } | null;
 }
 
@@ -314,14 +314,14 @@ export function getStats(): WhizmobStats | null {
 
     const lastScanRow = db.prepare('SELECT scanned_at, duration_ms, total FROM scans ORDER BY id DESC LIMIT 1').get() as { scanned_at: string; duration_ms: number; total: number } | undefined;
 
-    // Constellation counts (table may not exist yet)
-    let constellationCount = 0;
-    let constellationComponentCount = 0;
+    // Mob counts (table may not exist yet)
+    let mobCount = 0;
+    let mobComponentCount = 0;
     try {
-      const cRow = db.prepare('SELECT COUNT(*) as cnt FROM constellations').get() as { cnt: number };
-      constellationCount = cRow.cnt;
-      const ccRow = db.prepare('SELECT COUNT(*) as cnt FROM constellation_components').get() as { cnt: number };
-      constellationComponentCount = ccRow.cnt;
+      const cRow = db.prepare('SELECT COUNT(*) as cnt FROM mobs').get() as { cnt: number };
+      mobCount = cRow.cnt;
+      const ccRow = db.prepare('SELECT COUNT(*) as cnt FROM mob_components').get() as { cnt: number };
+      mobComponentCount = ccRow.cnt;
     } catch {
       // Tables don't exist yet
     }
@@ -331,8 +331,8 @@ export function getStats(): WhizmobStats | null {
       byType,
       byPlatform,
       platformCount,
-      constellationCount,
-      constellationComponentCount,
+      mobCount,
+      mobComponentCount,
       lastScan: lastScanRow || null,
     };
   } finally {

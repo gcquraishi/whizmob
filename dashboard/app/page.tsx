@@ -34,7 +34,7 @@ interface ScanDiff {
   removed_names: string[];
 }
 
-export default function YardPage() {
+export default function InventoryPage() {
   const [allPassports, setAllPassports] = useState<Passport[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

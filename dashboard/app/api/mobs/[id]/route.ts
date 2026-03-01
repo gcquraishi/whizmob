@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConstellation } from '@/lib/db';
+import { getMob } from '@/lib/db';
 
 export async function GET(
   _request: NextRequest,
@@ -7,11 +7,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const constellation = await getConstellation(decodeURIComponent(id));
-    if (!constellation) {
+    const mob = await getMob(decodeURIComponent(id));
+    if (!mob) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    return NextResponse.json(constellation);
+    return NextResponse.json(mob);
   } catch (err) {
     return NextResponse.json(
       { error: (err as Error).message },

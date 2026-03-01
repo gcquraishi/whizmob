@@ -41,7 +41,7 @@ export default function MobsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/constellations').then(r => r.json()),
+      fetch('/api/mobs').then(r => r.json()),
       fetch('/api/mobs/graph').then(r => r.json()),
     ]).then(([mobsData, graph]) => {
       setMobs(mobsData);
@@ -90,7 +90,7 @@ export default function MobsPage() {
             </button>
           </div>
           <Link
-            href="/constellations/import"
+            href="/mobs/import"
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
           >
             <Upload size={14} />
@@ -115,7 +115,7 @@ export default function MobsPage() {
             </div>
             <h2 className="text-base font-semibold text-gray-900 mb-1">No mobs yet</h2>
             <p className="text-sm text-gray-500">
-              Create one from the CLI: <code className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono">whizmob constellation define &quot;my-system&quot;</code>
+              Create one from the CLI: <code className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono">whizmob mob define &quot;my-system&quot;</code>
             </p>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function MobsPage() {
           {mobs.map((c) => (
             <Link
               key={c.id}
-              href={`/constellations/${encodeURIComponent(c.id)}`}
+              href={`/mobs/${encodeURIComponent(c.id)}`}
               className="group block bg-white rounded-xl border border-gray-200 p-5 hover:border-indigo-300 hover:shadow-md transition-all duration-150"
             >
               <div className="flex items-start gap-3">

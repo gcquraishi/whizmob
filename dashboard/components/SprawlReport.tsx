@@ -142,7 +142,7 @@ export default function SprawlReport({ result }: SprawlReportProps) {
     return (
       <div className="text-center py-16">
         <p className="text-sm text-gray-500">
-          No duplicates detected. Your Yard is clean.
+          No duplicates detected. Your inventory is clean.
         </p>
       </div>
     );

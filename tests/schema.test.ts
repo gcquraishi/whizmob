@@ -37,8 +37,8 @@ const EXPECTED_TABLES = [
   'tags',
   'scans',
   'translations',
-  'constellations',
-  'constellation_components',
+  'mobs',
+  'mob_components',
 ];
 
 describe('schema', () => {
@@ -74,22 +74,22 @@ describe('schema', () => {
     db.close();
   });
 
-  test('constellation_components has foreign key to constellations', () => {
+  test('mob_components has foreign key to mobs', () => {
     const db = openMemoryDb();
     db.pragma('foreign_keys = ON');
 
-    // Insert a constellation
+    // Insert a mob
     db.prepare(
-      `INSERT INTO constellations (id, name, description) VALUES ('test-id', 'Test', '')`
+      `INSERT INTO mobs (id, name, description) VALUES ('test-id', 'Test', '')`
     ).run();
 
-    // Inserting a component with the valid constellation ID should succeed
+    // Inserting a component with the valid mob ID should succeed
     db.prepare(
-      `INSERT INTO constellation_components (constellation_id, component_type) VALUES ('test-id', 'passport')`
+      `INSERT INTO mob_components (mob_id, component_type) VALUES ('test-id', 'passport')`
     ).run();
 
     const count = (
-      db.prepare(`SELECT COUNT(*) as cnt FROM constellation_components`).get() as { cnt: number }
+      db.prepare(`SELECT COUNT(*) as cnt FROM mob_components`).get() as { cnt: number }
     ).cnt;
     assert.equal(count, 1);
 

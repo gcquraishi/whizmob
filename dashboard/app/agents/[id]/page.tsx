@@ -32,7 +32,7 @@ const typeIcons: Record<string, { icon: typeof Bot; color: string; bg: string; l
   settings: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100', label: 'Settings' },
 };
 
-export default function DossierPage() {
+export default function DetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;

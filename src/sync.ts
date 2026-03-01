@@ -32,7 +32,7 @@ export interface SyncEntry {
 }
 
 export interface SyncResult {
-  constellation: string;
+  mob: string;
   exportedAt: string;
   exportedFrom: string;
   entries: SyncEntry[];
@@ -42,7 +42,7 @@ export interface SyncResult {
   missingBundle: number;
 }
 
-export function syncConstellation(bundlePath: string): SyncResult {
+export function syncMob(bundlePath: string): SyncResult {
   const manifestPath = join(bundlePath, 'manifest.json');
   if (!existsSync(manifestPath)) {
     throw new Error(`No manifest.json found in ${bundlePath}. Is this a valid Whizmob export bundle?`);
@@ -169,7 +169,7 @@ export function syncConstellation(bundlePath: string): SyncResult {
   }
 
   return {
-    constellation: manifest.constellation.name,
+    mob: (manifest.mob || (manifest as any).constellation).name,
     exportedAt: manifest.exported_at,
     exportedFrom: manifest.exported_from,
     entries,

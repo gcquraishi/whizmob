@@ -49,7 +49,7 @@ George can maintain a single source of truth for each constellation (CEO OS on p
 - **Acceptance criteria**:
   - [ ] Define a constellation on work machine from work-authored skills/agents
   - [ ] Export with `license: "work"` provenance — bundle includes clear licensing metadata
-  - [ ] Import on personal machine — license metadata visible in `whizmob roster` and dashboard dossier
+  - [ ] Import on personal machine — license metadata visible in `whizmob roster` and dashboard detail page
   - [ ] `whizmob import` shows informational notice when importing `license: "work"` content
   - [ ] `whizmob update` works in the reverse direction (work → personal) with same three-way classification
   - [ ] Round-trip validated: personal → work (CEO OS) AND work → personal (design systems) both functional

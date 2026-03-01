@@ -97,8 +97,8 @@ whizmob dashboard
 ```
 
 The dashboard includes:
-- Searchable agent inventory (the Yard)
-- Agent detail pages (Dossiers) with source viewer and secret redaction
+- Searchable agent inventory
+- Detail pages with source viewer and secret redaction
 - Constellation management with export/import UI
 
 ### Translation

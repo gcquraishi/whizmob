@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ronin — Skill Translation</title>
+<title>Whizmob — Skill Translation</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -350,7 +350,7 @@
   <!-- HEADER -->
   <div class="section-header">
     <h2>How skill translation works</h2>
-    <p>A skill definition written for one platform carries art direction, domain knowledge, and behavioral instructions. Ronin extracts the platform-neutral knowledge, then adapts the delivery for each target.</p>
+    <p>A skill definition written for one platform carries art direction, domain knowledge, and behavioral instructions. Whizmob extracts the platform-neutral knowledge, then adapts the delivery for each target.</p>
   </div>
 
   <!-- FLOW -->
@@ -495,8 +495,8 @@
   <div class="comparison-header">
     <h3>Same subject, three models</h3>
     <div class="toggle-pills">
-      <button class="pill" onclick="showView('raw')">Without Ronin</button>
-      <button class="pill" onclick="showView('translated')">With Ronin</button>
+      <button class="pill" onclick="showView('raw')">Without Whizmob</button>
+      <button class="pill" onclick="showView('translated')">With Whizmob</button>
       <button class="pill active" onclick="showView('both')">Side by side</button>
     </div>
   </div>
@@ -537,7 +537,7 @@
       <div class="image-card">
         <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
         <div class="card-meta">
-          <span class="tag tag-translated">ronin-translated</span>
+          <span class="tag tag-translated">whizmob-translated</span>
           <div class="platform color-dalle">DALL-E</div>
           <div class="prompt-snippet">Simplified graphic illustration of an ancient Roman statesman. Flat solid color fills only, hard edges only. Skin: muted yellow-green olive (#6B7F5E)...</div>
         </div>
@@ -545,7 +545,7 @@
       <div class="image-card">
         <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
         <div class="card-meta">
-          <span class="tag tag-translated">ronin-translated</span>
+          <span class="tag tag-translated">whizmob-translated</span>
           <div class="platform color-mj">Midjourney</div>
           <div class="prompt-snippet">simplified graphic illustration of ancient Roman statesman ::2 rubber stamp screen print aesthetic ::1.5 --no shading shadows --ar 3:4 --style raw...</div>
         </div>
@@ -553,7 +553,7 @@
       <div class="image-card">
         <div class="image-frame"><div class="image-placeholder"><div class="ph-icon"></div>awaiting image</div></div>
         <div class="card-meta">
-          <span class="tag tag-translated">ronin-translated</span>
+          <span class="tag tag-translated">whizmob-translated</span>
           <div class="platform color-gemini">Gemini</div>
           <div class="prompt-snippet">Illustration of an ancient Roman statesman. NO realistic skin tones. Skin filled with muted yellow-green olive (#6B7F5E). Simplified graphic illustration...</div>
         </div>
@@ -565,7 +565,7 @@
   <div class="footer-note">
     The art direction knowledge &mdash; palettes, moods, style references, composition &mdash; transfers at near-100% fidelity across all platforms. What changes is the delivery: how that knowledge is expressed in a form each model can act on. The translation rules are codified and mostly mechanical; the knowledge itself is written once.
     <br><br>
-    <code>ronin translate illustrator --to dalle midjourney gemini</code>
+    <code>whizmob translate illustrator --to dalle midjourney gemini</code>
   </div>
 
 </div>

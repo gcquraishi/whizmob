@@ -62,11 +62,12 @@ export function listBundledExports(): Array<{ name: string; id: string; version:
     if (!existsSync(manifestPath)) continue;
     try {
       const manifest: ExportManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+      const mobMeta = manifest.mob || (manifest as any).constellation;
       results.push({
-        name: manifest.constellation.name,
+        name: mobMeta.name,
         id: entry,
         version: manifest.bundle_version,
-        description: manifest.constellation.description || '',
+        description: mobMeta.description || '',
       });
     } catch {
       // Skip malformed manifests
@@ -88,11 +89,11 @@ export interface ImportProfile {
 }
 
 /**
- * Load a saved import profile for a constellation.
+ * Load a saved import profile for a mob.
  * Handles both v1 (flat params object) and v2 (structured with version) formats.
  */
-export function loadImportProfile(constellationId: string): Record<string, string> {
-  const profilePath = join(resolveProfilesDir(), `${constellationId}.json`);
+export function loadImportProfile(mobId: string): Record<string, string> {
+  const profilePath = join(resolveProfilesDir(), `${mobId}.json`);
   if (!existsSync(profilePath)) return {};
   try {
     const data = JSON.parse(readFileSync(profilePath, 'utf-8'));
@@ -108,8 +109,8 @@ export function loadImportProfile(constellationId: string): Record<string, strin
 /**
  * Load the full profile including version metadata.
  */
-export function loadFullProfile(constellationId: string): ImportProfile {
-  const profilePath = join(resolveProfilesDir(), `${constellationId}.json`);
+export function loadFullProfile(mobId: string): ImportProfile {
+  const profilePath = join(resolveProfilesDir(), `${mobId}.json`);
   if (!existsSync(profilePath)) return { params: {}, last_imported_version: null };
   try {
     const data = JSON.parse(readFileSync(profilePath, 'utf-8'));
@@ -127,13 +128,13 @@ export function loadFullProfile(constellationId: string): ImportProfile {
  * Save resolved content params and version as an import profile for future re-imports.
  */
 export function saveImportProfile(
-  constellationId: string,
+  mobId: string,
   params: Record<string, string>,
   bundleVersion?: number,
 ): void {
   const dir = resolveProfilesDir();
   mkdirSync(dir, { recursive: true });
-  const profilePath = join(dir, `${constellationId}.json`);
+  const profilePath = join(dir, `${mobId}.json`);
   const profile: ImportProfile = {
     params,
     last_imported_version: bundleVersion ?? null,
