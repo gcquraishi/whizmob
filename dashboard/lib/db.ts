@@ -471,6 +471,10 @@ export interface ConstellationComponentRow {
   component_type: string;
   file_path: string | null;
   role: string | null;
+  purpose: string | null;
+  invocation: string | null;
+  scope: string | null;
+  tags: string[];
 }
 
 export interface ConstellationDetailRow extends ConstellationRow {
@@ -524,7 +528,8 @@ export async function getConstellation(id: string): Promise<ConstellationDetailR
   // Fetch components
   const compResult = database.exec(`
     SELECT cc.passport_id, p.name as passport_name, p.type as passport_type,
-           cc.component_type, cc.file_path, cc.role
+           cc.component_type, cc.file_path, cc.role,
+           p.purpose, p.invocation, p.scope
     FROM constellation_components cc
     LEFT JOIN passports p ON cc.passport_id = p.id
     WHERE cc.constellation_id = ?
@@ -534,16 +539,49 @@ export async function getConstellation(id: string): Promise<ConstellationDetailR
   let components: ConstellationComponentRow[] = [];
   if (compResult.length > 0) {
     const compCols = compResult[0].columns;
+
+    // Collect passport IDs for batch tag fetch
+    const passportIds: string[] = [];
+    for (const r of compResult[0].values) {
+      const pid = r[compCols.indexOf('passport_id')];
+      if (pid) passportIds.push(pid as string);
+    }
+
+    // Batch fetch tags (same pattern as getPassports)
+    const tagsByPassportId = new Map<string, string[]>();
+    if (passportIds.length > 0) {
+      const placeholders = passportIds.map(() => '?').join(', ');
+      const tagResult = database.exec(
+        `SELECT passport_id, tag FROM tags WHERE passport_id IN (${placeholders})`,
+        passportIds
+      );
+      if (tagResult.length > 0) {
+        for (const [passportId, tag] of tagResult[0].values as [string, string][]) {
+          const existing = tagsByPassportId.get(passportId);
+          if (existing) {
+            existing.push(tag);
+          } else {
+            tagsByPassportId.set(passportId, [tag]);
+          }
+        }
+      }
+    }
+
     components = compResult[0].values.map(r => {
       const c: Record<string, unknown> = {};
       compCols.forEach((col, i) => { c[col] = r[i]; });
+      const passportId = (c.passport_id as string | null) ?? null;
       return {
-        passport_id: (c.passport_id as string | null) ?? null,
+        passport_id: passportId,
         passport_name: (c.passport_name as string | null) ?? null,
         passport_type: (c.passport_type as string | null) ?? null,
         component_type: c.component_type as string,
         file_path: (c.file_path as string | null) ?? null,
         role: (c.role as string | null) ?? null,
+        purpose: (c.purpose as string | null) ?? null,
+        invocation: (c.invocation as string | null) ?? null,
+        scope: (c.scope as string | null) ?? null,
+        tags: passportId ? (tagsByPassportId.get(passportId) ?? []) : [],
       };
     });
   }

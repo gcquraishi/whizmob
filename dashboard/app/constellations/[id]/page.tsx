@@ -10,6 +10,16 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { toDisplayPath } from '@/lib/paths';
+import TagPill from '@/components/TagPill';
+
+const groupPluralLabels: Record<string, string> = {
+  memory_schema: 'Memory Schemas',
+  claude_md: 'CLAUDE.md Files',
+  passport: 'Passports',
+  hook: 'Hooks',
+  config: 'Configs',
+  passport_source: 'Sources',
+};
 
 interface ConstellationComponent {
   passport_id: string | null;
@@ -18,6 +28,10 @@ interface ConstellationComponent {
   component_type: string;
   file_path: string | null;
   role: string | null;
+  purpose: string | null;
+  invocation: string | null;
+  scope: string | null;
+  tags: string[];
 }
 
 interface ConstellationDetail {
@@ -188,7 +202,7 @@ export default function ConstellationDetailPage() {
                 <div key={type}>
                   <div className="flex items-center gap-2 mb-2">
                     <cfg.icon size={14} className={cfg.color} />
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{cfg.label}s</h3>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{groupPluralLabels[type] || `${cfg.label}s`}</h3>
                     <span className="text-[10px] text-gray-400">{components.length}</span>
                   </div>
                   <div className="space-y-1">
@@ -260,29 +274,46 @@ function ComponentRow({ component }: { component: ConstellationComponent }) {
     : null;
 
   return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors">
-      {pCfg ? (
-        <pCfg.icon size={13} className={pCfg.color} />
-      ) : (
-        <FileText size={13} className="text-gray-400" />
-      )}
-      <div className="min-w-0 flex-1">
-        {isPassport ? (
-          <Link
-            href={`/agents/${encodeURIComponent(component.passport_id!)}`}
-            className="text-sm text-gray-900 hover:text-indigo-600 transition-colors"
-          >
-            {name}
-          </Link>
+    <div className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="mt-0.5">
+        {pCfg ? (
+          <pCfg.icon size={13} className={pCfg.color} />
         ) : (
-          <span className="text-sm text-gray-900">{name}</span>
+          <FileText size={13} className="text-gray-400" />
         )}
-        {component.role && (
-          <span className="ml-2 text-[10px] text-gray-400">{component.role}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          {isPassport ? (
+            <Link
+              href={`/agents/${encodeURIComponent(component.passport_id!)}`}
+              className="text-sm text-gray-900 hover:text-indigo-600 transition-colors"
+            >
+              {name}
+            </Link>
+          ) : (
+            <span className="text-sm text-gray-900">{name}</span>
+          )}
+          {component.invocation && (
+            <code className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{component.invocation}</code>
+          )}
+          {component.role && (
+            <span className="text-[10px] text-gray-400">{component.role}</span>
+          )}
+        </div>
+        {isPassport && component.purpose && (
+          <p className="text-xs text-gray-500 truncate mt-0.5">{component.purpose}</p>
+        )}
+        {isPassport && component.tags && component.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {component.tags.map(tag => (
+              <TagPill key={tag} tag={tag} />
+            ))}
+          </div>
         )}
       </div>
       {displayPath && !isPassport && (
-        <code className="text-[10px] text-gray-400 font-mono truncate max-w-48">{displayPath}</code>
+        <code className="text-[10px] text-gray-400 font-mono truncate max-w-48 mt-0.5">{displayPath}</code>
       )}
     </div>
   );
