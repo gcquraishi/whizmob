@@ -7,7 +7,7 @@ import clsx from 'clsx';
 
 const links = [
   { href: '/', label: 'Inventory', Icon: LayoutGrid },
-  { href: '/constellations', label: 'Constellations', Icon: Orbit },
+  { href: '/mobs', label: 'Mobs', Icon: Orbit },
   { href: '/translation', label: 'Translate', Icon: ArrowRightLeft, secondary: true },
 ];
 

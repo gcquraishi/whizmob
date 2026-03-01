@@ -130,9 +130,9 @@ export default function ConstellationDetailPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
         <button onClick={() => router.push('/constellations')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
-          <ArrowLeft size={14} /> Back to Constellations
+          <ArrowLeft size={14} /> Back to Mobs
         </button>
-        <p className="text-sm text-gray-500">Constellation not found.</p>
+        <p className="text-sm text-gray-500">Mob not found.</p>
       </div>
     );
   }
@@ -148,8 +148,8 @@ export default function ConstellationDetailPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
       {/* Back */}
-      <button onClick={() => router.push('/constellations')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
-        <ArrowLeft size={14} /> Back to Constellations
+      <button onClick={() => router.push('/mobs')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <ArrowLeft size={14} /> Back to Mobs
       </button>
 
       {/* Header */}
@@ -206,7 +206,7 @@ export default function ConstellationDetailPage() {
         <Section title="Export">
           <div className="space-y-3">
             <p className="text-xs text-gray-500">
-              Export this constellation as a portable bundle. Secrets are stripped, paths are parameterized, and memory schemas are bootstrapped (structure only, no data).
+              Export this mob as a portable bundle. Secrets are stripped, paths are parameterized, and memory schemas are bootstrapped (structure only, no data).
             </p>
             <button
               onClick={handleExport}

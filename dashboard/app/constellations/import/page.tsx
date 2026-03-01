@@ -111,8 +111,8 @@ export default function ImportPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
       {/* Back */}
-      <button onClick={() => router.push('/constellations')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
-        <ArrowLeft size={14} /> Back to Constellations
+      <button onClick={() => router.push('/mobs')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <ArrowLeft size={14} /> Back to Mobs
       </button>
 
       {/* Header */}
@@ -121,9 +121,9 @@ export default function ImportPage() {
           <Upload size={24} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Import Constellation</h1>
+          <h1 className="text-xl font-bold text-gray-900">Import Mob</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Import a constellation bundle exported from another machine or account.
+            Import a mob bundle exported from another machine or account.
             Point to the bundle directory to preview what will be installed.
           </p>
         </div>
@@ -134,7 +134,7 @@ export default function ImportPage() {
         <Section title="Bundle Location">
           <div className="space-y-3">
             <p className="text-xs text-gray-500">
-              Enter the absolute path to an exported constellation bundle (the directory containing <code className="bg-gray-100 px-1 rounded">manifest.json</code>).
+              Enter the absolute path to an exported mob bundle (the directory containing <code className="bg-gray-100 px-1 rounded">manifest.json</code>).
             </p>
             <div className="flex gap-2">
               <input
@@ -173,8 +173,8 @@ export default function ImportPage() {
         {/* Plan results */}
         {plan && !importResult && (
           <>
-            {/* Constellation info */}
-            <Section title="Constellation">
+            {/* Mob info */}
+            <Section title="Mob">
               <div className="space-y-1">
                 <div className="text-sm font-semibold text-gray-900">{plan.manifest.constellation.name}</div>
                 {plan.manifest.constellation.description && (
@@ -274,7 +274,7 @@ export default function ImportPage() {
                 )}
                 {missingDeps.length > 0 && (
                   <p className="text-xs text-amber-600">
-                    {missingDeps.length} required dependency(ies) missing. Import may work but the constellation may not function correctly.
+                    {missingDeps.length} required dependency(ies) missing. Import may work but the mob may not function correctly.
                   </p>
                 )}
                 <button
@@ -295,7 +295,7 @@ export default function ImportPage() {
                   ) : (
                     <>
                       <Play size={14} />
-                      Install Constellation
+                      Install Mob
                     </>
                   )}
                 </button>
