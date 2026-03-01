@@ -60,6 +60,7 @@ export default function MobGraph({ nodes: rawNodes, edges }: MobGraphProps) {
   const animRef = useRef<number>(0);
   const nodesRef = useRef<GraphNode[]>([]);
   const dragRef = useRef<{ node: GraphNode; offsetX: number; offsetY: number } | null>(null);
+  const wasDraggingRef = useRef(false);
   const hoveredRef = useRef<GraphNode | null>(null);
   const router = useRouter();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GraphNode } | null>(null);
@@ -308,6 +309,7 @@ export default function MobGraph({ nodes: rawNodes, edges }: MobGraphProps) {
     const rect = canvas.getBoundingClientRect();
 
     if (dragRef.current) {
+      wasDraggingRef.current = true;
       dragRef.current.node.x = e.clientX - rect.left - dragRef.current.offsetX;
       dragRef.current.node.y = e.clientY - rect.top - dragRef.current.offsetY;
       dragRef.current.node.vx = 0;
@@ -335,7 +337,7 @@ export default function MobGraph({ nodes: rawNodes, edges }: MobGraphProps) {
   }, []);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
-    if (dragRef.current) return;
+    if (wasDraggingRef.current) { wasDraggingRef.current = false; return; }
     const node = hitTest(e.clientX, e.clientY);
     if (!node) return;
 
