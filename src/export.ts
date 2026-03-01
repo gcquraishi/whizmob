@@ -96,11 +96,15 @@ export interface ExportResult {
 
 // Patterns that indicate secrets — specific enough to avoid matching prose
 // like "key files" or "token count". Only match assignment/config patterns.
+// Suffixes that indicate config values, not secrets (e.g., TOKEN_EXPIRY, KEY_SIZE)
+const SAFE_KEY_SUFFIXES = /(?:_EXPIRY|_TIMEOUT|_COUNT|_SIZE|_LIMIT|_PORT|_LENGTH|_MAX|_MIN|_TTL|_INTERVAL|_RETRIES|_DELAY|_DURATION|_RATE|_THRESHOLD)$/;
+
 const SECRET_PATTERNS = [
   // JSON-style: "some_secret_key": "value"
   /"\w*(?:password|secret|_token|_key|credential|api_key|apikey|private_key|auth_token|access_token|secret_key)\w*"\s*:\s*"[^"]+"/gi,
   // YAML/env-style: SECRET_KEY=value or SECRET_KEY: value (uppercase key names)
-  /\b[A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z_]*\s*[:=]\s*\S+/g,
+  // Excludes numeric-only values (e.g., TOKEN_EXPIRY: 3600) and boolean-like values
+  /\b[A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z_]*\s*[:=]\s*(?![\d]+(?:\s|$))(?!(?:true|false|null|none|yes|no)\s)(?:\S+)/g,
   // Known key formats
   /sk[-_][a-zA-Z0-9]{20,}/g, // Stripe-style keys
   /ghp_[a-zA-Z0-9]{36}/g, // GitHub PATs
@@ -150,14 +154,19 @@ function stripSecrets(content: string, filePath: string): { content: string; str
   for (const pattern of SECRET_PATTERNS) {
     const regex = new RegExp(pattern.source, pattern.flags);
     modified = modified.replace(regex, (match) => {
-      stripped = true;
-      // Keep the key name but redact the value
+      // Extract the key name (before = or :) and skip safe suffixes
       const eqIdx = match.indexOf('=');
       const colonIdx = match.indexOf(':');
       const sepIdx = eqIdx >= 0 && (colonIdx < 0 || eqIdx < colonIdx) ? eqIdx : colonIdx;
       if (sepIdx >= 0) {
+        const keyName = match.slice(0, sepIdx).trim().replace(/"/g, '');
+        if (SAFE_KEY_SUFFIXES.test(keyName)) {
+          return match; // Not a secret — config value like TOKEN_EXPIRY
+        }
+        stripped = true;
         return match.slice(0, sepIdx + 1) + ' "REDACTED"';
       }
+      stripped = true;
       return '"REDACTED"';
     });
   }
