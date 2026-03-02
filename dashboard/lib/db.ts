@@ -14,7 +14,7 @@ let db: Database | null = null;
 // The dashboard cannot import from src/ directly due to the separate Next.js build
 // context. When updating the schema, update both files.
 //
-// Last synced: 2026-02-24
+// Last synced: 2026-03-01
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS passports (
   id TEXT PRIMARY KEY,
@@ -80,6 +80,16 @@ CREATE TABLE IF NOT EXISTS mob_components (
   file_path TEXT,
   role TEXT,
   UNIQUE (mob_id, passport_id, component_type, file_path)
+);
+
+CREATE TABLE IF NOT EXISTS edges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id TEXT NOT NULL REFERENCES passports(id) ON DELETE CASCADE,
+  target_id TEXT NOT NULL REFERENCES passports(id) ON DELETE CASCADE,
+  edge_type TEXT NOT NULL,
+  evidence TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (source_id, target_id, edge_type, evidence)
 );
 `;
 
@@ -705,6 +715,91 @@ export async function getMobGraphData(): Promise<MobGraphData> {
   }
 
   return { nodes, edges };
+}
+
+// --- Edge queries ---
+
+export interface EdgeRow {
+  id: number;
+  source_id: string;
+  source_name: string;
+  source_type: string;
+  target_id: string;
+  target_name: string;
+  target_type: string;
+  edge_type: string;
+  evidence: string;
+}
+
+export async function getEdges(): Promise<EdgeRow[]> {
+  const database = await getDb();
+  try {
+    const result = database.exec(`
+      SELECT e.id, e.source_id, p1.name as source_name, p1.type as source_type,
+             e.target_id, p2.name as target_name, p2.type as target_type,
+             e.edge_type, e.evidence
+      FROM edges e
+      JOIN passports p1 ON e.source_id = p1.id
+      JOIN passports p2 ON e.target_id = p2.id
+      ORDER BY e.source_id, e.target_id
+    `);
+    if (result.length === 0) return [];
+    const columns = result[0].columns;
+    return result[0].values.map(row => {
+      const obj: Record<string, unknown> = {};
+      columns.forEach((col, i) => { obj[col] = row[i]; });
+      return {
+        id: obj.id as number,
+        source_id: obj.source_id as string,
+        source_name: obj.source_name as string,
+        source_type: obj.source_type as string,
+        target_id: obj.target_id as string,
+        target_name: obj.target_name as string,
+        target_type: obj.target_type as string,
+        edge_type: obj.edge_type as string,
+        evidence: obj.evidence as string,
+      };
+    });
+  } catch {
+    // Table may not exist yet
+    return [];
+  }
+}
+
+export interface EdgeStats {
+  total: number;
+  byType: Record<string, number>;
+  connectedPassports: number;
+}
+
+export async function getEdgeStats(): Promise<EdgeStats> {
+  const database = await getDb();
+  try {
+    const typeResult = database.exec('SELECT edge_type, COUNT(*) as cnt FROM edges GROUP BY edge_type');
+    const byType: Record<string, number> = {};
+    let total = 0;
+    if (typeResult.length > 0) {
+      for (const row of typeResult[0].values) {
+        const type = row[0] as string;
+        const count = row[1] as number;
+        byType[type] = count;
+        total += count;
+      }
+    }
+
+    const connectedResult = database.exec(`
+      SELECT COUNT(DISTINCT id) as cnt FROM (
+        SELECT source_id as id FROM edges
+        UNION
+        SELECT target_id as id FROM edges
+      )
+    `);
+    const connectedPassports = connectedResult.length > 0 ? connectedResult[0].values[0][0] as number : 0;
+
+    return { total, byType, connectedPassports };
+  } catch {
+    return { total: 0, byType: {}, connectedPassports: 0 };
+  }
 }
 
 export async function getLastScan(): Promise<{
