@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
 import type { WhizmobInventory, AgentType, LicenseType } from './types.js';
 import { SCHEMA, MIGRATIONS } from './schema.js';
+import type { InferredEdge } from './edges.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
 const DEFAULT_DB_PATH = join(DB_DIR, 'whizmob.db');
@@ -144,6 +145,62 @@ export function importInventory(inventory: WhizmobInventory): ScanDiff {
   };
 }
 
+export interface EdgeRow {
+  id: number;
+  source_id: string;
+  target_id: string;
+  edge_type: string;
+  evidence: string;
+  created_at: string;
+}
+
+export function importEdges(edges: InferredEdge[]): { added: number; total: number } {
+  mkdirSync(DB_DIR, { recursive: true });
+  const db = new Database(resolveDbPath());
+  db.exec(SCHEMA);
+  runMigrations(db);
+
+  try {
+    // Clear previous edges (they're re-inferred on each scan)
+    db.exec('DELETE FROM edges');
+
+    const stmt = db.prepare(
+      `INSERT OR IGNORE INTO edges (source_id, target_id, edge_type, evidence)
+       VALUES (?, ?, ?, ?)`
+    );
+
+    let added = 0;
+    const insertAll = db.transaction(() => {
+      for (const e of edges) {
+        const result = stmt.run(e.source_id, e.target_id, e.edge_type, e.evidence);
+        if (result.changes > 0) added++;
+      }
+    });
+
+    insertAll();
+    return { added, total: edges.length };
+  } finally {
+    db.close();
+  }
+}
+
+export function getEdges(): EdgeRow[] {
+  if (!existsSync(resolveDbPath())) return [];
+  const db = new Database(resolveDbPath(), { readonly: true });
+
+  try {
+    return db.prepare(
+      `SELECT id, source_id, target_id, edge_type, evidence, created_at
+       FROM edges ORDER BY source_id, target_id`
+    ).all() as EdgeRow[];
+  } catch {
+    // Table may not exist yet
+    return [];
+  } finally {
+    db.close();
+  }
+}
+
 export interface WhizmobStats {
   total: number;
   byType: Record<string, number>;
@@ -151,6 +208,7 @@ export interface WhizmobStats {
   platformCount: number;
   mobCount: number;
   mobComponentCount: number;
+  edgeCount: number;
   lastScan: { scanned_at: string; duration_ms: number; total: number } | null;
 }
 
@@ -317,6 +375,7 @@ export function getStats(): WhizmobStats | null {
     // Mob counts (table may not exist yet)
     let mobCount = 0;
     let mobComponentCount = 0;
+    let edgeCount = 0;
     try {
       const cRow = db.prepare('SELECT COUNT(*) as cnt FROM mobs').get() as { cnt: number };
       mobCount = cRow.cnt;
@@ -324,6 +383,12 @@ export function getStats(): WhizmobStats | null {
       mobComponentCount = ccRow.cnt;
     } catch {
       // Tables don't exist yet
+    }
+    try {
+      const eRow = db.prepare('SELECT COUNT(*) as cnt FROM edges').get() as { cnt: number };
+      edgeCount = eRow.cnt;
+    } catch {
+      // Table may not exist yet
     }
 
     return {
@@ -333,6 +398,7 @@ export function getStats(): WhizmobStats | null {
       platformCount,
       mobCount,
       mobComponentCount,
+      edgeCount,
       lastScan: lastScanRow || null,
     };
   } finally {

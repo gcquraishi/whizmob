@@ -83,6 +83,16 @@ CREATE TABLE IF NOT EXISTS mob_components (
   role TEXT,
   UNIQUE (mob_id, passport_id, component_type, file_path)
 );
+
+CREATE TABLE IF NOT EXISTS edges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id TEXT NOT NULL REFERENCES passports(id) ON DELETE CASCADE,
+  target_id TEXT NOT NULL REFERENCES passports(id) ON DELETE CASCADE,
+  edge_type TEXT NOT NULL,
+  evidence TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (source_id, target_id, edge_type, evidence)
+);
 `;
 
 /**

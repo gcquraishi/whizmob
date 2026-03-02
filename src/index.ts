@@ -10,7 +10,8 @@ import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
 import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
-import { importInventory, getStats, resolveSkill } from './db.js';
+import { importInventory, importEdges, getStats, resolveSkill } from './db.js';
+import { inferEdges } from './edges.js';
 import {
   defineMob,
   addComponents,
@@ -69,6 +70,11 @@ program
         if (diff.added_names.length > 0) {
           console.error(`[whizmob] New: ${diff.added_names.join(', ')}`);
         }
+
+        // Infer and store edges between passports
+        const edges = await inferEdges(inventory.passports);
+        const edgeResult = importEdges(edges);
+        console.error(`[whizmob] Edges: ${edgeResult.added} inferred`);
       }
 
       const output = format === 'table'
@@ -146,6 +152,9 @@ program
 
       if (stats.mobCount > 0) {
         console.log(`${stats.mobCount} mob${stats.mobCount !== 1 ? 's' : ''} (${stats.mobComponentCount} components)`);
+      }
+      if (stats.edgeCount > 0) {
+        console.log(`${stats.edgeCount} edge${stats.edgeCount !== 1 ? 's' : ''} inferred`);
       }
 
       if (opts.verbose) {
