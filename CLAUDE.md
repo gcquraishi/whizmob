@@ -23,7 +23,6 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 
 **Key files:**
 - `PRD.md` — Product requirements document (v0.1 draft)
-- `seed-inventory.json` — George's initial agent inventory export (36 agents)
 - `src/roster.ts` — Roster query engine (compact, hook, search modes)
 - `src/db.ts` — CLI-side SQLite import (better-sqlite3)
 - `src/constellation.ts` — Constellation CRUD (define, add, list, show, delete)
@@ -48,6 +47,10 @@ _Last updated: 2026-03-01 (late)_
 - **BIG-21: Secret redaction false positives fixed** — tightened `SECRET_PATTERNS` in `src/export.ts` to avoid redacting non-secret terms. Added `SAFE_KEY_NAMES` set (primary_key, foreign_key, token_count, etc.), expanded `SAFE_KEY_SUFFIXES` with _TYPE, _NAME, _PATH, etc. Fixed boolean lookahead to match at end-of-string. 24-test `secrets.test.ts` suite covers true/false positives.
 - **BIG-22: Dashboard DB casts eliminated** — replaced all fragile `row[N] as Type` positional index casts in `dashboard/lib/db.ts` with column-name-based lookup via `columns.indexOf(name)`. Updated 7 functions: getAllTags, getMobGraphData, getEdgeStats, getDiscoveredMobs, getLastScan, importInventory, getMob component mapping.
 - **BIG-24: Test coverage expanded** — added 16 tests across 2 new suites: `cluster.test.ts` (10 tests for clusterMobs connected component detection) and `sync.test.ts` (6 tests for syncMob change detection). Total: 99 tests across 9 suites.
+
+### Recent Completions (Public Launch — 2026-03-01)
+- **GitHub repo public** — `gcquraishi/whizmob` is now public. History scrubbed via `git-filter-repo` (removed `seed-inventory.json` and `dashboard/data/whizmob.db` from all 80 commits). MIT LICENSE added. `.gitignore` updated.
+- **M4 partially complete** — README rewritten, package.json updated, repo public, history clean. Remaining: demo mode, screenshot/GIF for README.
 
 ### Recent Completions (Vocabulary Cleanup — 2026-03-01)
 - **Full vocabulary rename** — Yard→Inventory, Dossier→Detail, Forge removed, remaining Ronin→Whizmob across 18 files. constellation→mob rename in source code (`src/constellation.ts`→`src/mob.ts`, tests, dashboard API routes).
@@ -168,9 +171,9 @@ _Last updated: 2026-03-01 (late)_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **M4: Public Launch** — blocked on George creating GitHub account/org. README rewritten, package.json updated. Remaining: repo rename (dev → `whiz-mob`, public → `whizmob`), git history scrub, demo mode, screenshots.
-- **Dog-food** — CEO OS dry-run succeeds. Blocked on BIG-50 (need public repo for trust). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
-- **Open tickets**: BIG-50 (GitHub migration).
+- **M4: Public Launch — partially complete** — repo public, history scrubbed, README + LICENSE done. Remaining: demo mode (read-only dashboard sharing), screenshot/GIF for README.
+- **Dog-food** — CEO OS now unblocked (repo is public). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
+- **Open tickets**: None blocking.
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
