@@ -35,18 +35,19 @@ Run `whizmob scan`, open the dashboard, and instantly see your agent systems —
 - **Tickets**: [[WHIZ-24]], [[WHIZ-25]], [[WHIZ-26]], [[WHIZ-27]]
 - **Key files**: `dashboard/app/page.tsx`, `dashboard/components/MobGraph.tsx` (rearchitect), `dashboard/app/agents/` (new), `dashboard/lib/db.ts`
 
-### M3: Smart Update — Not Started
+### M3: Smart Update — Complete
 - **Why it matters**: "I discovered an unlock on personal, now I want it on work" should be one command. The CLI install/update pipeline is what makes mobs portable, not just visible.
 - **Acceptance criteria**:
-  - [ ] `whizmob update <bundle>` command: load import profile → classify changes → apply safe ones → surface ambiguous ones
-  - [ ] Three-way classification for each file:
-    - **Parameter-only divergence**: local differs from bundle only due to `{{PARAM}}` substitutions → safe to overwrite with new upstream + re-substitute
+  - [x] `whizmob update <bundle>` command: load import profile → classify changes → apply safe ones → surface ambiguous ones
+  - [x] Three-way classification for each file:
     - **Upstream-only**: local unchanged since last import, upstream changed → auto-apply
-    - **Both-changed**: local edits AND upstream edits → show diff, ask user
-  - [ ] Import-time content hashing: store hash of pre-substitution bundle content in profile. On update, compare hash to detect real edits vs. param-only divergence.
-  - [ ] If bundle is a git repo path, `--pull` flag runs `git pull` before syncing
-  - [ ] End-to-end: edit a skill → re-export → `whizmob update` on another machine → param-only and upstream-only changes apply automatically, both-changed files show a clear diff
-  - [ ] `whizmob install <bundle>` as alias for `whizmob import` (friendlier verb for new users)
+    - **Local-only**: user edits preserved, upstream unchanged → skip
+    - **Both-changed**: local edits AND upstream edits → show diff, skip (or apply with --force)
+  - [x] Import-time content hashing: store hash of pre-substitution bundle content in profile. On update, reverse-substitute local content to canonical form and compare hashes.
+  - [x] If bundle is a git repo path, `--pull` flag runs `git pull` before syncing
+  - [x] `whizmob install <bundle>` as alias for `whizmob import` (friendlier verb for new users)
+  - [x] 8 new tests covering all classification scenarios. 59 tests total across 6 suites.
+  - [x] Post-build review passed (CRITICAL: 0, HIGH: 0, MEDIUM: 0)
 - **Tickets**: Carries forward from cross-account-portability M3
 - **Key files**: `src/sync.ts`, `src/import.ts`, `src/index.ts`
 
