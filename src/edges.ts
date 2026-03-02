@@ -47,10 +47,9 @@ export async function inferEdges(passports: ProtoPassport[]): Promise<InferredEd
   const sharedStateRefs = new Map<string, Set<string>>();
 
   // Known shared-state file patterns (not passport source files, but files passports reference)
+  // Be specific: 'memory.json' alone is too generic and creates false connections.
   const sharedStatePatterns = [
-    'memory.json',
     'cofounder/memory.json',
-    'settings.json',
     '.big-heavy-panels',
   ];
 
@@ -142,4 +141,119 @@ function addEdge(edges: InferredEdge[], seen: Set<string>, edge: InferredEdge): 
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Discovered mob: a cluster of tightly-connected passports found via
+ * connectivity-based clustering of the edge graph.
+ */
+export interface DiscoveredMob {
+  id: string;
+  name: string;
+  members: string[];   // passport IDs
+  edgeCount: number;   // edges within this cluster
+}
+
+/**
+ * Cluster passports into discovered mobs using connected components
+ * on the edge graph. Each connected component with 2+ members
+ * becomes a discovered mob. Singletons are "islands."
+ *
+ * Filtering: project configs and settings are excluded from clustering
+ * since they're infrastructure (CLAUDE.md files reference everything,
+ * creating one giant cluster). They appear in the inventory instead.
+ *
+ * Naming: uses the most-connected node's name + " System" as a default.
+ */
+export function clusterMobs(
+  edges: InferredEdge[],
+  passportNames: Map<string, string>,
+  passportTypes?: Map<string, string>,
+): DiscoveredMob[] {
+  // Filter out edges involving project/settings passports — they're infrastructure
+  const excludedTypes = new Set(['project', 'settings']);
+  const filteredEdges = passportTypes
+    ? edges.filter(e => {
+        const sourceType = passportTypes.get(e.source_id);
+        const targetType = passportTypes.get(e.target_id);
+        return (!sourceType || !excludedTypes.has(sourceType)) &&
+               (!targetType || !excludedTypes.has(targetType));
+      })
+    : edges;
+
+  // Build adjacency list (undirected)
+  const adj = new Map<string, Set<string>>();
+  for (const e of filteredEdges) {
+    if (!adj.has(e.source_id)) adj.set(e.source_id, new Set());
+    if (!adj.has(e.target_id)) adj.set(e.target_id, new Set());
+    adj.get(e.source_id)!.add(e.target_id);
+    adj.get(e.target_id)!.add(e.source_id);
+  }
+
+  // BFS to find connected components
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (const node of adj.keys()) {
+    if (visited.has(node)) continue;
+    const component: string[] = [];
+    const queue = [node];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      component.push(current);
+      for (const neighbor of adj.get(current) || []) {
+        if (!visited.has(neighbor)) queue.push(neighbor);
+      }
+    }
+    components.push(component);
+  }
+
+  // Filter to clusters with 2+ members and build mob objects
+  const mobs: DiscoveredMob[] = [];
+
+  for (const members of components) {
+    if (members.length < 2) continue;
+
+    const memberSet = new Set(members);
+
+    // Count internal edges
+    let edgeCount = 0;
+    for (const e of edges) {
+      if (memberSet.has(e.source_id) && memberSet.has(e.target_id)) {
+        edgeCount++;
+      }
+    }
+
+    // Name: most-connected node in this cluster
+    const degreesInCluster = new Map<string, number>();
+    for (const m of members) {
+      let degree = 0;
+      for (const neighbor of adj.get(m) || []) {
+        if (memberSet.has(neighbor)) degree++;
+      }
+      degreesInCluster.set(m, degree);
+    }
+    const hub = members.reduce((a, b) =>
+      (degreesInCluster.get(a) || 0) >= (degreesInCluster.get(b) || 0) ? a : b
+    );
+    const hubName = passportNames.get(hub) || hub;
+
+    // Generate a stable ID from sorted member IDs
+    const sortedMembers = [...members].sort();
+    const id = `discovered-${sortedMembers.slice(0, 3).join('-').substring(0, 40)}`;
+
+    mobs.push({
+      id,
+      name: `${hubName} System`,
+      members: sortedMembers,
+      edgeCount,
+    });
+  }
+
+  // Sort by size descending
+  mobs.sort((a, b) => b.members.length - a.members.length);
+
+  return mobs;
 }

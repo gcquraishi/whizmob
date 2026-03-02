@@ -802,6 +802,159 @@ export async function getEdgeStats(): Promise<EdgeStats> {
   }
 }
 
+// --- Discovered mobs (clustering) ---
+
+export interface DiscoveredMob {
+  id: string;
+  name: string;
+  members: Array<{
+    passport_id: string;
+    name: string;
+    type: string;
+    purpose: string;
+    invocation: string | null;
+    source_file: string;
+  }>;
+  edges: Array<{
+    source_id: string;
+    target_id: string;
+    edge_type: string;
+    evidence: string;
+  }>;
+}
+
+export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
+  const database = await getDb();
+
+  // Get all edges
+  let edgeRows: Array<{ source_id: string; target_id: string; edge_type: string; evidence: string }> = [];
+  try {
+    const edgeResult = database.exec('SELECT source_id, target_id, edge_type, evidence FROM edges');
+    if (edgeResult.length > 0) {
+      edgeRows = edgeResult[0].values.map(row => ({
+        source_id: row[0] as string,
+        target_id: row[1] as string,
+        edge_type: row[2] as string,
+        evidence: row[3] as string,
+      }));
+    }
+  } catch {
+    return [];
+  }
+
+  if (edgeRows.length === 0) return [];
+
+  // Get passport types to filter out project/settings (infrastructure)
+  const typeResult = database.exec('SELECT id, type FROM passports');
+  const passportTypes = new Map<string, string>();
+  if (typeResult.length > 0) {
+    for (const row of typeResult[0].values) {
+      passportTypes.set(row[0] as string, row[1] as string);
+    }
+  }
+  const excludedTypes = new Set(['project', 'settings']);
+
+  // Filter edges to exclude project/settings passports
+  const filteredEdges = edgeRows.filter(e => {
+    const sourceType = passportTypes.get(e.source_id);
+    const targetType = passportTypes.get(e.target_id);
+    return (!sourceType || !excludedTypes.has(sourceType)) &&
+           (!targetType || !excludedTypes.has(targetType));
+  });
+
+  if (filteredEdges.length === 0) return [];
+
+  // Build adjacency list
+  const adj = new Map<string, Set<string>>();
+  for (const e of filteredEdges) {
+    if (!adj.has(e.source_id)) adj.set(e.source_id, new Set());
+    if (!adj.has(e.target_id)) adj.set(e.target_id, new Set());
+    adj.get(e.source_id)!.add(e.target_id);
+    adj.get(e.target_id)!.add(e.source_id);
+  }
+
+  // BFS for connected components
+  const visited = new Set<string>();
+  const components: string[][] = [];
+  for (const node of adj.keys()) {
+    if (visited.has(node)) continue;
+    const component: string[] = [];
+    const queue = [node];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      component.push(current);
+      for (const neighbor of adj.get(current) || []) {
+        if (!visited.has(neighbor)) queue.push(neighbor);
+      }
+    }
+    components.push(component);
+  }
+
+  // Filter to 2+ members, fetch passport data, build mobs
+  const mobs: DiscoveredMob[] = [];
+
+  for (const memberIds of components) {
+    if (memberIds.length < 2) continue;
+
+    const memberSet = new Set(memberIds);
+
+    // Fetch passport data for members
+    const placeholders = memberIds.map(() => '?').join(', ');
+    const passportResult = database.exec(
+      `SELECT id, name, type, purpose, invocation, source_file FROM passports WHERE id IN (${placeholders})`,
+      memberIds
+    );
+
+    const members: DiscoveredMob['members'] = [];
+    if (passportResult.length > 0) {
+      const cols = passportResult[0].columns;
+      for (const row of passportResult[0].values) {
+        const obj: Record<string, unknown> = {};
+        cols.forEach((col, i) => { obj[col] = row[i]; });
+        members.push({
+          passport_id: obj.id as string,
+          name: obj.name as string,
+          type: obj.type as string,
+          purpose: obj.purpose as string,
+          invocation: (obj.invocation as string | null) ?? null,
+          source_file: obj.source_file as string,
+        });
+      }
+    }
+
+    // Internal edges
+    const internalEdges = edgeRows.filter(
+      e => memberSet.has(e.source_id) && memberSet.has(e.target_id)
+    );
+
+    // Name: most-connected node
+    const degrees = new Map<string, number>();
+    for (const m of memberIds) {
+      let degree = 0;
+      for (const neighbor of adj.get(m) || []) {
+        if (memberSet.has(neighbor)) degree++;
+      }
+      degrees.set(m, degree);
+    }
+    const hub = memberIds.reduce((a, b) =>
+      (degrees.get(a) || 0) >= (degrees.get(b) || 0) ? a : b
+    );
+    const hubMember = members.find(m => m.passport_id === hub);
+    const name = hubMember ? `${hubMember.name} System` : 'Discovered Mob';
+
+    const sortedIds = [...memberIds].sort();
+    const id = `discovered-${sortedIds.slice(0, 3).join('-').substring(0, 40)}`;
+
+    mobs.push({ id, name, members, edges: internalEdges });
+  }
+
+  // Sort by size descending
+  mobs.sort((a, b) => b.members.length - a.members.length);
+  return mobs;
+}
+
 export async function getLastScan(): Promise<{
   scanned_at: string;
   duration_ms: number;
