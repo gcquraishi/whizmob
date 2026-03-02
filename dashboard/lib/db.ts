@@ -215,8 +215,10 @@ export async function importInventory(inventory: ImportableInventory): Promise<S
   const existingRows = database.exec('SELECT id, name FROM passports');
   const existingIds = new Map<string, string>();
   if (existingRows.length > 0) {
+    const existCols = existingRows[0].columns;
     for (const row of existingRows[0].values) {
-      existingIds.set(row[0] as string, row[1] as string);
+      const col = (name: string) => row[existCols.indexOf(name)];
+      existingIds.set(col('id') as string, col('name') as string);
     }
   }
 
@@ -456,10 +458,14 @@ export async function getAllTags(): Promise<Array<{ tag: string; count: number }
     'SELECT tag, COUNT(*) as count FROM tags GROUP BY tag ORDER BY count DESC, tag'
   );
   if (result.length === 0) return [];
-  return result[0].values.map(row => ({
-    tag: row[0] as string,
-    count: row[1] as number,
-  }));
+  const columns = result[0].columns;
+  return result[0].values.map(row => {
+    const col = (name: string) => row[columns.indexOf(name)];
+    return {
+      tag: col('tag') as string,
+      count: col('count') as number,
+    };
+  });
 }
 
 // --- Mob queries ---
@@ -577,7 +583,7 @@ export async function getMob(id: string): Promise<MobDetailRow | null> {
       }
     }
 
-    components = compResult[0].values.map(r => {
+    components = compResult[0].values.map((r): MobComponentRow => {
       const c: Record<string, unknown> = {};
       compCols.forEach((col, i) => { c[col] = r[i]; });
       const passportId = (c.passport_id as string | null) ?? null;
@@ -592,7 +598,7 @@ export async function getMob(id: string): Promise<MobDetailRow | null> {
         invocation: (c.invocation as string | null) ?? null,
         scope: (c.scope as string | null) ?? null,
         tags: passportId ? (tagsByPassportId.get(passportId) ?? []) : [],
-      } as MobComponentRow;
+      };
     });
   }
 
@@ -641,9 +647,11 @@ export async function getMobGraphData(): Promise<MobGraphData> {
     SELECT id, name FROM mobs ORDER BY name
   `);
   if (mobResult.length > 0) {
+    const mobCols = mobResult[0].columns;
     for (const row of mobResult[0].values) {
-      const id = row[0] as string;
-      nodes.push({ id, type: 'mob', label: row[1] as string });
+      const col = (name: string) => row[mobCols.indexOf(name)];
+      const id = col('id') as string;
+      nodes.push({ id, type: 'mob', label: col('name') as string });
       nodeIds.add(id);
     }
   }
@@ -660,14 +668,16 @@ export async function getMobGraphData(): Promise<MobGraphData> {
   if (compResult.length > 0) {
     // Track component node ID → list of mobs it belongs to (for shared detection)
     const componentMobs = new Map<string, string[]>();
+    const compCols = compResult[0].columns;
 
     for (const row of compResult[0].values) {
-      const mobId = row[0] as string;
-      const passportId = row[1] as string | null;
-      const componentType = row[2] as string;
-      const filePath = row[3] as string | null;
-      const passportName = row[4] as string | null;
-      const passportType = row[5] as string | null;
+      const col = (name: string) => row[compCols.indexOf(name)];
+      const mobId = col('mob_id') as string;
+      const passportId = col('passport_id') as string | null;
+      const componentType = col('component_type') as string;
+      const filePath = col('file_path') as string | null;
+      const passportName = col('passport_name') as string | null;
+      const passportType = col('passport_type') as string | null;
 
       // Derive a stable node ID for this component
       const compNodeId = passportId || `file:${filePath || 'unknown'}`;
@@ -779,9 +789,11 @@ export async function getEdgeStats(): Promise<EdgeStats> {
     const byType: Record<string, number> = {};
     let total = 0;
     if (typeResult.length > 0) {
+      const typeCols = typeResult[0].columns;
       for (const row of typeResult[0].values) {
-        const type = row[0] as string;
-        const count = row[1] as number;
+        const col = (name: string) => row[typeCols.indexOf(name)];
+        const type = col('edge_type') as string;
+        const count = col('cnt') as number;
         byType[type] = count;
         total += count;
       }
@@ -794,7 +806,9 @@ export async function getEdgeStats(): Promise<EdgeStats> {
         SELECT target_id as id FROM edges
       )
     `);
-    const connectedPassports = connectedResult.length > 0 ? connectedResult[0].values[0][0] as number : 0;
+    const connectedPassports = connectedResult.length > 0
+      ? connectedResult[0].values[0][connectedResult[0].columns.indexOf('cnt')] as number
+      : 0;
 
     return { total, byType, connectedPassports };
   } catch {
@@ -831,12 +845,16 @@ export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
   try {
     const edgeResult = database.exec('SELECT source_id, target_id, edge_type, evidence FROM edges');
     if (edgeResult.length > 0) {
-      edgeRows = edgeResult[0].values.map(row => ({
-        source_id: row[0] as string,
-        target_id: row[1] as string,
-        edge_type: row[2] as string,
-        evidence: row[3] as string,
-      }));
+      const edgeCols = edgeResult[0].columns;
+      edgeRows = edgeResult[0].values.map(row => {
+        const col = (name: string) => row[edgeCols.indexOf(name)];
+        return {
+          source_id: col('source_id') as string,
+          target_id: col('target_id') as string,
+          edge_type: col('edge_type') as string,
+          evidence: col('evidence') as string,
+        };
+      });
     }
   } catch {
     return [];
@@ -848,8 +866,10 @@ export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
   const typeResult = database.exec('SELECT id, type FROM passports');
   const passportTypes = new Map<string, string>();
   if (typeResult.length > 0) {
+    const ptCols = typeResult[0].columns;
     for (const row of typeResult[0].values) {
-      passportTypes.set(row[0] as string, row[1] as string);
+      const col = (name: string) => row[ptCols.indexOf(name)];
+      passportTypes.set(col('id') as string, col('type') as string);
     }
   }
   const excludedTypes = new Set(['project', 'settings']);
@@ -967,12 +987,14 @@ export async function getLastScan(): Promise<{
     'SELECT scanned_at, duration_ms, total, added, removed FROM scans ORDER BY id DESC LIMIT 1'
   );
   if (result.length === 0 || result[0].values.length === 0) return null;
+  const columns = result[0].columns;
   const row = result[0].values[0];
+  const col = (name: string) => row[columns.indexOf(name)];
   return {
-    scanned_at: row[0] as string,
-    duration_ms: row[1] as number,
-    total: row[2] as number,
-    added: row[3] as number,
-    removed: row[4] as number,
+    scanned_at: col('scanned_at') as string,
+    duration_ms: col('duration_ms') as number,
+    total: col('total') as number,
+    added: col('added') as number,
+    removed: col('removed') as number,
   };
 }
