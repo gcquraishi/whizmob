@@ -34,7 +34,7 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-01_
+_Last updated: 2026-03-01 (late)_
 
 **Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. 59 tests across 6 suites. Active roadmap: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked).
 
@@ -43,6 +43,11 @@ _Last updated: 2026-03-01_
 - **M2: Mob Inspector** — dashboard homepage (`/`) replaced with three-panel inspector: mob list (left), force-directed graph (top right), component detail cards (bottom right). Connectivity-based clustering via BFS connected components, filtering project/settings infrastructure types. Click graph node → scroll to detail card. Inventory at `/agents`. Nav: Inspector / Inventory / Import / Translate.
 - **M3: Smart Update** — `whizmob update <bundle>` with `--dry-run`, `--force`, `--pull` flags. Import stores per-file content hashes in profile. Update reverse-substitutes local content to canonical form, compares hashes for three-way classification. `whizmob install` alias for `whizmob import`. 8 new tests.
 - **README rewritten** around inspector narrative for public launch.
+
+### Recent Completions (Quality Fixes — 2026-03-01)
+- **BIG-21: Secret redaction false positives fixed** — tightened `SECRET_PATTERNS` in `src/export.ts` to avoid redacting non-secret terms. Added `SAFE_KEY_NAMES` set (primary_key, foreign_key, token_count, etc.), expanded `SAFE_KEY_SUFFIXES` with _TYPE, _NAME, _PATH, etc. Fixed boolean lookahead to match at end-of-string. 24-test `secrets.test.ts` suite covers true/false positives.
+- **BIG-22: Dashboard DB casts eliminated** — replaced all fragile `row[N] as Type` positional index casts in `dashboard/lib/db.ts` with column-name-based lookup via `columns.indexOf(name)`. Updated 7 functions: getAllTags, getMobGraphData, getEdgeStats, getDiscoveredMobs, getLastScan, importInventory, getMob component mapping.
+- **BIG-24: Test coverage expanded** — added 16 tests across 2 new suites: `cluster.test.ts` (10 tests for clusterMobs connected component detection) and `sync.test.ts` (6 tests for syncMob change detection). Total: 99 tests across 9 suites.
 
 ### Recent Completions (Vocabulary Cleanup — 2026-03-01)
 - **Full vocabulary rename** — Yard→Inventory, Dossier→Detail, Forge removed, remaining Ronin→Whizmob across 18 files. constellation→mob rename in source code (`src/constellation.ts`→`src/mob.ts`, tests, dashboard API routes).
@@ -165,7 +170,7 @@ _Last updated: 2026-03-01_
 ### Active Work
 - **M4: Public Launch** — blocked on George creating GitHub account/org. README rewritten, package.json updated. Remaining: repo rename (dev → `whiz-mob`, public → `whizmob`), git history scrub, demo mode, screenshots.
 - **Dog-food** — CEO OS dry-run succeeds. Blocked on BIG-50 (need public repo for trust). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
-- **Open tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps), BIG-50 (GitHub migration).
+- **Open tickets**: BIG-50 (GitHub migration).
 
 ### Known Issues
 - ~~**CRITICAL: XSS in middleware login page** — `returnTo` interpolated into inline `<script>` without escaping. Linear: BIG-10~~ **FIXED** (sanitizeReturnTo + encodeURIComponent)
@@ -188,7 +193,7 @@ _Last updated: 2026-03-01_
 ```bash
 # Pre-publish checklist
 npm run build                    # tsc compile
-npm test                         # 32 tests across 4 suites
+npm test                         # 99 tests across 9 suites
 npm pack --dry-run 2>&1 | grep "unpacked size"  # verify <600KB
 npm whoami                       # verify npm auth
 npm publish                      # ship it
@@ -205,7 +210,7 @@ npm view whizmob                 # verify on registry
 
 ### Immediate
 - **M4: Public Launch** — README done, blocked on GitHub repo setup (BIG-50). Remaining: repo rename, history scrub, demo mode, screenshots.
-- **Post-publish polish** — remaining open tickets: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps)
+- **Post-publish polish** — BIG-21, BIG-22, BIG-24 done. No remaining open quality tickets.
 
 ### Blocked
 - **Dog-food** — blocked on BIG-50 (need public repo for trust). Pipeline complete and tested.
