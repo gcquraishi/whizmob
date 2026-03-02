@@ -96,15 +96,27 @@ export interface ExportResult {
 
 // Patterns that indicate secrets — specific enough to avoid matching prose
 // like "key files" or "token count". Only match assignment/config patterns.
+
 // Suffixes that indicate config values, not secrets (e.g., TOKEN_EXPIRY, KEY_SIZE)
-const SAFE_KEY_SUFFIXES = /(?:_EXPIRY|_TIMEOUT|_COUNT|_SIZE|_LIMIT|_PORT|_LENGTH|_MAX|_MIN|_TTL|_INTERVAL|_RETRIES|_DELAY|_DURATION|_RATE|_THRESHOLD)$/;
+const SAFE_KEY_SUFFIXES = /(?:_EXPIRY|_TIMEOUT|_COUNT|_SIZE|_LIMIT|_PORT|_LENGTH|_MAX|_MIN|_TTL|_INTERVAL|_RETRIES|_DELAY|_DURATION|_RATE|_THRESHOLD|_TYPE|_NAME|_PATH|_DIR|_FILE|_FORMAT|_MODE|_LEVEL|_INDEX|_EXCHANGE)$/;
+
+// Key names that look like they contain secret words but are not secrets.
+// These are common in database schemas, docs, and config that refer to concepts, not values.
+const SAFE_KEY_NAMES = new Set([
+  'primary_key', 'foreign_key', 'unique_key', 'sort_key', 'partition_key',
+  'key_file', 'key_path', 'key_type', 'key_name', 'key_format', 'key_size',
+  'token_count', 'token_type', 'token_limit', 'token_usage',
+  'secret_name', 'secret_path',
+]);
 
 const SECRET_PATTERNS = [
-  // JSON-style: "some_secret_key": "value"
-  /"\w*(?:password|secret|_token|_key|credential|api_key|apikey|private_key|auth_token|access_token|secret_key)\w*"\s*:\s*"[^"]+"/gi,
+  // JSON-style: "some_secret_key": "value" — requires a secret word as a SUFFIX
+  // of the key name (not just anywhere in it). E.g., "api_key": "..." matches,
+  // but "key_file": "..." does not.
+  /"\w*(?:password|secret|_token|api_key|apikey|private_key|auth_token|access_token|secret_key|_credential)\w*"\s*:\s*"[^"]+"/gi,
   // YAML/env-style: SECRET_KEY=value or SECRET_KEY: value (uppercase key names)
   // Excludes numeric-only values (e.g., TOKEN_EXPIRY: 3600) and boolean-like values
-  /\b[A-Z_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z_]*\s*[:=]\s*(?![\d]+(?:\s|$))(?!(?:true|false|null|none|yes|no)\s)(?:\S+)/g,
+  /\b[A-Z_]*(?:PASSWORD|SECRET|_TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL)[A-Z_]*\s*[:=]\s*(?![\d]+(?:\s|$))(?!(?:true|false|null|none|yes|no)(?:\s|$))(?:\S+)/g,
   // Known key formats
   /sk[-_][a-zA-Z0-9]{20,}/g, // Stripe-style keys
   /ghp_[a-zA-Z0-9]{36}/g, // GitHub PATs
@@ -129,7 +141,8 @@ function parameterizePath(absolutePath: string): string {
   return result;
 }
 
-function stripSecrets(content: string, filePath: string): { content: string; stripped: boolean } {
+/** Exported for testing — strips secret values from file content. */
+export function stripSecrets(content: string, filePath: string): { content: string; stripped: boolean } {
   let modified = content;
   let stripped = false;
 
@@ -154,14 +167,18 @@ function stripSecrets(content: string, filePath: string): { content: string; str
   for (const pattern of SECRET_PATTERNS) {
     const regex = new RegExp(pattern.source, pattern.flags);
     modified = modified.replace(regex, (match) => {
-      // Extract the key name (before = or :) and skip safe suffixes
+      // Extract the key name (before = or :) and skip safe suffixes/names
       const eqIdx = match.indexOf('=');
       const colonIdx = match.indexOf(':');
       const sepIdx = eqIdx >= 0 && (colonIdx < 0 || eqIdx < colonIdx) ? eqIdx : colonIdx;
       if (sepIdx >= 0) {
         const keyName = match.slice(0, sepIdx).trim().replace(/"/g, '');
+        const keyLower = keyName.toLowerCase();
         if (SAFE_KEY_SUFFIXES.test(keyName)) {
           return match; // Not a secret — config value like TOKEN_EXPIRY
+        }
+        if (SAFE_KEY_NAMES.has(keyLower)) {
+          return match; // Not a secret — schema/config concept like primary_key
         }
         stripped = true;
         return match.slice(0, sepIdx + 1) + ' "REDACTED"';
