@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ArrowRightLeft, Swords, Orbit } from 'lucide-react';
+import { Network, LayoutGrid, Upload, ArrowRightLeft, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 const links = [
-  { href: '/', label: 'Inventory', Icon: LayoutGrid },
-  { href: '/mobs', label: 'Mobs', Icon: Orbit },
+  { href: '/', label: 'Inspector', Icon: Network },
+  { href: '/agents', label: 'Inventory', Icon: LayoutGrid },
+  { href: '/mobs/import', label: 'Import', Icon: Upload },
   { href: '/translation', label: 'Translate', Icon: ArrowRightLeft, secondary: true },
 ];
 
@@ -27,7 +28,9 @@ export default function Nav() {
 
         {/* Nav links */}
         {links.map(({ href, label, Icon, secondary }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+          const isActive = href === '/'
+            ? pathname === '/'
+            : pathname.startsWith(href);
           return (
             <Link
               key={href}

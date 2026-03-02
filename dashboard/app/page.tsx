@@ -1,28 +1,32 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import SummaryStats from '@/components/SummaryStats';
-import SearchBar from '@/components/SearchBar';
-import TypeFilter from '@/components/TypeFilter';
-import PlatformFilter from '@/components/PlatformFilter';
-import AgentCard from '@/components/AgentCard';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import InspectorGraph from '@/components/InspectorGraph';
 import ScanButton from '@/components/ScanButton';
-import SprawlToggle from '@/components/SprawlToggle';
-import SprawlReport from '@/components/SprawlReport';
-import DiffModal from '@/components/DiffModal';
-import { computeDedupGroups } from '@/lib/dedup';
-import { Swords, Inbox } from 'lucide-react';
+import { Swords, Inbox, Network, ArrowRight, Zap, FileText, Link2 } from 'lucide-react';
 
-interface Passport {
-  id: string;
+interface MobMember {
+  passport_id: string;
   name: string;
   type: string;
-  platform: string;
   purpose: string;
-  model_hint: string | null;
-  tags: string[];
-  scope: string;
-  metadata_json: string;
+  invocation: string | null;
+  source_file: string;
+}
+
+interface MobEdge {
+  source_id: string;
+  target_id: string;
+  edge_type: string;
+  evidence: string;
+}
+
+interface DiscoveredMob {
+  id: string;
+  name: string;
+  members: MobMember[];
+  edges: MobEdge[];
 }
 
 interface ScanDiff {
@@ -34,199 +38,225 @@ interface ScanDiff {
   removed_names: string[];
 }
 
-export default function InventoryPage() {
-  const [allPassports, setAllPassports] = useState<Passport[]>([]);
+const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  subagent: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'Agent' },
+  skill: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Skill' },
+  mcp: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'MCP' },
+  project: { bg: 'bg-gray-50', text: 'text-gray-600', label: 'Project' },
+  settings: { bg: 'bg-gray-50', text: 'text-gray-500', label: 'Settings' },
+  extension: { bg: 'bg-violet-50', text: 'text-violet-700', label: 'Extension' },
+};
+
+function toDisplayPath(filePath: string): string {
+  const home = typeof window !== 'undefined' ? '' : '';
+  return filePath.replace(/^\/Users\/[^/]+/, '~');
+}
+
+export default function InspectorPage() {
+  const [mobs, setMobs] = useState<DiscoveredMob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'sprawl'>('grid');
-  const [diff, setDiff] = useState<ScanDiff | null>(null);
-  const [lastScan, setLastScan] = useState<{ scanned_at: string; total: number } | null>(null);
+  const [selectedMobId, setSelectedMobId] = useState<string | null>(null);
+  const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
+  const detailRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Fetch all passports once on mount (and after scans)
-  const fetchAll = useCallback(async () => {
-    const res = await fetch('/api/inventory');
-    if (res.ok) {
-      setAllPassports(await res.json());
-    }
+  const fetchMobs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/discovered-mobs');
+      if (res.ok) {
+        const data: DiscoveredMob[] = await res.json();
+        setMobs(data);
+        if (data.length > 0 && !selectedMobId) {
+          setSelectedMobId(data[0].id);
+        }
+      }
+    } catch { /* ignore */ }
     setLoading(false);
-  }, []);
-
-  // Fetch last scan metadata
-  const fetchLastScan = useCallback(async () => {
-    const res = await fetch('/api/scan');
-    if (res.ok) {
-      setLastScan(await res.json());
-    }
-  }, []);
+  }, [selectedMobId]);
 
   useEffect(() => {
-    fetchAll();
-    fetchLastScan();
-  }, [fetchAll, fetchLastScan]);
+    fetchMobs();
+  }, [fetchMobs]);
 
-  // Client-side filtering — instant, no network round-trip
-  const passports = useMemo(() => {
-    let result = allPassports;
-    if (typeFilter) {
-      result = result.filter(p => p.type === typeFilter);
-    }
-    if (platformFilter) {
-      result = result.filter(p => p.platform === platformFilter);
-    }
-    if (search) {
-      const term = search.toLowerCase();
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(term) ||
-        p.purpose.toLowerCase().includes(term)
-      );
-    }
-    return result;
-  }, [allPassports, typeFilter, platformFilter, search]);
+  const selectedMob = mobs.find(m => m.id === selectedMobId) || null;
 
-  const dedupResult = useMemo(() => computeDedupGroups(allPassports), [allPassports]);
+  const handleNodeClick = useCallback((passportId: string) => {
+    setHighlightedNode(passportId);
+    const el = detailRefs.current.get(passportId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, []);
 
-  function handleScanComplete(scanDiff: ScanDiff) {
-    setDiff(scanDiff);
-    fetchAll();
-    fetchLastScan();
+  function handleScanComplete(_diff: ScanDiff) {
+    fetchMobs();
   }
 
-  // Compute counts from unfiltered data
-  const counts: Record<string, number> = {};
-  allPassports.forEach((p) => {
-    counts[p.type] = (counts[p.type] || 0) + 1;
-  });
-
-  // Compute platform counts from unfiltered data
-  const platformCounts: Record<string, number> = {};
-  allPassports.forEach((p) => {
-    platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
-  });
-  const platforms = Object.keys(platformCounts).sort();
-
-  // Find most recently active project
-  const mostRecentProject = useMemo(() => allPassports
-    .filter(p => p.type === 'project')
-    .reduce<{ name: string; date: string } | null>((best, p) => {
-      let meta: Record<string, unknown> = {};
-      try { meta = JSON.parse(p.metadata_json || '{}'); } catch { /* skip */ }
-      const lastActive = meta.last_active as string | undefined;
-      if (!lastActive) return best;
-      if (!best || lastActive > best.date) return { name: p.name, date: lastActive };
-      return best;
-    }, null), [allPassports]);
-
-  const isEmpty = !loading && allPassports.length === 0 && !search && !typeFilter && !platformFilter;
-  const noResults = !loading && passports.length === 0 && (search || typeFilter || platformFilter);
+  const isEmpty = !loading && mobs.length === 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gray-900 text-white flex items-center justify-center">
-            <Swords size={18} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Whizmob</h1>
-            <p className="text-xs text-gray-500">Agent Control Plane</p>
-          </div>
-        </div>
-        <ScanButton onScanComplete={handleScanComplete} />
-      </div>
-
-      {/* Summary + Filters */}
-      {!isEmpty && (
-        <div className="space-y-4 mb-6">
-          {!typeFilter && !search && !platformFilter && (
-            <SummaryStats counts={counts} platformCounts={platformCounts} mostRecentProject={mostRecentProject} lastScan={lastScan} dedupGroups={dedupResult.groups.length} dedupPassports={dedupResult.groups.reduce((sum, g) => sum + g.members.length, 0)} />
-          )}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex-1 w-full sm:w-auto">
-              <SearchBar value={search} onChange={setSearch} />
-            </div>
-            <PlatformFilter value={platformFilter} onChange={setPlatformFilter} platforms={platforms} />
-            <TypeFilter value={typeFilter} onChange={setTypeFilter} />
-            <SprawlToggle mode={viewMode} onChange={setViewMode} groupCount={dedupResult.groups.length} />
-          </div>
-        </div>
-      )}
-
+    <div className="h-[calc(100vh-48px)] flex flex-col">
       {/* Loading */}
       {loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gray-100" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-100 rounded w-2/3" />
-                  <div className="h-3 bg-gray-100 rounded w-full" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
-                </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-sm text-gray-400 animate-pulse">Discovering mobs...</div>
+        </div>
+      )}
+
+      {/* Empty — no mobs discovered */}
+      {isEmpty && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-sm">
+            <div className="inline-flex w-14 h-14 rounded-2xl bg-gray-100 items-center justify-center mb-4">
+              <Network size={24} className="text-gray-400" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">No mobs discovered</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Run a scan to discover your agents and their connections. Whizmob will automatically find agent systems.
+            </p>
+            <ScanButton onScanComplete={handleScanComplete} />
+            <p className="text-xs text-gray-400 mt-4">
+              Or browse your{' '}
+              <Link href="/agents" className="text-indigo-600 hover:underline">full inventory</Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Inspector layout */}
+      {!loading && mobs.length > 0 && (
+        <div className="flex-1 flex min-h-0">
+          {/* Left: Mob list */}
+          <div className="w-64 border-r border-gray-200 bg-gray-50/50 flex flex-col shrink-0">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Discovered Mobs</h2>
+                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{mobs.length}</span>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Empty — never scanned */}
-      {isEmpty && (
-        <div className="text-center py-20">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-gray-100 items-center justify-center mb-4">
-            <Inbox size={24} className="text-gray-400" />
+            <div className="flex-1 overflow-y-auto">
+              {mobs.map(mob => (
+                <button
+                  key={mob.id}
+                  onClick={() => { setSelectedMobId(mob.id); setHighlightedNode(null); }}
+                  className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors ${
+                    selectedMobId === mob.id
+                      ? 'bg-white border-l-2 border-l-indigo-500'
+                      : 'hover:bg-white border-l-2 border-l-transparent'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-gray-900 truncate">{mob.name}</div>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-400">
+                    <span>{mob.members.length} agents</span>
+                    <span>&middot;</span>
+                    <span>{mob.edges.length} connections</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 border-t border-gray-200">
+              <Link
+                href="/agents"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Full Inventory
+                <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
-          <h2 className="text-base font-semibold text-gray-900 mb-1">No agents yet</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Click &ldquo;Scan Now&rdquo; to discover your agents, skills, and projects across all platforms.
-          </p>
+
+          {/* Right: Graph + Detail */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {selectedMob ? (
+              <>
+                {/* Top: Graph */}
+                <div className="h-[45%] p-4 pb-2 shrink-0">
+                  <InspectorGraph
+                    members={selectedMob.members}
+                    edges={selectedMob.edges}
+                    onNodeClick={handleNodeClick}
+                    highlightId={highlightedNode}
+                  />
+                </div>
+
+                {/* Bottom: Component detail cards */}
+                <div className="flex-1 overflow-y-auto p-4 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Components &middot; {selectedMob.members.length}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {selectedMob.members.map(member => {
+                      const typeInfo = TYPE_COLORS[member.type] || TYPE_COLORS.project;
+                      const isHighlighted = highlightedNode === member.passport_id;
+                      // Find this member's connections
+                      const connections = selectedMob.edges.filter(
+                        e => e.source_id === member.passport_id || e.target_id === member.passport_id
+                      );
+                      return (
+                        <div
+                          key={member.passport_id}
+                          ref={el => {
+                            if (el) detailRefs.current.set(member.passport_id, el);
+                          }}
+                          onClick={() => setHighlightedNode(member.passport_id)}
+                          className={`rounded-lg border p-4 cursor-pointer transition-all duration-200 ${
+                            isHighlighted
+                              ? 'border-indigo-300 bg-indigo-50/30 shadow-sm ring-1 ring-indigo-200'
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/passport/${encodeURIComponent(member.passport_id)}`}
+                                  className="text-sm font-semibold text-gray-900 hover:text-indigo-600 truncate transition-colors"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  {member.name}
+                                </Link>
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${typeInfo.bg} ${typeInfo.text}`}>
+                                  {typeInfo.label}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                                {member.purpose}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Metadata row */}
+                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                            {member.invocation && (
+                              <span className="flex items-center gap-1">
+                                <Zap size={10} />
+                                <code className="font-mono">{member.invocation}</code>
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <FileText size={10} />
+                              {toDisplayPath(member.source_file).split('/').pop()}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Link2 size={10} />
+                              {connections.length} connection{connections.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+                Select a mob to inspect
+              </div>
+            )}
+          </div>
         </div>
       )}
-
-      {/* No search results */}
-      {noResults && viewMode === 'grid' && (
-        <div className="text-center py-16">
-          <p className="text-sm text-gray-500">
-            No results found.{' '}
-            <button
-              onClick={() => { setSearch(''); setTypeFilter(''); setPlatformFilter(''); }}
-              className="text-blue-600 hover:underline"
-            >
-              Clear filters
-            </button>
-          </p>
-        </div>
-      )}
-
-      {/* Sprawl report */}
-      {!loading && viewMode === 'sprawl' && !isEmpty && (
-        <SprawlReport result={dedupResult} />
-      )}
-
-      {/* Card grid */}
-      {!loading && viewMode === 'grid' && passports.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {passports.map((p) => (
-            <AgentCard
-              key={p.id}
-              id={p.id}
-              name={p.name}
-              type={p.type}
-              platform={p.platform}
-              purpose={p.purpose}
-              model_hint={p.model_hint}
-              tags={p.tags}
-              scope={p.scope}
-              showPlatformBadge={platforms.length > 1}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Diff Modal */}
-      {diff && <DiffModal diff={diff} onClose={() => setDiff(null)} />}
     </div>
   );
 }
