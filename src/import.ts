@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -86,6 +87,7 @@ function resolveProfilesDir(): string {
 export interface ImportProfile {
   params: Record<string, string>;
   last_imported_version: number | null;
+  file_hashes?: Record<string, string>;
 }
 
 /**
@@ -115,7 +117,11 @@ export function loadFullProfile(mobId: string): ImportProfile {
   try {
     const data = JSON.parse(readFileSync(profilePath, 'utf-8'));
     if (data.params && typeof data.params === 'object') {
-      return { params: data.params, last_imported_version: data.last_imported_version ?? null };
+      return {
+        params: data.params,
+        last_imported_version: data.last_imported_version ?? null,
+        file_hashes: data.file_hashes ?? undefined,
+      };
     }
     // v1 format migration
     return { params: data, last_imported_version: null };
@@ -131,6 +137,7 @@ export function saveImportProfile(
   mobId: string,
   params: Record<string, string>,
   bundleVersion?: number,
+  fileHashes?: Record<string, string>,
 ): void {
   const dir = resolveProfilesDir();
   mkdirSync(dir, { recursive: true });
@@ -138,6 +145,7 @@ export function saveImportProfile(
   const profile: ImportProfile = {
     params,
     last_imported_version: bundleVersion ?? null,
+    file_hashes: fileHashes,
   };
   writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf-8');
 }
@@ -317,6 +325,7 @@ export interface ImportResult {
   conflicts: number;
   provenanceRecorded: number;
   contentParamsApplied: number;
+  fileHashes: Record<string, string>;
   warnings: string[];
 }
 
@@ -368,6 +377,9 @@ export function executeImport(
   let contentParamsApplied = 0;
   const warnings: string[] = [...plan.warnings];
 
+  // Track file hashes for the import profile (pre-substitution content)
+  const fileHashes: Record<string, string> = {};
+
   // Build content substitution map from resolved params
   const contentSubs = buildContentSubstitutions(plan.contentParams);
 
@@ -386,6 +398,9 @@ export function executeImport(
     }
 
     let content = readFileSync(sourcePath, 'utf-8');
+
+    // Store hash of pre-substitution content for future update comparisons
+    fileHashes[action.file.bundle_path] = createHash('sha256').update(content).digest('hex');
 
     // Apply content parameter substitution
     if (Object.keys(contentSubs).length > 0) {
@@ -439,5 +454,5 @@ export function executeImport(
     }
   }
 
-  return { installed, skipped, conflicts, provenanceRecorded, contentParamsApplied, warnings };
+  return { installed, skipped, conflicts, provenanceRecorded, contentParamsApplied, fileHashes, warnings };
 }

@@ -693,7 +693,7 @@ program
         console.log(`Skipped: ${result.skipped - result.conflicts} file(s) (missing from bundle)`);
       }
 
-      // Save profile for future re-imports
+      // Save profile for future re-imports (including file hashes for update)
       if (result.installed > 0) {
         const contentParamValues: Record<string, string> = {};
         for (const cp of plan.contentParams) {
@@ -701,11 +701,127 @@ program
             contentParamValues[cp.token] = cp.value;
           }
         }
-        if (Object.keys(contentParamValues).length > 0) {
-          saveImportProfile(mobId, contentParamValues, plan.manifest.bundle_version);
+        if (Object.keys(contentParamValues).length > 0 || Object.keys(result.fileHashes).length > 0) {
+          saveImportProfile(mobId, contentParamValues, plan.manifest.bundle_version, result.fileHashes);
           console.log(`Profile saved to ~/.whizmob/import-profiles/${mobId}.json (v${plan.manifest.bundle_version})`);
         }
       }
+    } catch (err) {
+      console.error(`[whizmob] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// `install` is a friendlier alias for `import`
+program
+  .command('install [bundle]')
+  .description('Install a mob bundle (alias for import)')
+  .option('--list', 'List available bundled mobs')
+  .option('--dry-run', 'Show what would be installed without writing files')
+  .option('--force', 'Overwrite existing files without prompting')
+  .option('--no-profile', 'Ignore saved import profile')
+  .option('--no-prompt', 'Skip interactive prompts (fail on missing params)')
+  .option('--param <params...>', 'Override parameters as KEY=VALUE')
+  .action(async (bundleArg: string | undefined, opts) => {
+    // Delegate to import command by re-parsing with 'import' verb
+    const importCmd = program.commands.find(c => c.name() === 'import');
+    if (importCmd) {
+      await importCmd.parseAsync([bundleArg || '', ...process.argv.slice(3)], { from: 'user' });
+    }
+  });
+
+program
+  .command('update <bundle>')
+  .description('Update locally installed mob files from a newer bundle version')
+  .option('--dry-run', 'Show what would change without applying')
+  .option('--force', 'Overwrite files with both local and upstream changes')
+  .option('--pull', 'Run git pull in the bundle directory before updating')
+  .action(async (bundleArg: string, opts) => {
+    try {
+      const { planUpdate, executeUpdate, pullBundle } = await import('./update.js');
+
+      // Resolve bundle path
+      const resolved = resolveBundlePath(bundleArg);
+      const bundlePath = resolved.path;
+      if (resolved.named) {
+        console.log(`[whizmob] Resolved bundle "${bundleArg}" → ${bundlePath}`);
+      }
+
+      // Optional git pull
+      if (opts.pull) {
+        console.log('[whizmob] Pulling latest from git...');
+        const pulled = pullBundle(bundlePath);
+        if (!pulled) {
+          console.error('[whizmob] git pull failed — directory may not be a git repo.');
+        }
+      }
+
+      const plan = planUpdate(bundlePath);
+      const mobMeta = plan.manifest.mob;
+
+      console.log(`Mob: ${mobMeta.name} (v${plan.manifest.bundle_version})`);
+      console.log(`Files: ${plan.actions.length}`);
+      console.log('');
+
+      // Summarize
+      if (plan.unchanged > 0) console.log(`  ${plan.unchanged} unchanged`);
+      if (plan.autoApply > 0) console.log(`  ${plan.autoApply} upstream-only (will auto-apply)`);
+      if (plan.localOnly > 0) console.log(`  ${plan.localOnly} local-only (your edits preserved)`);
+      if (plan.newFiles > 0) console.log(`  ${plan.newFiles} new file(s)`);
+      if (plan.conflicts > 0) console.log(`  ${plan.conflicts} conflict(s) (both local and upstream changed)`);
+      console.log('');
+
+      // Show details for non-unchanged files
+      for (const action of plan.actions) {
+        if (action.classification === 'unchanged') continue;
+
+        const icon = {
+          'upstream-only': '\u2191', // ↑
+          'local-only': '\u2193',    // ↓
+          'both-changed': '!',
+          'new-file': '+',
+          'missing-bundle': '?',
+        }[action.classification] || ' ';
+        const label = action.file.passport_name || action.file.bundle_path;
+        console.log(`  ${icon} ${label} [${action.classification}]`);
+
+        if (action.diff) {
+          for (const line of action.diff.split('\n').slice(0, 10)) {
+            console.log(`    ${line}`);
+          }
+          const totalLines = action.diff.split('\n').length;
+          if (totalLines > 10) {
+            console.log(`    ... (${totalLines - 10} more lines)`);
+          }
+        }
+      }
+
+      if (plan.warnings.length > 0) {
+        console.log('');
+        for (const w of plan.warnings) {
+          console.log(`  Warning: ${w}`);
+        }
+      }
+
+      if (opts.dryRun) {
+        console.log('\n[dry-run] No files written.');
+        return;
+      }
+
+      if (plan.autoApply === 0 && plan.newFiles === 0 && plan.conflicts === 0) {
+        console.log('Everything is up to date.');
+        return;
+      }
+
+      console.log('');
+      const result = executeUpdate(bundlePath, plan, { force: opts.force });
+
+      console.log(`Applied: ${result.applied} file(s)`);
+      if (result.newFiles > 0) console.log(`New files: ${result.newFiles}`);
+      if (result.conflicts > 0) {
+        console.log(`Conflicts skipped: ${result.conflicts} (use --force to overwrite)`);
+      }
+      if (result.skipped > 0) console.log(`Skipped: ${result.skipped} file(s)`);
     } catch (err) {
       console.error(`[whizmob] ${(err as Error).message}`);
       process.exit(1);
