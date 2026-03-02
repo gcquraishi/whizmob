@@ -51,16 +51,16 @@ Run `whizmob scan`, open the dashboard, and instantly see your agent systems —
 - **Tickets**: Carries forward from cross-account-portability M3
 - **Key files**: `src/sync.ts`, `src/import.ts`, `src/index.ts`
 
-### M4: Public Launch — Not Started
+### M4: Public Launch — Blocked
 - **Why it matters**: Whizmob can't grow beyond George if nobody can find it. A public repo with the inspector narrative positions whizmob as "the tool for understanding your AI agent systems" — not just another CLI utility.
 - **Acceptance criteria**:
-  - [ ] Public GitHub repo named `whizmob` (dev repo renamed to `whiz-mob`)
-  - [ ] Git history scrubbed: `seed-inventory.json` and `dashboard/data/whizmob.db` removed from all commits
-  - [ ] README rewritten around the inspector narrative: "You've built more agent systems than you think. Whizmob shows you."
-  - [ ] `npx whizmob scan` works from the public repo — zero-config first run
+  - [ ] Public GitHub repo named `whizmob` (dev repo renamed to `whiz-mob`) — blocked on George creating GitHub account
+  - [ ] Git history scrubbed: `seed-inventory.json` and `dashboard/data/whizmob.db` removed from all commits — blocked on repo setup
+  - [x] README rewritten around the inspector narrative: "You've built more agent systems than you think. Whizmob shows you."
+  - [ ] `npx whizmob scan` works from the public repo — zero-config first run — blocked on repo setup
   - [ ] Demo mode (read-only dashboard sharing) so George can show the inspector to others without exposing auth
-  - [ ] npm package updated to point at the public repo
-  - [ ] At least one screenshot/GIF of the mob inspector in the README
+  - [x] npm package.json updated with new description and keywords
+  - [ ] At least one screenshot/GIF of the mob inspector in the README — needs dashboard running with data
 - **Tickets**: [[WHIZ-10]], [[WHIZ-4]]
 - **Key files**: `README.md`, `package.json`, GitHub repo settings
 

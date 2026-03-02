@@ -29,23 +29,23 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `src/constellation.ts` — Constellation CRUD (define, add, list, show, delete)
 - `src/export.ts` — Constellation export engine (path rewriting, secret stripping, memory bootstrapping)
 - `src/import.ts` — Constellation import engine (parameter resolution, conflict detection, dry-run)
+- `src/update.ts` — Smart update engine (three-way change classification, content hashing)
 - `src/sync.ts` — Constellation sync engine (change detection, inline diff)
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
 _Last updated: 2026-03-01_
 
-**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97 passports across 3 platforms (Claude Code, Cursor, Codex), including both user-level and project-level agents. `whizmob roster` CLI bridges the inventory into Claude Code sessions via a SessionStart hook — now constellation-aware, grouping agents by system. `whizmob translate` provides two-stage skill translation (Source → Canonical → Target) to DALL-E, Midjourney, and Gemini platforms. Constellations (now called "mobs" in the UI) are fully operational: define groups, export portable bundles with path rewriting/secret stripping/memory bootstrapping, import onto other machines, sync to detect changes, and track provenance (origin, author, license). **Named bundle resolution** — `whizmob import ceo-operating-system` resolves to bundled exports shipped with the npm package; `whizmob import --list` shows available bundles. **Content parameterization verified** — CEO OS constellation (v3) templatized with 5 content parameters (`OWNER_NAME`, `ORG_NAME`, `WORKSPACE_ROOT`, `VAULT_PATH`, `PANEL_REGISTRY_DIR`). All 11 files stripped of hardcoded org references; import substitutes from `--param` flags. **Constellation versioning complete** — re-exports auto-detect changes via sync diff, bump `bundle_version`, and append changelog entries. Import profiles track `last_imported_version`. Dashboard removed from npm tarball (was 90% of package size). 43 tests across 4 suites. Dog-food tested on work machine — dry-run succeeds, blocked on GitHub repo going public for full trust. **Dashboard mob graph view** — interactive force-directed graph at `/mobs` showing mob-to-component relationships with drag, hover, click navigation, and shared-component cross-links.
+**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. 59 tests across 6 suites. Active roadmap: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked).
+
+### Recent Completions (Mob Inspector Roadmap — 2026-03-01)
+- **M1: Edge Inference Engine** — `src/edges.ts` reads source file content, detects file path references, skill invocations (`/name` patterns), and shared state. 129 edges, 31 connected passports. Edges stored in SQLite `edges` table. 8 tests.
+- **M2: Mob Inspector** — dashboard homepage (`/`) replaced with three-panel inspector: mob list (left), force-directed graph (top right), component detail cards (bottom right). Connectivity-based clustering via BFS connected components, filtering project/settings infrastructure types. Click graph node → scroll to detail card. Inventory at `/agents`. Nav: Inspector / Inventory / Import / Translate.
+- **M3: Smart Update** — `whizmob update <bundle>` with `--dry-run`, `--force`, `--pull` flags. Import stores per-file content hashes in profile. Update reverse-substitutes local content to canonical form, compares hashes for three-way classification. `whizmob install` alias for `whizmob import`. 8 new tests.
+- **README rewritten** around inspector narrative for public launch.
 
 ### Recent Completions (Vocabulary Cleanup — 2026-03-01)
-- **Full vocabulary rename** — Yard→Inventory, Dossier→Detail, Forge removed, remaining Ronin→Whizmob across 18 files (dashboard source, config, CLAUDE.md, README, PRD, roadmaps, HTML demos). Zero stale refs in active code. constellation→mob rename completed in source code (`src/constellation.ts`→`src/mob.ts`, tests, dashboard API routes).
-
-### Recent Completions (Mob Graph View — 2026-03-01)
-- **Force-directed graph visualization** (`dashboard/components/MobGraph.tsx`) — canvas-based graph with vanilla JS force simulation (no external deps). Mob nodes (large, indigo) connect to component nodes (small, color-coded by type). Shared components create dashed cross-links between mobs.
-- **Dual view** (`dashboard/app/mobs/page.tsx`) — toggle between card grid (existing) and interactive graph view. Graph supports drag-to-reposition, hover tooltips, click-to-navigate (mob → detail, component → detail).
-- **Graph data API** (`dashboard/app/api/mobs/graph/route.ts`, `dashboard/lib/db.ts`) — `getMobGraphData()` returns nodes + edges with shared-component detection.
-- **Constellation → Mob rename** — all dashboard UI labels (nav, page titles, back buttons, descriptions, import page) say "Mob" instead of "Constellation". Internal code/DB unchanged.
-- **Old /constellations path redirects to /mobs**.
+- **Full vocabulary rename** — Yard→Inventory, Dossier→Detail, Forge removed, remaining Ronin→Whizmob across 18 files. constellation→mob rename in source code (`src/constellation.ts`→`src/mob.ts`, tests, dashboard API routes).
 
 ### Recent Completions (Named Bundles + Templatization v3 — 2026-02-27)
 - **Named bundle resolution** (`src/import.ts`) — `resolveBundlePath()` detects whether import argument is a filesystem path or named bundle, resolves named bundles from `<package-root>/exports/<name>/`. `listBundledExports()` reads all bundled manifests for `--list` output.
@@ -163,11 +163,8 @@ _Last updated: 2026-03-01_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **GitHub repo migration (BIG-50)** — Create `bigheavyio` org owned by `george@bigheavy.fun`, scrub `seed-inventory.json` + `dashboard/data/whizmob.db` from history, make repo public. Blocked on George creating GitHub account with business email.
-- **Dog-food** — CEO OS dry-run succeeds on work machine. Blocked on BIG-50 (Claude Code refuses to install packages without public repo). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' --param '{{ORG_NAME}}=CONEX' ...`
-- **Cross-account portability roadmap** — `docs/roadmaps/cross-account-portability.md`. M2 (versioning) complete. Next: M3 (smart update with sync agent). M1 (dog-food) blocked on BIG-50.
-- **Translation validation**: Ready-to-run prompts in `whizmob/translation-test-prompts.md`. Dashboard page at `/translation` awaiting images.
-- **Kellan Elliott-McCrea intro** — email drafted, 10 Q&A prep complete. BIG-6.
+- **M4: Public Launch** — blocked on George creating GitHub account/org. README rewritten, package.json updated. Remaining: repo rename (dev → `whiz-mob`, public → `whizmob`), git history scrub, demo mode, screenshots.
+- **Dog-food** — CEO OS dry-run succeeds. Blocked on BIG-50 (need public repo for trust). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
 - **Open tickets**: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps), BIG-50 (GitHub migration).
 
 ### Known Issues
@@ -204,15 +201,14 @@ npm view whizmob                 # verify on registry
 - **Package exclusions**: test images, `tsconfig.tsbuildinfo`, `package-lock.json` excluded via `files` array negation in `package.json`
 
 ## Roadmap
-**Active roadmap**: `docs/roadmaps/cross-account-portability.md` (M2 complete)
+**Active roadmap**: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked)
 
 ### Immediate
-- **M3: Smart Update with Sync Agent** — three-way change classification (param-only, upstream-only, both-changed), pre-substitution content hashing, sync agent for semantic conflict resolution. `whizmob update <bundle>` command.
-- **Dog-food** — port CEO OS to work machine (blocked on work machine access). Bundle, versioning, and profiles are ready.
+- **M4: Public Launch** — README done, blocked on GitHub repo setup (BIG-50). Remaining: repo rename, history scrub, demo mode, screenshots.
 - **Post-publish polish** — remaining open tickets: BIG-21 (secret redaction false positives), BIG-22 (dashboard DB casts), BIG-24 (test coverage gaps)
 
 ### Blocked
-- **M1: Dog-food execution** — blocked on work machine access. Export/import/versioning pipeline is complete and tested.
+- **Dog-food** — blocked on BIG-50 (need public repo for trust). Pipeline complete and tested.
 - **Translation validation** — run translation image test (needs API access)
 
 ### Future (Backlog)
