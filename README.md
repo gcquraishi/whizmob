@@ -1,138 +1,129 @@
 # whizmob
 
-Inventory, port, and manage your AI agents across Claude Code, Cursor, and Codex.
+**You've built more agent systems than you think. Whizmob shows you.**
 
-You've built agents, skills, MCP integrations, and project configs across multiple AI tools. whizmob scans your local environment, catalogs everything into a searchable inventory, and lets you bundle agents into portable **constellations** you can move between machines.
+Whizmob scans your AI tool configs (Claude Code, Cursor, Codex), discovers which agents, skills, and integrations actually work together, and visualizes them as **mobs** — the agent systems you've organically built without realizing it.
 
 ## Quick start
 
 ```bash
 npx whizmob scan
+npx whizmob dashboard
 ```
 
-That's it. whizmob scans `~/.claude/`, `~/.cursor/`, and `~/.codex/` and shows you what you have:
+Open `http://localhost:3333` and see your agent systems laid out as interactive force-directed graphs. Click nodes to inspect components, see how they connect, and understand what you've built.
 
-```
-97 items across 3 platforms: 57 agents, 27 skills, 3 mcp servers, 9 project configs, 1 settings.
-```
+## What it discovers
 
-## What it finds
+Whizmob finds your agents across three platforms:
 
-- **Subagents** (`.claude/agents/*.md`, `.cursor/agents/*.md`)
+- **Agents** (`.claude/agents/*.md`, `.cursor/agents/*.md`, `.codex/agents/`)
 - **Skills** (`.claude/skills/*/SKILL.md`)
 - **MCP servers** (`.claude/.mcp.json`, `.cursor/mcp.json`)
 - **Project configs** (`.claude/` directories inside your projects)
 - **Settings** (`.claude/settings.json`, `.cursor/settings.json`)
-- **Codex agents** (`.codex/agents/`)
 
-## Commands
+Then it reads each component's source file and detects **edges** — references between components:
 
-### Inventory
+- **File path references** — one agent mentions another's config file
+- **Skill invocations** — `/skillname` patterns matching known skills
+- **Shared state** — multiple components reading the same file
+
+Components with edges cluster into **discovered mobs**. A mob is a group of agents, skills, hooks, and config that work together as a system.
+
+## The Inspector
+
+The dashboard homepage is the **mob inspector** — a master-detail view showing:
+
+- **Left panel**: discovered mobs, ranked by size
+- **Top right**: force-directed graph of the selected mob's components and connections
+- **Bottom right**: component detail cards (name, type, purpose, invocation, connections)
+
+Click a graph node and the corresponding detail card highlights and scrolls into view.
+
+The full flat inventory lives at `/agents` — every component across all platforms, searchable and filterable.
+
+## Portability
+
+Bundle your mobs and move them between machines:
 
 ```bash
-whizmob scan                    # Scan and import into local DB
-whizmob scan --format table     # Human-readable table output
-whizmob stats                   # Summary with platform breakdown
-whizmob stats -v                # Verbose per-platform counts
-whizmob roster --search "deploy" # Search agents by name or purpose
-```
-
-### Constellations
-
-A constellation is a named group of agents, skills, hooks, and config that work together as a system. Think: your code review setup, your deployment pipeline, your executive operating system.
-
-```bash
-# Define a constellation
-whizmob constellation define "my-review-system" \
+# Define a mob
+whizmob mob define "my-review-system" \
   --desc "Code review agents and skills" \
   --add code-reviewer test-runner linter
 
-# Add non-passport components (hooks, config files)
-whizmob constellation add-component my-review-system ./hooks/pre-commit.sh --type hook
-
-# View it
-whizmob constellation show my-review-system
-whizmob constellation list
-```
-
-### Export & Import
-
-Move constellations between machines. whizmob handles path rewriting, secret stripping, and memory bootstrapping automatically.
-
-```bash
-# Export (on source machine)
+# Export (handles path rewriting, secret stripping, memory bootstrapping)
 whizmob export my-review-system
-# -> ~/.whizmob/exports/my-review-system/
 
-# Transfer via git, USB, whatever
-# ...
+# Import on another machine
+whizmob install my-review-system --dry-run   # Preview
+whizmob install my-review-system             # Install
 
-# Import (on target machine)
-whizmob import ./my-review-system --dry-run  # Preview what will be installed
-whizmob import ./my-review-system            # Install it
-whizmob import ./my-review-system --force    # Overwrite existing files
+# Update after upstream changes
+whizmob update my-review-system              # Three-way merge: auto-applies safe changes
+whizmob update my-review-system --pull       # Git pull first, then update
 ```
 
-What export does for you:
-- Rewrites absolute paths to `{{HOME}}`, `{{CLAUDE_DIR}}`, `{{WHIZMOB_DIR}}`
-- Strips secrets from `.mcp.json` env blocks and any key matching `password|secret|token|key`
-- Bootstraps memory files (preserves structure, empties values)
-- Flags required MCP servers and npm packages as dependencies
+The update command uses content hashing to classify each file:
 
-### Sync
+- **Upstream-only** changes auto-apply (safe)
+- **Local-only** edits are preserved (your customizations)
+- **Both-changed** files show a diff (you decide)
 
-Check if source files have changed since you exported:
+## Commands
 
 ```bash
-whizmob constellation sync ~/.whizmob/exports/my-review-system
-```
+# Discovery
+whizmob scan                         # Scan all platforms, infer edges
+whizmob stats                        # Summary with edge and mob counts
 
-### Dashboard
+# Inspector
+whizmob dashboard                    # Launch web dashboard (localhost:3333)
 
-Browse your inventory in a web UI:
+# Roster (CLI queries)
+whizmob roster --search "deploy"     # Search by name or purpose
+whizmob roster --hook                # Compact output for SessionStart hook
 
-```bash
-whizmob dashboard
-# -> http://localhost:3333
-```
+# Mobs
+whizmob mob list                     # List defined mobs
+whizmob mob show my-system           # Show mob details
+whizmob mob sync ./bundle            # Detect changes vs export
 
-The dashboard includes:
-- Searchable agent inventory
-- Detail pages with source viewer and secret redaction
-- Constellation management with export/import UI
+# Portability
+whizmob export my-system             # Export as portable bundle
+whizmob install <bundle>             # Install a bundle (alias for import)
+whizmob update <bundle>              # Smart update with change classification
+whizmob install --list               # Show bundled mobs shipped with whizmob
 
-### Translation
-
-Translate Claude Code skills to other AI platforms:
-
-```bash
+# Translation
 whizmob translate my-skill --to gemini dalle midjourney
-whizmob translate --list  # Show translatable skills
 ```
 
 ## How it works
 
-whizmob is local-first. Everything stays on your machine:
+Everything is local. No accounts, no server, no API keys.
 
-- **Scanner** reads your `~/.claude/`, `~/.cursor/`, and `~/.codex/` directories
-- **SQLite database** at `~/.whizmob/whizmob.db` stores the inventory
-- **Dashboard** is a local Next.js app — no server, no accounts
-- **Exports** are plain directories with a `manifest.json` — git-friendly, no binaries
+- **Scanner** reads `~/.claude/`, `~/.cursor/`, and `~/.codex/`
+- **Edge inference** reads source files to detect inter-component references
+- **Clustering** groups connected components into discovered mobs (BFS on the edge graph)
+- **SQLite** at `~/.whizmob/whizmob.db` stores inventory and edges
+- **Dashboard** is a local Next.js app at `localhost:3333`
+- **Exports** are plain directories with `manifest.json` — git-friendly, no binaries
 
 ## Session integration
 
-whizmob can inject your agent roster into every Claude Code session via a SessionStart hook:
+Inject your agent roster into every Claude Code session:
 
 ```bash
-# Add to your Claude Code hooks config
-# The hook outputs a compact roster that Claude sees at session start
+# Add whizmob roster hook to your SessionStart hooks
 whizmob roster --hook
 ```
 
 ## Requirements
 
 - Node.js 20+
-- Claude Code, Cursor, or Codex installed (whizmob scans their config directories)
+- At least one of: Claude Code, Cursor, or Codex installed
 
 ## License
 
