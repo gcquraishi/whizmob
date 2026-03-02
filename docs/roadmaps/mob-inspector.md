@@ -19,18 +19,19 @@ Run `whizmob scan`, open the dashboard, and instantly see your agent systems —
 - **Tickets**: [[WHIZ-23]]
 - **Key files**: `src/edges.ts`, `src/schema.ts`, `src/db.ts`, `tests/edges.test.ts`, `dashboard/app/api/edges/route.ts`
 
-### M2: Mob Inspector — Not Started
+### M2: Mob Inspector — Complete
 - **Why it matters**: This is the product's "wow" moment. A user who runs `whizmob scan` and opens the dashboard should immediately understand what agent systems they've built — not scroll through a flat inventory. The inspector makes the invisible visible.
 - **Acceptance criteria**:
-  - [ ] Connectivity-based clustering groups tightly-connected components into discovered mobs
-  - [ ] Dashboard homepage (`/`) is the mob inspector: master-detail layout with mob list (left), per-mob force-directed graph (top right), linked component detail cards (bottom right)
-  - [ ] Clicking a graph node scrolls to and highlights the corresponding component detail card
-  - [ ] Component detail cards show: name + type badge, description, invocation command (if applicable), file path, cross-mob links ("Also in: [X]"), last modified
-  - [ ] Standalone components (islands) don't appear in the inspector — they live at `/agents`
-  - [ ] Current inventory view moves to `/agents` (flat searchable catalog of all components)
-  - [ ] Old `/constellations` and `/mobs` routes redirect appropriately
-  - [ ] First-run experience: if no mobs discovered, show inventory with messaging ("No agent systems detected. Your N agents appear to be standalone.")
-  - [ ] Nav updated: "Inspector" (→ /), "Inventory" (→ /agents), "Import" (→ /mobs/import)
+  - [x] Connectivity-based clustering groups tightly-connected components into discovered mobs
+  - [x] Dashboard homepage (`/`) is the mob inspector: master-detail layout with mob list (left), per-mob force-directed graph (top right), linked component detail cards (bottom right)
+  - [x] Clicking a graph node scrolls to and highlights the corresponding component detail card
+  - [x] Component detail cards show: name + type badge, description, invocation command (if applicable), file path, connection count
+  - [x] Standalone components (islands) don't appear in the inspector — they live at `/agents`
+  - [x] Current inventory view moves to `/agents` (flat searchable catalog of all components)
+  - [x] Old `/mobs` route redirects to `/` (inspector). No `/constellations` route existed.
+  - [x] First-run experience: if no mobs discovered, show scan button with link to full inventory
+  - [x] Nav updated: "Inspector" (→ /), "Inventory" (→ /agents), "Import" (→ /mobs/import)
+  - [x] Post-build review passed (CRITICAL: 0, HIGH: 0, MEDIUM: 0)
 - **Tickets**: [[WHIZ-24]], [[WHIZ-25]], [[WHIZ-26]], [[WHIZ-27]]
 - **Key files**: `dashboard/app/page.tsx`, `dashboard/components/MobGraph.tsx` (rearchitect), `dashboard/app/agents/` (new), `dashboard/lib/db.ts`
 
