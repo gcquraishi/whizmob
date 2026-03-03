@@ -2,7 +2,7 @@ export type Platform = 'claude-code' | 'codex' | 'cursor' | 'windsurf' | 'copilo
 export type AgentType = 'subagent' | 'skill' | 'mcp' | 'project' | 'settings' | 'extension';
 export type AgentScope = 'user' | 'project';
 export type AgentStatus = 'active' | 'draft' | 'archived';
-export type ComponentType = 'passport' | 'hook' | 'memory_schema' | 'claude_md' | 'config';
+export type ComponentType = 'passport' | 'hook' | 'memory_schema' | 'claude_md' | 'config' | 'documentation';
 export type LicenseType = 'personal' | 'work' | 'open' | 'commercial';
 export type OutputFormat = 'json' | 'table';
 

@@ -112,10 +112,13 @@ describe('export / import pipeline', () => {
     assert.equal(result.manifest.mob.name, 'Export Test');
     assert.equal(result.manifest.mob.author, 'test-author');
 
-    // The hook file we added should appear in files[]
-    assert.equal(result.fileCount, 1, 'Expected exactly one file in the export');
+    // The hook file we added should appear in files[], plus auto-generated overview.md
+    assert.equal(result.fileCount, 2, 'Expected hook file + overview.md in the export');
     const entry = result.manifest.files[0];
     assert.equal(entry.component_type, 'hook');
+    const overviewEntry = result.manifest.files[1];
+    assert.equal(overviewEntry.component_type, 'documentation');
+    assert.equal(overviewEntry.bundle_path, 'overview.md');
     assert.equal(entry.role, 'session-start');
     assert.equal(entry.secrets_stripped, false);
     assert.equal(entry.memory_bootstrapped, false);
@@ -158,7 +161,7 @@ describe('export / import pipeline', () => {
 
     const result = exportMob('Export Test', { outputDir: realBundleDir });
 
-    assert.equal(result.fileCount, 1);
+    assert.equal(result.fileCount, 2, 'Expected hook file + overview.md');
     const entry = result.manifest.files[0];
     const bundledFilePath = join(realBundleDir, entry.bundle_path);
     assert.ok(existsSync(bundledFilePath), `Bundled file should exist at ${bundledFilePath}`);

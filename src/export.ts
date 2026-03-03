@@ -296,6 +296,64 @@ function inferParamDescription(paramName: string): string {
     .join(' ');
 }
 
+/**
+ * Generate a draft overview.md from mob metadata and component list.
+ */
+function generateOverview(
+  mob: { name: string; description: string; author: string | null },
+  files: ExportFileEntry[],
+  contentParams: Record<string, ContentParameter>,
+): string {
+  const lines: string[] = [];
+  lines.push(`# ${mob.name}`);
+  lines.push('');
+  lines.push(mob.description || 'A mob bundle exported from Whizmob.');
+  lines.push('');
+
+  // Components section
+  const byType = new Map<string, ExportFileEntry[]>();
+  for (const f of files) {
+    const type = f.component_type;
+    if (!byType.has(type)) byType.set(type, []);
+    byType.get(type)!.push(f);
+  }
+
+  lines.push('## Components');
+  lines.push('');
+  for (const [type, entries] of byType) {
+    const label = type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    lines.push(`### ${label} (${entries.length})`);
+    lines.push('');
+    for (const entry of entries) {
+      const name = entry.passport_name || entry.bundle_path;
+      lines.push(`- **${name}**${entry.role ? ` — ${entry.role}` : ''}`);
+    }
+    lines.push('');
+  }
+
+  // Parameters section
+  if (Object.keys(contentParams).length > 0) {
+    lines.push('## Parameters');
+    lines.push('');
+    lines.push('| Parameter | Description |');
+    lines.push('|-----------|-------------|');
+    for (const [token, meta] of Object.entries(contentParams)) {
+      lines.push(`| \`${token}\` | ${meta.description} |`);
+    }
+    lines.push('');
+  }
+
+  // Install section
+  lines.push('## Install');
+  lines.push('');
+  lines.push('```bash');
+  lines.push(`npx whizmob import ${mob.name.toLowerCase().replace(/\s+/g, '-')}`);
+  lines.push('```');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
 export function exportMob(
   mobName: string,
   options: { outputDir?: string; dryRun?: boolean } = {},
@@ -523,6 +581,33 @@ export function exportMob(
       content_parameters: contentParameters,
       changelog,
     };
+
+    // Generate or validate overview.md
+    const overviewPath = join(bundleDir, 'overview.md');
+    const existingOverview = existsSync(overviewPath)
+      ? readFileSync(overviewPath, 'utf-8')
+      : null;
+
+    if (!existingOverview) {
+      // Auto-generate a draft overview.md from manifest data
+      const overviewContent = generateOverview(mob, fileEntries, contentParameters);
+      if (!options.dryRun) {
+        mkdirSync(bundleDir, { recursive: true });
+        writeFileSync(overviewPath, overviewContent, 'utf-8');
+      }
+      warnings.push('Auto-generated overview.md — edit it to add context about how this mob works.');
+    }
+
+    // Add overview.md to manifest files
+    fileEntries.push({
+      bundle_path: 'overview.md',
+      original_path: 'overview.md',
+      component_type: 'documentation',
+      role: null,
+      passport_name: null,
+      secrets_stripped: false,
+      memory_bootstrapped: false,
+    });
 
     // Write manifest
     if (!options.dryRun) {

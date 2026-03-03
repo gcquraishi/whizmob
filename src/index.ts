@@ -541,7 +541,11 @@ program
         }
         console.log('Available bundled mobs:');
         for (const b of bundles) {
-          console.log(`  ${b.id} — ${b.name} (v${b.version})${b.description ? ` — ${b.description}` : ''}`);
+          const desc = b.summary || b.description;
+          console.log(`  ${b.id} — ${b.name} (v${b.version})`);
+          if (desc) {
+            console.log(`    ${desc}`);
+          }
         }
         console.log('');
         console.log('Usage: whizmob import <name> [--dry-run] [--param ...]');

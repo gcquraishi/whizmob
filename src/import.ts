@@ -46,11 +46,11 @@ export function resolveBundlePath(bundleArg: string): { path: string; named: boo
  * List all bundled exports shipped with the package.
  * Reads exports/{name}/manifest.json from the package root.
  */
-export function listBundledExports(): Array<{ name: string; id: string; version: number; description: string }> {
+export function listBundledExports(): Array<{ name: string; id: string; version: number; description: string; summary: string }> {
   const exportsDir = join(__importDirname, '..', 'exports');
   if (!existsSync(exportsDir)) return [];
 
-  const results: Array<{ name: string; id: string; version: number; description: string }> = [];
+  const results: Array<{ name: string; id: string; version: number; description: string; summary: string }> = [];
   let entries: string[];
   try {
     entries = readdirSync(exportsDir);
@@ -64,11 +64,28 @@ export function listBundledExports(): Array<{ name: string; id: string; version:
     try {
       const manifest: ExportManifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
       const mobMeta = manifest.mob || (manifest as any).constellation;
+
+      // Read one-line summary from overview.md (first non-heading, non-empty line)
+      let summary = '';
+      const overviewPath = join(exportsDir, entry, 'overview.md');
+      if (existsSync(overviewPath)) {
+        const overviewContent = readFileSync(overviewPath, 'utf-8');
+        const lines = overviewContent.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            summary = trimmed;
+            break;
+          }
+        }
+      }
+
       results.push({
         name: mobMeta.name,
         id: entry,
         version: manifest.bundle_version,
         description: mobMeta.description || '',
+        summary,
       });
     } catch {
       // Skip malformed manifests
@@ -254,6 +271,9 @@ export function planImport(
   const actions: ImportAction[] = [];
 
   for (const file of manifest.files) {
+    // Documentation files (overview.md) are bundle-level docs, not installable
+    if (file.component_type === 'documentation') continue;
+
     const targetPath = deparameterizePath(file.original_path, resolvedParams);
     const conflict = existsSync(targetPath);
     const needsSecrets = file.secrets_stripped;
