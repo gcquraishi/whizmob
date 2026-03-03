@@ -26,6 +26,7 @@ import { exportMob } from './export.js';
 import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile, resolveBundlePath, listBundledExports } from './import.js';
 import { createInterface } from 'node:readline/promises';
 import { syncMob } from './sync.js';
+import { generateDemo } from './demo.js';
 import type { TargetPlatform } from './adapters/types.js';
 import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType } from './types.js';
 
@@ -229,6 +230,29 @@ program
       });
     } catch {
       // User killed the process (Ctrl+C)
+    }
+  });
+
+program
+  .command('demo')
+  .description('Generate a self-contained HTML demo of the mob inspector')
+  .option('-o, --output <file>', 'Output file path (default: ~/.whizmob/demo.html)')
+  .option('--open', 'Open the demo in the default browser after generating')
+  .action((opts) => {
+    try {
+      const result = generateDemo(opts.output);
+      console.log(`Demo generated: ${result.path}`);
+      console.log(`  ${result.mobCount} mob${result.mobCount !== 1 ? 's' : ''}, ${result.memberCount} components`);
+
+      if (opts.open) {
+        const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+        execSync(`${openCmd} "${result.path}"`);
+      } else {
+        console.log(`\nOpen in browser: open "${result.path}"`);
+      }
+    } catch (err) {
+      console.error(`[whizmob] Demo failed: ${(err as Error).message}`);
+      process.exit(1);
     }
   });
 
