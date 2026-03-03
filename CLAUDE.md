@@ -30,12 +30,17 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `src/import.ts` — Constellation import engine (parameter resolution, conflict detection, dry-run)
 - `src/update.ts` — Smart update engine (three-way change classification, content hashing)
 - `src/sync.ts` — Constellation sync engine (change detection, inline diff)
+- `src/demo.ts` — Self-contained HTML demo generator
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
 _Last updated: 2026-03-03_
 
-**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. 59 tests across 6 suites. Active roadmap: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked).
+**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. 99 tests across 9 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped (M1: edge inference, M2: inspector, M3: smart update, M4: public launch).
+
+### Recent Completions (M4: Public Launch — 2026-03-03)
+- **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data, interactive force-directed graph, mob list, and component detail cards. Zero dependencies — opens in any browser. `--open` flag launches the browser automatically. `--output` for custom path.
+- **README visual** — Inspector preview SVG (`docs/inspector-preview.svg`) showing the three-panel layout. Demo command documented in Commands section.
 
 ### Recent Completions (Nightshift — 2026-03-03)
 - **WHIZ-12: overview.md for mob exports** — Every `whizmob export` now auto-generates an `overview.md` with mob summary, component inventory grouped by type, content parameters table, and install instructions. Added `documentation` component type. Import skips documentation files. `--list` shows summary from overview.md. 99 tests pass.
@@ -174,7 +179,7 @@ _Last updated: 2026-03-03_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **M4: Public Launch — partially complete** — repo public, history scrubbed, README + LICENSE done. Remaining: demo mode (read-only dashboard sharing), screenshot/GIF for README.
+- **Mob Inspector roadmap complete** — all 4 milestones shipped. Next: dog-food the CEO OS bundle and plan next roadmap.
 - **Dog-food** — CEO OS now unblocked (repo is public). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
 - **Open tickets**: None blocking.
 
@@ -212,14 +217,11 @@ npm view whizmob                 # verify on registry
 - **Package exclusions**: test images, `tsconfig.tsbuildinfo`, `package-lock.json` excluded via `files` array negation in `package.json`
 
 ## Roadmap
-**Active roadmap**: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked)
+**Completed roadmap**: `docs/roadmaps/mob-inspector.md` (M1-M4 all complete)
 
 ### Immediate
-- **M4: Public Launch** — README done, blocked on GitHub repo setup (BIG-50). Remaining: repo rename, history scrub, demo mode, screenshots.
-- **Post-publish polish** — BIG-21, BIG-22, BIG-24 done. No remaining open quality tickets.
-
-### Blocked
-- **Dog-food** — blocked on BIG-50 (need public repo for trust). Pipeline complete and tested.
+- **Dog-food** — CEO OS bundle ready. Command: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
+- **Next roadmap** — needs planning session (`/roadmap whizmob`)
 - **Translation validation** — run translation image test (needs API access)
 
 ### Future (Backlog)

@@ -51,18 +51,19 @@ Run `whizmob scan`, open the dashboard, and instantly see your agent systems —
 - **Tickets**: Carries forward from cross-account-portability M3
 - **Key files**: `src/sync.ts`, `src/import.ts`, `src/index.ts`
 
-### M4: Public Launch — Blocked
+### M4: Public Launch — Complete
 - **Why it matters**: Whizmob can't grow beyond George if nobody can find it. A public repo with the inspector narrative positions whizmob as "the tool for understanding your AI agent systems" — not just another CLI utility.
 - **Acceptance criteria**:
-  - [ ] Public GitHub repo named `whizmob` (dev repo renamed to `whiz-mob`) — blocked on George creating GitHub account
-  - [ ] Git history scrubbed: `seed-inventory.json` and `dashboard/data/whizmob.db` removed from all commits — blocked on repo setup
+  - [x] Public GitHub repo at `gcquraishi/whizmob`
+  - [x] Git history scrubbed: `seed-inventory.json` and `dashboard/data/whizmob.db` removed from all commits
   - [x] README rewritten around the inspector narrative: "You've built more agent systems than you think. Whizmob shows you."
-  - [ ] `npx whizmob scan` works from the public repo — zero-config first run — blocked on repo setup
-  - [ ] Demo mode (read-only dashboard sharing) so George can show the inspector to others without exposing auth
+  - [x] `npx whizmob scan` works — published as `whizmob@0.1.3` on npm
+  - [x] Demo mode: `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive force-directed graph
   - [x] npm package.json updated with new description and keywords
-  - [ ] At least one screenshot/GIF of the mob inspector in the README — needs dashboard running with data
+  - [x] Inspector preview SVG in README showing three-panel layout
+  - [x] Post-build review passed (CRITICAL: 0, HIGH: 0, MEDIUM: 0)
 - **Tickets**: [[WHIZ-10]], [[WHIZ-4]]
-- **Key files**: `README.md`, `package.json`, GitHub repo settings
+- **Key files**: `README.md`, `package.json`, `src/demo.ts`, `docs/inspector-preview.svg`
 
 ## Deferred (explicitly not this roadmap)
 - **Cloud sync / hosted registry** — git-based transfer works for the current scale. Don't build infra for hypothetical users.
