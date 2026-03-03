@@ -238,6 +238,7 @@ npm view whizmob                 # verify on registry
 - Proto-Passport schema for all agent identity data
 - Whizmob metaphor: agents don't belong to a platform — they belong to you
 - Inventory (home page listing), Detail (passport view)
+- **overview.md required**: Every mob export must include an `overview.md`. The export engine auto-generates a draft from manifest data if none exists. The overview is listed in `manifest.json` with `component_type: 'documentation'` and skipped during import (bundle-level docs, not installable). `whizmob import --list` reads the first non-heading line as a one-line summary.
 - **`resolveDbPath()` pattern**: All modules that open the SQLite DB must check `process.env.WHIZMOB_DB_PATH` first, falling back to `~/.whizmob/whizmob.db`. This enables test isolation. Applies to: `src/db.ts`, `src/constellation.ts`, `src/export.ts`, `src/import.ts`, `src/roster.ts`.
 - **`resolveProfilesDir()` pattern**: Import profile storage checks `process.env.WHIZMOB_PROFILES_DIR` first, falling back to `~/.whizmob/import-profiles/`. Tests must set this env var to avoid writing to the real directory.
 - **LIKE escaping**: Any LIKE query on user input must escape `%`, `_`, and `|` with the `|` prefix and `ESCAPE '|'` clause. Apply in both CLI (`src/`) and dashboard (`dashboard/lib/db.ts`).
