@@ -33,6 +33,10 @@ Components with edges cluster into **discovered mobs**. A mob is a group of agen
 
 ## The Inspector
 
+<p align="center">
+  <img src="docs/inspector-preview.svg" alt="Whizmob Mob Inspector — three-panel layout showing discovered mobs, force-directed graph, and component detail cards" width="720" />
+</p>
+
 The dashboard homepage is the **mob inspector** — a master-detail view showing:
 
 - **Left panel**: discovered mobs, ranked by size
@@ -42,6 +46,13 @@ The dashboard homepage is the **mob inspector** — a master-detail view showing
 Click a graph node and the corresponding detail card highlights and scrolls into view.
 
 The full flat inventory lives at `/agents` — every component across all platforms, searchable and filterable.
+
+Share the inspector without requiring a local install:
+
+```bash
+whizmob demo          # Generate standalone HTML preview
+whizmob demo --open   # Generate and open in browser
+```
 
 ## Portability
 
@@ -80,6 +91,8 @@ whizmob stats                        # Summary with edge and mob counts
 
 # Inspector
 whizmob dashboard                    # Launch web dashboard (localhost:3333)
+whizmob demo                         # Generate shareable HTML preview
+whizmob demo --open                  # Generate and open in browser
 
 # Roster (CLI queries)
 whizmob roster --search "deploy"     # Search by name or purpose
