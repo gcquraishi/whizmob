@@ -33,9 +33,12 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-01 (late)_
+_Last updated: 2026-03-03_
 
 **Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. 59 tests across 6 suites. Active roadmap: `docs/roadmaps/mob-inspector.md` (M1-M3 complete, M4 blocked).
+
+### Recent Completions (Nightshift — 2026-03-03)
+- **WHIZ-12: overview.md for mob exports** — Every `whizmob export` now auto-generates an `overview.md` with mob summary, component inventory grouped by type, content parameters table, and install instructions. Added `documentation` component type. Import skips documentation files. `--list` shows summary from overview.md. 99 tests pass.
 
 ### Recent Completions (Mob Inspector Roadmap — 2026-03-01)
 - **M1: Edge Inference Engine** — `src/edges.ts` reads source file content, detects file path references, skill invocations (`/name` patterns), and shared state. 129 edges, 31 connected passports. Edges stored in SQLite `edges` table. 8 tests.
