@@ -34,9 +34,19 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-03_
+_Last updated: 2026-03-04_
 
-**Published on npm as `whizmob@0.1.3`.** Scanner discovers 97+ passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. 99 tests across 9 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped (M1: edge inference, M2: inspector, M3: smart update, M4: public launch).
+**Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — mobs can contain sub-mobs with `mob add-child`. Components roll up across parent + descendants (deduplicated). Export of a parent mob includes all children's components. Cycle detection prevents circular nesting. 112 tests across 10 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap M1 complete.**
+
+### Recent Completions (M1: Mob Hierarchy — 2026-03-04)
+- **`mob_children` table** — parent-child relationships with display_order. CASCADE delete. CHECK constraint prevents self-referencing.
+- **`addChild`/`removeChild`** — with BFS-based cycle detection. Auto-incrementing display_order.
+- **`getAllComponents` rollup** — BFS collects all descendant mob IDs, DISTINCT query deduplicates components across the tree.
+- **`getMob` enhanced** — returns `children[]` and `all_components[]` when hierarchy exists. Flat mobs unchanged.
+- **CLI** — `whizmob mob add-child <parent> <child>`, `whizmob mob remove-child <parent> <child>`. `mob show` displays sub-mobs and rolled-up component count.
+- **Export** — `exportMob` walks full hierarchy, includes `hierarchy` field in manifest with sub-mob metadata.
+- **Dog-food** — CEO OS defined with 5 sub-mobs (daily-ops, strategic, execution, maintenance, autonomous), 31 components total, export produces 32 files including hierarchy metadata.
+- **13 new tests** — cycle detection, self-reference guard, component dedup, flat mob regression, multi-mob sharing.
 
 ### Recent Completions (M4: Public Launch — 2026-03-03)
 - **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data, interactive force-directed graph, mob list, and component detail cards. Zero dependencies — opens in any browser. `--open` flag launches the browser automatically. `--output` for custom path.
@@ -179,8 +189,8 @@ _Last updated: 2026-03-03_
   - Output: `~/.whizmob/translations/<skill>/` with `canonical.md`, per-target `.md` files, `manifest.json`
 
 ### Active Work
-- **Mob Inspector roadmap complete** — all 4 milestones shipped. Next: dog-food the CEO OS bundle and plan next roadmap.
-- **Dog-food** — CEO OS now unblocked (repo is public). Command ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
+- **Mob Hierarchy roadmap in progress** — M1 complete. M2 (graph clusters), M3 (auto-discovery), M4 (granular export) ready to start.
+- **CEO OS dog-food complete** — 5 sub-mobs defined (daily-ops, strategic, execution, maintenance, autonomous) with 31 components. Export produces 32 files with hierarchy metadata.
 - **Open tickets**: None blocking.
 
 ### Known Issues
@@ -217,11 +227,13 @@ npm view whizmob                 # verify on registry
 - **Package exclusions**: test images, `tsconfig.tsbuildinfo`, `package-lock.json` excluded via `files` array negation in `package.json`
 
 ## Roadmap
+**Active roadmap**: `docs/roadmaps/mob-hierarchy.md` (M1 complete, M2-M4 not started)
 **Completed roadmap**: `docs/roadmaps/mob-inspector.md` (M1-M4 all complete)
 
 ### Immediate
-- **Dog-food** — CEO OS bundle ready. Command: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
-- **Next roadmap** — needs planning session (`/roadmap whizmob`)
+- **M2: Graph Clusters** — dashboard graph renders sub-mob boundaries as convex hulls or color-coded regions
+- **M3: Sub-Mob Auto-Discovery** — clustering algorithm detects sub-groups within connected components
+- **M4: Granular Export** — export a sub-mob independently or a parent mob as full tree
 - **Translation validation** — run translation image test (needs API access)
 
 ### Future (Backlog)
