@@ -826,6 +826,14 @@ export async function getEdgeStats(): Promise<EdgeStats> {
 
 // --- Discovered mobs (clustering) ---
 
+export interface SubMobInfo {
+  id: string;
+  name: string;
+  description: string;
+  display_order: number;
+  member_ids: string[];
+}
+
 export interface DiscoveredMob {
   id: string;
   name: string;
@@ -836,6 +844,7 @@ export interface DiscoveredMob {
     purpose: string;
     invocation: string | null;
     source_file: string;
+    sub_mob_ids?: string[];
   }>;
   edges: Array<{
     source_id: string;
@@ -843,6 +852,7 @@ export interface DiscoveredMob {
     edge_type: string;
     evidence: string;
   }>;
+  children?: SubMobInfo[];
 }
 
 export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
@@ -980,6 +990,118 @@ export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
 
   // Sort by size descending
   mobs.sort((a, b) => b.members.length - a.members.length);
+
+  // Enrich mobs with hierarchy data from mob_children table
+  try {
+    // Get all parent-child relationships
+    const childResult = database.exec(`
+      SELECT mc.parent_mob_id, mc.child_mob_id, mc.display_order,
+             m.name, m.description
+      FROM mob_children mc
+      JOIN mobs m ON mc.child_mob_id = m.id
+      ORDER BY mc.display_order, m.name
+    `);
+
+    if (childResult.length > 0) {
+      const childCols = childResult[0].columns;
+      const parentChildren = new Map<string, SubMobInfo[]>();
+
+      for (const row of childResult[0].values) {
+        const col = (name: string) => row[childCols.indexOf(name)];
+        const parentId = col('parent_mob_id') as string;
+        const childId = col('child_mob_id') as string;
+
+        if (!parentChildren.has(parentId)) parentChildren.set(parentId, []);
+        parentChildren.get(parentId)!.push({
+          id: childId,
+          name: col('name') as string,
+          description: col('description') as string,
+          display_order: col('display_order') as number,
+          member_ids: [],
+        });
+      }
+
+      // Get component-to-sub-mob mapping
+      const compResult = database.exec(`
+        SELECT mc2.mob_id as sub_mob_id, mc2.passport_id
+        FROM mob_components mc2
+        WHERE mc2.passport_id IS NOT NULL
+          AND mc2.mob_id IN (SELECT child_mob_id FROM mob_children)
+      `);
+
+      const subMobMembers = new Map<string, Set<string>>();
+      if (compResult.length > 0) {
+        const compCols = compResult[0].columns;
+        for (const row of compResult[0].values) {
+          const col = (name: string) => row[compCols.indexOf(name)];
+          const subMobId = col('sub_mob_id') as string;
+          const passportId = col('passport_id') as string;
+          if (!subMobMembers.has(subMobId)) subMobMembers.set(subMobId, new Set());
+          subMobMembers.get(subMobId)!.add(passportId);
+        }
+      }
+
+      // For each discovered mob, check if it overlaps with a defined parent mob
+      for (const mob of mobs) {
+        const mobMemberIds = new Set(mob.members.map(m => m.passport_id));
+
+        // Check each defined parent mob
+        for (const [parentId, children] of parentChildren) {
+          // Get all passport IDs in this parent mob (direct + children)
+          const allChildPassportIds = new Set<string>();
+          for (const child of children) {
+            const memberSet = subMobMembers.get(child.id);
+            if (memberSet) {
+              for (const pid of memberSet) {
+                allChildPassportIds.add(pid);
+                child.member_ids.push(pid);
+              }
+            }
+          }
+
+          // Check overlap: if >50% of the parent's passports are in this discovered mob
+          let overlap = 0;
+          for (const pid of allChildPassportIds) {
+            if (mobMemberIds.has(pid)) overlap++;
+          }
+
+          if (allChildPassportIds.size > 0 && overlap / allChildPassportIds.size > 0.5) {
+            // Enrich this mob with hierarchy
+            mob.children = children.map(c => ({
+              ...c,
+              member_ids: c.member_ids.filter(pid => mobMemberIds.has(pid)),
+            }));
+
+            // Tag each member with its sub-mob(s)
+            for (const member of mob.members) {
+              const memberSubMobs: string[] = [];
+              for (const child of children) {
+                if (child.member_ids.includes(member.passport_id)) {
+                  memberSubMobs.push(child.id);
+                }
+              }
+              if (memberSubMobs.length > 0) {
+                member.sub_mob_ids = memberSubMobs;
+              }
+            }
+
+            // Use defined mob name if available
+            const definedMobResult = database.exec(
+              `SELECT name FROM mobs WHERE id = ?`, [parentId]
+            );
+            if (definedMobResult.length > 0 && definedMobResult[0].values.length > 0) {
+              mob.name = definedMobResult[0].values[0][0] as string;
+            }
+
+            break; // Only one hierarchy per discovered mob
+          }
+        }
+      }
+    }
+  } catch {
+    // Hierarchy enrichment is best-effort — table may not exist in older DBs
+  }
+
   return mobs;
 }
 

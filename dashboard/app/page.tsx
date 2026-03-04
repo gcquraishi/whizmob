@@ -13,6 +13,7 @@ interface MobMember {
   purpose: string;
   invocation: string | null;
   source_file: string;
+  sub_mob_ids?: string[];
 }
 
 interface MobEdge {
@@ -22,11 +23,20 @@ interface MobEdge {
   evidence: string;
 }
 
+interface SubMobInfo {
+  id: string;
+  name: string;
+  description: string;
+  display_order: number;
+  member_ids: string[];
+}
+
 interface DiscoveredMob {
   id: string;
   name: string;
   members: MobMember[];
   edges: MobEdge[];
+  children?: SubMobInfo[];
 }
 
 interface ScanDiff {
@@ -57,6 +67,7 @@ export default function InspectorPage() {
   const [loading, setLoading] = useState(true);
   const [selectedMobId, setSelectedMobId] = useState<string | null>(null);
   const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
+  const [activeSubMob, setActiveSubMob] = useState<string | null>(null);
   const detailRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const fetchMobs = useCallback(async () => {
@@ -137,7 +148,7 @@ export default function InspectorPage() {
               {mobs.map(mob => (
                 <button
                   key={mob.id}
-                  onClick={() => { setSelectedMobId(mob.id); setHighlightedNode(null); }}
+                  onClick={() => { setSelectedMobId(mob.id); setHighlightedNode(null); setActiveSubMob(null); }}
                   className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors ${
                     selectedMobId === mob.id
                       ? 'bg-white border-l-2 border-l-indigo-500'
@@ -149,6 +160,12 @@ export default function InspectorPage() {
                     <span>{mob.members.length} agents</span>
                     <span>&middot;</span>
                     <span>{mob.edges.length} connections</span>
+                    {mob.children && mob.children.length > 0 && (
+                      <>
+                        <span>&middot;</span>
+                        <span>{mob.children.length} sub-mobs</span>
+                      </>
+                    )}
                   </div>
                 </button>
               ))}
@@ -173,8 +190,11 @@ export default function InspectorPage() {
                   <InspectorGraph
                     members={selectedMob.members}
                     edges={selectedMob.edges}
+                    children={selectedMob.children}
                     onNodeClick={handleNodeClick}
+                    onSubMobClick={setActiveSubMob}
                     highlightId={highlightedNode}
+                    activeSubMob={activeSubMob}
                   />
                 </div>
 
@@ -182,11 +202,23 @@ export default function InspectorPage() {
                 <div className="flex-1 overflow-y-auto p-4 pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Components &middot; {selectedMob.members.length}
+                      {activeSubMob
+                        ? `${selectedMob.children?.find(c => c.id === activeSubMob)?.name || 'Sub-mob'} Components`
+                        : `Components \u00B7 ${selectedMob.members.length}`}
                     </h3>
+                    {activeSubMob && (
+                      <button
+                        onClick={() => setActiveSubMob(null)}
+                        className="text-[11px] text-gray-400 hover:text-gray-600"
+                      >
+                        Show all
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    {selectedMob.members.map(member => {
+                    {selectedMob.members
+                      .filter(member => !activeSubMob || member.sub_mob_ids?.includes(activeSubMob))
+                      .map(member => {
                       const typeInfo = TYPE_COLORS[member.type] || TYPE_COLORS.project;
                       const isHighlighted = highlightedNode === member.passport_id;
                       // Find this member's connections
