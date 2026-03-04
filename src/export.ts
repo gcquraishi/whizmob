@@ -36,6 +36,13 @@ export interface ChangelogEntry {
   files_changed: string[];
 }
 
+export interface MobHierarchyEntry {
+  id: string;
+  name: string;
+  description: string;
+  display_order: number;
+}
+
 export interface ExportManifest {
   version: '1.0';
   bundle_version: number;
@@ -45,6 +52,7 @@ export interface ExportManifest {
     description: string;
     author: string | null;
   };
+  hierarchy?: MobHierarchyEntry[];
   exported_at: string;
   exported_from: string; // machine hostname
   files: ExportFileEntry[];
@@ -122,6 +130,25 @@ const SECRET_PATTERNS = [
   /ghp_[a-zA-Z0-9]{36}/g, // GitHub PATs
   /xoxb-[a-zA-Z0-9-]+/g, // Slack bot tokens
 ];
+
+/** BFS to collect all descendant mob IDs. */
+function collectDescendantIds(db: Database.Database, rootId: string): Set<string> {
+  const descendants = new Set<string>();
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = db.prepare(
+      `SELECT child_mob_id FROM mob_children WHERE parent_mob_id = ?`
+    ).all(current) as { child_mob_id: string }[];
+    for (const c of children) {
+      if (!descendants.has(c.child_mob_id)) {
+        descendants.add(c.child_mob_id);
+        queue.push(c.child_mob_id);
+      }
+    }
+  }
+  return descendants;
+}
 
 function expandTilde(p: string): string {
   if (p.startsWith('~/')) {
@@ -378,16 +405,30 @@ export function exportMob(
       throw new Error(`Mob "${mobName}" not found. Use \`whizmob mob list\` to see available mobs.`);
     }
 
-    // Fetch components with passport details and provenance
+    // Collect all mob IDs in hierarchy (parent + all descendants)
+    const allMobIds = collectDescendantIds(db, id);
+    allMobIds.add(id);
+    const placeholders = [...allMobIds].map(() => '?').join(',');
+
+    // Fetch child mobs for hierarchy metadata
+    const childMobs = db.prepare(`
+      SELECT mc.child_mob_id, mc.display_order, m.name, m.description
+      FROM mob_children mc
+      JOIN mobs m ON mc.child_mob_id = m.id
+      WHERE mc.parent_mob_id = ?
+      ORDER BY mc.display_order, m.name
+    `).all(id) as { child_mob_id: string; display_order: number; name: string; description: string }[];
+
+    // Fetch components across all mobs in hierarchy (deduplicated by file path)
     const components = db.prepare(`
-      SELECT cc.passport_id, cc.component_type, cc.file_path, cc.role,
+      SELECT DISTINCT cc.passport_id, cc.component_type, cc.file_path, cc.role,
              p.name as passport_name, p.source_file as passport_source,
              p.origin, p.author as passport_author, p.license, p.forked_from
       FROM mob_components cc
       LEFT JOIN passports p ON cc.passport_id = p.id
-      WHERE cc.mob_id = ?
+      WHERE cc.mob_id IN (${placeholders})
       ORDER BY cc.component_type, COALESCE(p.name, cc.file_path)
-    `).all(id) as {
+    `).all(...allMobIds) as {
       passport_id: string | null;
       component_type: ComponentType;
       file_path: string | null;
@@ -401,7 +442,7 @@ export function exportMob(
     }[];
 
     if (components.length === 0) {
-      throw new Error(`Mob "${mob.name}" has no components. Add some with \`whizmob mob add-component\`.`);
+      throw new Error(`Mob "${mob.name}" has no components (including sub-mobs). Add some with \`whizmob mob add-component\`.`);
     }
 
     // Collect files to export
@@ -560,6 +601,15 @@ export function exportMob(
     }
 
     // Build manifest
+    const hierarchy: MobHierarchyEntry[] | undefined = childMobs.length > 0
+      ? childMobs.map(c => ({
+          id: c.child_mob_id,
+          name: c.name,
+          description: c.description,
+          display_order: c.display_order,
+        }))
+      : undefined;
+
     const manifest: ExportManifest = {
       version: '1.0',
       bundle_version: bundleVersion,
@@ -569,6 +619,7 @@ export function exportMob(
         description: mob.description,
         author: mob.author,
       },
+      ...(hierarchy ? { hierarchy } : {}),
       exported_at: new Date().toISOString(),
       exported_from: hostname(),
       files: fileEntries,
