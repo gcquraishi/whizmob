@@ -204,6 +204,10 @@ export interface DependencyCheck {
   available: boolean;
 }
 
+function resolveDbPath(): string {
+  return process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
+}
+
 function expandTilde(p: string): string {
   if (p.startsWith('~/')) return join(homedir(), p.slice(2));
   if (p === '~') return homedir();
@@ -440,7 +444,7 @@ export function executeImport(
   }
 
   // Record provenance in Whizmob DB for imported passports
-  const dbPath = process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
+  const dbPath = resolveDbPath();
   if (existsSync(dbPath)) {
     try {
       const db = new Database(dbPath);
@@ -478,60 +482,60 @@ export function executeImport(
 
   // Create mob hierarchy in DB if manifest includes hierarchy
   if (plan.manifest.hierarchy && plan.manifest.hierarchy.length > 0) {
-    const dbPath = process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
+    const dbPath = resolveDbPath();
     if (existsSync(dbPath)) {
       try {
         const db = new Database(dbPath);
         try {
-          // Ensure mob_children table exists
-          try { db.exec(TABLE_MIGRATIONS); } catch { /* already exists */ }
+          db.exec(TABLE_MIGRATIONS);
 
           const mobMeta = plan.manifest.mob;
+          const validSubMobIds = new Set(plan.manifest.hierarchy.map(h => h.id));
 
-          // Upsert parent mob
-          db.prepare(`
+          const upsertMob = db.prepare(`
             INSERT INTO mobs (id, name, description, author) VALUES (?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description
-          `).run(mobMeta.id, mobMeta.name, mobMeta.description, mobMeta.author);
-
-          // Create sub-mobs and hierarchy relationships
-          const insertMob = db.prepare(`
-            INSERT INTO mobs (id, name, description) VALUES (?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description
           `);
           const insertChild = db.prepare(`
             INSERT OR REPLACE INTO mob_children (parent_mob_id, child_mob_id, display_order)
             VALUES (?, ?, ?)
           `);
-
-          for (const sub of plan.manifest.hierarchy) {
-            insertMob.run(sub.id, sub.name, sub.description);
-            insertChild.run(mobMeta.id, sub.id, sub.display_order);
-          }
-
-          // Assign components to sub-mobs based on manifest file entries
           const insertComp = db.prepare(`
             INSERT OR IGNORE INTO mob_components (mob_id, passport_id, component_type, file_path)
             VALUES (?, ?, ?, ?)
           `);
+          const lookupPassport = db.prepare('SELECT id FROM passports WHERE name = ?');
 
-          for (const action of plan.actions) {
-            const file = action.file;
-            if (file.sub_mobs && file.sub_mobs.length > 0) {
-              for (const subMobId of file.sub_mobs) {
-                // Try to find passport by name
-                const passport = file.passport_name
-                  ? db.prepare('SELECT id FROM passports WHERE name = ?').get(file.passport_name) as { id: string } | undefined
-                  : undefined;
-                insertComp.run(
-                  subMobId,
-                  passport?.id || null,
-                  file.component_type === 'passport_source' ? 'passport' : file.component_type,
-                  passport ? null : action.targetPath,
-                );
+          const hierarchyTx = db.transaction(() => {
+            // Upsert parent mob
+            upsertMob.run(mobMeta.id, mobMeta.name, mobMeta.description, mobMeta.author);
+
+            // Create sub-mobs and hierarchy relationships
+            for (const sub of plan.manifest.hierarchy!) {
+              upsertMob.run(sub.id, sub.name, sub.description, null);
+              insertChild.run(mobMeta.id, sub.id, sub.display_order);
+            }
+
+            // Assign components to sub-mobs based on manifest file entries
+            for (const action of plan.actions) {
+              const file = action.file;
+              if (file.sub_mobs && file.sub_mobs.length > 0) {
+                for (const subMobId of file.sub_mobs) {
+                  if (!validSubMobIds.has(subMobId)) continue;
+                  const passport = file.passport_name
+                    ? lookupPassport.get(file.passport_name) as { id: string } | undefined
+                    : undefined;
+                  insertComp.run(
+                    subMobId,
+                    passport?.id || null,
+                    file.component_type === 'passport_source' ? 'passport' : file.component_type,
+                    passport ? null : action.targetPath,
+                  );
+                }
               }
             }
-          }
+          });
+          hierarchyTx();
         } finally {
           db.close();
         }

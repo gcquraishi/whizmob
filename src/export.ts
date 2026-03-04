@@ -480,22 +480,22 @@ export function exportMob(
     const passportSubMobs = new Map<string, string[]>();
     const filePathSubMobs = new Map<string, string[]>();
     if (childMobs.length > 0) {
-      for (const child of childMobs) {
-        const childComps = db.prepare(
-          `SELECT passport_id, file_path FROM mob_components WHERE mob_id = ?`
-        ).all(child.child_mob_id) as { passport_id: string | null; file_path: string | null }[];
-        for (const comp of childComps) {
-          if (comp.passport_id) {
-            if (!passportSubMobs.has(comp.passport_id)) {
-              passportSubMobs.set(comp.passport_id, []);
-            }
-            passportSubMobs.get(comp.passport_id)!.push(child.child_mob_id);
-          } else if (comp.file_path) {
-            if (!filePathSubMobs.has(comp.file_path)) {
-              filePathSubMobs.set(comp.file_path, []);
-            }
-            filePathSubMobs.get(comp.file_path)!.push(child.child_mob_id);
+      const childIds = childMobs.map(c => c.child_mob_id);
+      const childPlaceholders = childIds.map(() => '?').join(',');
+      const allChildComps = db.prepare(
+        `SELECT mob_id, passport_id, file_path FROM mob_components WHERE mob_id IN (${childPlaceholders})`
+      ).all(...childIds) as { mob_id: string; passport_id: string | null; file_path: string | null }[];
+      for (const comp of allChildComps) {
+        if (comp.passport_id) {
+          if (!passportSubMobs.has(comp.passport_id)) {
+            passportSubMobs.set(comp.passport_id, []);
           }
+          passportSubMobs.get(comp.passport_id)!.push(comp.mob_id);
+        } else if (comp.file_path) {
+          if (!filePathSubMobs.has(comp.file_path)) {
+            filePathSubMobs.set(comp.file_path, []);
+          }
+          filePathSubMobs.get(comp.file_path)!.push(comp.mob_id);
         }
       }
     }
