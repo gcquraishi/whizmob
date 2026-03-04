@@ -19,6 +19,10 @@ import {
   getMob,
   deleteMob,
   removeComponent,
+  addChild,
+  removeChild,
+  getChildren,
+  getAllComponents,
   slugify,
 } from './mob.js';
 import { translateSkill, printListOutput, printTranslateReport, isValidTarget } from './translate.js';
@@ -342,13 +346,31 @@ mob
       if (detail.author) console.log(`  Author: ${detail.author}`);
       console.log(`  Created: ${detail.created_at}`);
       console.log(`  Updated: ${detail.updated_at}`);
-      console.log(`  Components (${detail.components.length}):`);
 
+      // Show child mobs if any
+      if (detail.children.length > 0) {
+        console.log(`  Sub-mobs (${detail.children.length}):`);
+        for (const child of detail.children) {
+          console.log(`    - ${child.name} (${child.component_count} components)`);
+        }
+      }
+
+      console.log(`  Components (${detail.components.length}):`);
       for (const comp of detail.components) {
         const label = comp.passport_name || comp.file_path || comp.passport_id || '(unknown)';
         const typeBadge = comp.component_type !== 'passport' ? ` [${comp.component_type}]` : '';
         const roleBadge = comp.role ? ` (${comp.role})` : '';
         console.log(`    - ${label}${typeBadge}${roleBadge}`);
+      }
+
+      // Show rolled-up total if has children
+      if (detail.all_components) {
+        console.log(`  All components (${detail.all_components.length} across all sub-mobs, deduplicated):`);
+        for (const comp of detail.all_components) {
+          const label = comp.passport_name || comp.file_path || comp.passport_id || '(unknown)';
+          const typeBadge = comp.component_type !== 'passport' ? ` [${comp.component_type}]` : '';
+          console.log(`    - ${label}${typeBadge}`);
+        }
       }
     } catch (err) {
       console.error(`[whizmob] ${(err as Error).message}`);
@@ -397,6 +419,42 @@ mob
         } else {
           console.log(`${passportOrPath} is already in ${mobName}.`);
         }
+      }
+    } catch (err) {
+      console.error(`[whizmob] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+mob
+  .command('add-child <parent> <child>')
+  .description('Nest a child mob inside a parent mob')
+  .option('--order <n>', 'Display order (default: auto-increment)', parseInt)
+  .action((parent: string, child: string, opts) => {
+    try {
+      const parentId = slugify(parent);
+      const childId = slugify(child);
+      addChild(parentId, childId, opts.order);
+      console.log(`Added "${child}" as child of "${parent}".`);
+    } catch (err) {
+      console.error(`[whizmob] ${(err as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+mob
+  .command('remove-child <parent> <child>')
+  .description('Remove a child mob from a parent')
+  .action((parent: string, child: string) => {
+    try {
+      const parentId = slugify(parent);
+      const childId = slugify(child);
+      const removed = removeChild(parentId, childId);
+      if (removed) {
+        console.log(`Removed "${child}" from "${parent}".`);
+      } else {
+        console.error(`[whizmob] "${child}" is not a child of "${parent}".`);
+        process.exit(1);
       }
     } catch (err) {
       console.error(`[whizmob] ${(err as Error).message}`);
