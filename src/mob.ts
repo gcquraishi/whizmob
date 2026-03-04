@@ -229,6 +229,9 @@ export interface MobChild {
 }
 
 export function addChild(parentId: string, childId: string, displayOrder?: number): void {
+  if (parentId === childId) {
+    throw new Error(`Cannot add a mob as its own child.`);
+  }
   const db = openDb();
   try {
     // Verify both mobs exist
