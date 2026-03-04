@@ -77,6 +77,8 @@ export interface ExportFileEntry {
   secrets_stripped: boolean;
   /** Whether this is a memory schema (structure only, no data) */
   memory_bootstrapped: boolean;
+  /** Sub-mob IDs this component belongs to (for hierarchical bundles) */
+  sub_mobs?: string[];
   /** Provenance: who authored this agent */
   provenance?: {
     origin: string | null;
@@ -325,11 +327,14 @@ function inferParamDescription(paramName: string): string {
 
 /**
  * Generate a draft overview.md from mob metadata and component list.
+ * When hierarchy is present, groups components by sub-mob.
  */
 function generateOverview(
   mob: { name: string; description: string; author: string | null },
   files: ExportFileEntry[],
   contentParams: Record<string, ContentParameter>,
+  hierarchy?: MobHierarchyEntry[],
+  componentSubMobs?: Map<string, string[]>,
 ): string {
   const lines: string[] = [];
   lines.push(`# ${mob.name}`);
@@ -337,25 +342,76 @@ function generateOverview(
   lines.push(mob.description || 'A mob bundle exported from Whizmob.');
   lines.push('');
 
-  // Components section
-  const byType = new Map<string, ExportFileEntry[]>();
-  for (const f of files) {
-    const type = f.component_type;
-    if (!byType.has(type)) byType.set(type, []);
-    byType.get(type)!.push(f);
-  }
+  if (hierarchy && hierarchy.length > 0 && componentSubMobs) {
+    // Hierarchical layout: group by sub-mob
+    lines.push('## Structure');
+    lines.push('');
+    lines.push(`This mob contains ${hierarchy.length} sub-mobs:`);
+    lines.push('');
 
-  lines.push('## Components');
-  lines.push('');
-  for (const [type, entries] of byType) {
-    const label = type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    lines.push(`### ${label} (${entries.length})`);
-    lines.push('');
-    for (const entry of entries) {
-      const name = entry.passport_name || entry.bundle_path;
-      lines.push(`- **${name}**${entry.role ? ` — ${entry.role}` : ''}`);
+    for (const sub of hierarchy) {
+      lines.push(`### ${sub.name}`);
+      lines.push('');
+      if (sub.description) {
+        lines.push(sub.description);
+        lines.push('');
+      }
+
+      // Find files belonging to this sub-mob
+      const subFiles = files.filter(f => {
+        const name = f.passport_name || f.bundle_path;
+        const subs = componentSubMobs.get(name);
+        return subs && subs.includes(sub.id);
+      });
+
+      if (subFiles.length > 0) {
+        for (const entry of subFiles) {
+          const name = entry.passport_name || entry.bundle_path;
+          const typeLabel = entry.component_type.replace(/_/g, ' ');
+          lines.push(`- **${name}** (${typeLabel})${entry.role ? ` — ${entry.role}` : ''}`);
+        }
+        lines.push('');
+      }
     }
+
+    // Shared components (in multiple sub-mobs)
+    const sharedFiles = files.filter(f => {
+      const name = f.passport_name || f.bundle_path;
+      const subs = componentSubMobs.get(name);
+      return subs && subs.length > 1;
+    });
+    if (sharedFiles.length > 0) {
+      lines.push('### Shared Components');
+      lines.push('');
+      for (const entry of sharedFiles) {
+        const name = entry.passport_name || entry.bundle_path;
+        const subs = componentSubMobs.get(name)!;
+        const subNames = subs.map(sid => hierarchy.find(h => h.id === sid)?.name || sid).join(', ');
+        lines.push(`- **${name}** — shared by ${subNames}`);
+      }
+      lines.push('');
+    }
+  } else {
+    // Flat layout: group by type
+    const byType = new Map<string, ExportFileEntry[]>();
+    for (const f of files) {
+      const type = f.component_type;
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(f);
+    }
+
+    lines.push('## Components');
     lines.push('');
+    for (const [type, entries] of byType) {
+      const label = type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      lines.push(`### ${label} (${entries.length})`);
+      lines.push('');
+      for (const entry of entries) {
+        const name = entry.passport_name || entry.bundle_path;
+        lines.push(`- **${name}**${entry.role ? ` — ${entry.role}` : ''}`);
+      }
+      lines.push('');
+    }
   }
 
   // Parameters section
@@ -419,6 +475,31 @@ export function exportMob(
       ORDER BY mc.display_order, m.name
     `).all(id) as { child_mob_id: string; display_order: number; name: string; description: string }[];
 
+    // Build component-to-sub-mob mapping for hierarchical exports
+    // Maps both passport_id and file_path to their sub-mob memberships
+    const passportSubMobs = new Map<string, string[]>();
+    const filePathSubMobs = new Map<string, string[]>();
+    if (childMobs.length > 0) {
+      for (const child of childMobs) {
+        const childComps = db.prepare(
+          `SELECT passport_id, file_path FROM mob_components WHERE mob_id = ?`
+        ).all(child.child_mob_id) as { passport_id: string | null; file_path: string | null }[];
+        for (const comp of childComps) {
+          if (comp.passport_id) {
+            if (!passportSubMobs.has(comp.passport_id)) {
+              passportSubMobs.set(comp.passport_id, []);
+            }
+            passportSubMobs.get(comp.passport_id)!.push(child.child_mob_id);
+          } else if (comp.file_path) {
+            if (!filePathSubMobs.has(comp.file_path)) {
+              filePathSubMobs.set(comp.file_path, []);
+            }
+            filePathSubMobs.get(comp.file_path)!.push(child.child_mob_id);
+          }
+        }
+      }
+    }
+
     // Fetch components across all mobs in hierarchy (deduplicated by file path)
     const components = db.prepare(`
       SELECT DISTINCT cc.passport_id, cc.component_type, cc.file_path, cc.role,
@@ -452,10 +533,14 @@ export function exportMob(
       role: string | null;
       passportName: string | null;
       isMemory: boolean;
+      subMobs: string[] | undefined;
       provenance: { origin: string | null; author: string | null; license: LicenseType | null; forked_from: string | null } | undefined;
     }[] = [];
 
     for (const comp of components) {
+      const subMobs = comp.passport_id
+        ? passportSubMobs.get(comp.passport_id)
+        : (comp.file_path ? filePathSubMobs.get(comp.file_path) : undefined);
       const provenance = comp.passport_id
         ? { origin: comp.origin, author: comp.passport_author, license: comp.license, forked_from: comp.forked_from }
         : undefined;
@@ -468,6 +553,7 @@ export function exportMob(
           role: comp.role,
           passportName: comp.passport_name,
           isMemory: false,
+          subMobs,
           provenance,
         });
       } else if (comp.file_path) {
@@ -477,6 +563,7 @@ export function exportMob(
           role: comp.role,
           passportName: comp.passport_name,
           isMemory: comp.component_type === 'memory_schema',
+          subMobs,
           provenance,
         });
       } else {
@@ -545,6 +632,7 @@ export function exportMob(
         passport_name: file.passportName,
         secrets_stripped: stripped,
         memory_bootstrapped: memoryBootstrappedFlag,
+        ...(file.subMobs && file.subMobs.length > 0 ? { sub_mobs: file.subMobs } : {}),
         provenance: file.provenance,
       });
 
@@ -640,8 +728,19 @@ export function exportMob(
       : null;
 
     if (!existingOverview) {
+      // Build name-keyed sub-mob map for overview grouping
+      const componentSubMobs = new Map<string, string[]>();
+      if (childMobs.length > 0) {
+        for (const entry of fileEntries) {
+          if (entry.sub_mobs && entry.sub_mobs.length > 0) {
+            const name = entry.passport_name || entry.bundle_path;
+            componentSubMobs.set(name, entry.sub_mobs);
+          }
+        }
+      }
+
       // Auto-generate a draft overview.md from manifest data
-      const overviewContent = generateOverview(mob, fileEntries, contentParameters);
+      const overviewContent = generateOverview(mob, fileEntries, contentParameters, hierarchy, componentSubMobs);
       if (!options.dryRun) {
         mkdirSync(bundleDir, { recursive: true });
         writeFileSync(overviewPath, overviewContent, 'utf-8');

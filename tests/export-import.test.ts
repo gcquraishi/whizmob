@@ -20,7 +20,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { SCHEMA, MIGRATIONS } from '../src/schema.js';
+import { SCHEMA, MIGRATIONS, TABLE_MIGRATIONS } from '../src/schema.js';
 
 // ── Set env var BEFORE any module-level import from export.ts / mob.ts ──
 
@@ -440,5 +440,92 @@ describe('export / import pipeline', () => {
     const full = loadFullProfile('v1-legacy');
     assert.equal(full.last_imported_version, null, 'v1 format has no version');
     assert.equal(full.params['{{ORG_NAME}}'], 'legacy-org', 'v1 params should be migrated');
+  });
+
+  // ── Hierarchy export tests ──────────────────────────────────────────────
+
+  test('export of parent mob includes hierarchy in manifest', () => {
+    // Set up hierarchy in DB
+    const db = new Database(TEST_DB_PATH);
+    try { db.exec(TABLE_MIGRATIONS); } catch { /* already exists */ }
+
+    // Create parent and child mobs
+    db.prepare(`INSERT OR IGNORE INTO mobs (id, name, description) VALUES ('hier-parent', 'Hier Parent', 'Parent mob')`).run();
+    db.prepare(`INSERT OR IGNORE INTO mobs (id, name, description) VALUES ('hier-child-a', 'Daily Ops', 'Daily operations')`).run();
+    db.prepare(`INSERT OR IGNORE INTO mobs (id, name, description) VALUES ('hier-child-b', 'Strategic', 'Strategic workflows')`).run();
+
+    // Create hierarchy
+    db.prepare(`INSERT OR REPLACE INTO mob_children (parent_mob_id, child_mob_id, display_order) VALUES ('hier-parent', 'hier-child-a', 0)`).run();
+    db.prepare(`INSERT OR REPLACE INTO mob_children (parent_mob_id, child_mob_id, display_order) VALUES ('hier-parent', 'hier-child-b', 1)`).run();
+
+    // Add component to parent (the hook file)
+    db.prepare(`INSERT OR IGNORE INTO mob_components (mob_id, component_type, file_path) VALUES ('hier-parent', 'hook', ?)`).run(HOOK_FILE);
+    // Add same component to child-a
+    db.prepare(`INSERT OR IGNORE INTO mob_components (mob_id, component_type, file_path) VALUES ('hier-child-a', 'hook', ?)`).run(HOOK_FILE);
+    db.close();
+
+    const result = exportMob('Hier Parent', { dryRun: true });
+
+    assert.ok(result.manifest.hierarchy, 'Manifest should have hierarchy field');
+    assert.equal(result.manifest.hierarchy!.length, 2, 'Should have 2 child mobs');
+    assert.equal(result.manifest.hierarchy![0].name, 'Daily Ops');
+    assert.equal(result.manifest.hierarchy![1].name, 'Strategic');
+  });
+
+  test('export includes sub_mobs on file entries', () => {
+    const result = exportMob('Hier Parent', { dryRun: true });
+
+    // The hook file belongs to hier-child-a
+    const hookEntry = result.manifest.files.find(f => f.component_type === 'hook');
+    assert.ok(hookEntry, 'Should have a hook entry');
+    assert.ok(hookEntry!.sub_mobs, 'Hook entry should have sub_mobs');
+    assert.ok(hookEntry!.sub_mobs!.includes('hier-child-a'), 'Should be in hier-child-a');
+  });
+
+  test('overview.md groups by sub-mob when hierarchy present', () => {
+    const hierBundleDir = join(TEST_DIR, 'hier-bundle');
+    exportMob('Hier Parent', { outputDir: hierBundleDir });
+
+    const overviewPath = join(hierBundleDir, 'overview.md');
+    assert.ok(existsSync(overviewPath), 'overview.md should exist');
+
+    const content = readFileSync(overviewPath, 'utf-8');
+    assert.ok(content.includes('## Structure'), 'Should have Structure section');
+    assert.ok(content.includes('### Daily Ops'), 'Should list Daily Ops sub-mob');
+    assert.ok(content.includes('### Strategic'), 'Should list Strategic sub-mob');
+  });
+
+  test('import of hierarchical bundle creates mob hierarchy in DB', () => {
+    const hierBundleDir = join(TEST_DIR, 'hier-bundle');
+    // Ensure bundle exists
+    if (!existsSync(join(hierBundleDir, 'manifest.json'))) {
+      exportMob('Hier Parent', { outputDir: hierBundleDir });
+    }
+
+    // Clean up existing hierarchy to test import creates it
+    const db = new Database(TEST_DB_PATH);
+    db.prepare(`DELETE FROM mob_children WHERE parent_mob_id = 'hier-parent'`).run();
+    db.prepare(`DELETE FROM mobs WHERE id IN ('hier-parent', 'hier-child-a', 'hier-child-b')`).run();
+    db.close();
+
+    const plan = planImport(hierBundleDir);
+    executeImport(hierBundleDir, plan, { force: true });
+
+    // Verify hierarchy was created
+    const db2 = new Database(TEST_DB_PATH, { readonly: true });
+    const parent = db2.prepare(`SELECT * FROM mobs WHERE id = 'hier-parent'`).get() as { id: string } | undefined;
+    assert.ok(parent, 'Parent mob should exist after import');
+
+    const children = db2.prepare(`SELECT * FROM mob_children WHERE parent_mob_id = 'hier-parent'`).all() as { child_mob_id: string }[];
+    assert.equal(children.length, 2, 'Should have 2 child mobs');
+
+    const childIds = children.map(c => c.child_mob_id).sort();
+    assert.deepEqual(childIds, ['hier-child-a', 'hier-child-b']);
+    db2.close();
+  });
+
+  test('flat mob export has no hierarchy field', () => {
+    const result = exportMob('Export Test', { dryRun: true });
+    assert.equal(result.manifest.hierarchy, undefined, 'Flat mob should not have hierarchy');
   });
 });

@@ -637,6 +637,9 @@ program
           if (desc) {
             console.log(`    ${desc}`);
           }
+          if (b.hierarchy && b.hierarchy.length > 0) {
+            console.log(`    Sub-mobs: ${b.hierarchy.map(h => h.name).join(', ')}`);
+          }
         }
         console.log('');
         console.log('Usage: whizmob import <name> [--dry-run] [--param ...]');

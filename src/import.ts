@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
-import type { ExportManifest, ExportFileEntry, ContentParameter } from './export.js';
+import type { ExportManifest, ExportFileEntry, ContentParameter, MobHierarchyEntry } from './export.js';
+import { SCHEMA, TABLE_MIGRATIONS } from './schema.js';
 
 const __importDirname = dirname(fileURLToPath(import.meta.url));
 
@@ -46,11 +47,11 @@ export function resolveBundlePath(bundleArg: string): { path: string; named: boo
  * List all bundled exports shipped with the package.
  * Reads exports/{name}/manifest.json from the package root.
  */
-export function listBundledExports(): Array<{ name: string; id: string; version: number; description: string; summary: string }> {
+export function listBundledExports(): Array<{ name: string; id: string; version: number; description: string; summary: string; hierarchy?: MobHierarchyEntry[] }> {
   const exportsDir = join(__importDirname, '..', 'exports');
   if (!existsSync(exportsDir)) return [];
 
-  const results: Array<{ name: string; id: string; version: number; description: string; summary: string }> = [];
+  const results: Array<{ name: string; id: string; version: number; description: string; summary: string; hierarchy?: MobHierarchyEntry[] }> = [];
   let entries: string[];
   try {
     entries = readdirSync(exportsDir);
@@ -86,6 +87,7 @@ export function listBundledExports(): Array<{ name: string; id: string; version:
         version: manifest.bundle_version,
         description: mobMeta.description || '',
         summary,
+        hierarchy: manifest.hierarchy,
       });
     } catch {
       // Skip malformed manifests
@@ -471,6 +473,71 @@ export function executeImport(
       }
     } catch {
       warnings.push('Could not record provenance — database may be locked or unavailable.');
+    }
+  }
+
+  // Create mob hierarchy in DB if manifest includes hierarchy
+  if (plan.manifest.hierarchy && plan.manifest.hierarchy.length > 0) {
+    const dbPath = process.env.WHIZMOB_DB_PATH || join(homedir(), '.whizmob', 'whizmob.db');
+    if (existsSync(dbPath)) {
+      try {
+        const db = new Database(dbPath);
+        try {
+          // Ensure mob_children table exists
+          try { db.exec(TABLE_MIGRATIONS); } catch { /* already exists */ }
+
+          const mobMeta = plan.manifest.mob;
+
+          // Upsert parent mob
+          db.prepare(`
+            INSERT INTO mobs (id, name, description, author) VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description
+          `).run(mobMeta.id, mobMeta.name, mobMeta.description, mobMeta.author);
+
+          // Create sub-mobs and hierarchy relationships
+          const insertMob = db.prepare(`
+            INSERT INTO mobs (id, name, description) VALUES (?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description
+          `);
+          const insertChild = db.prepare(`
+            INSERT OR REPLACE INTO mob_children (parent_mob_id, child_mob_id, display_order)
+            VALUES (?, ?, ?)
+          `);
+
+          for (const sub of plan.manifest.hierarchy) {
+            insertMob.run(sub.id, sub.name, sub.description);
+            insertChild.run(mobMeta.id, sub.id, sub.display_order);
+          }
+
+          // Assign components to sub-mobs based on manifest file entries
+          const insertComp = db.prepare(`
+            INSERT OR IGNORE INTO mob_components (mob_id, passport_id, component_type, file_path)
+            VALUES (?, ?, ?, ?)
+          `);
+
+          for (const action of plan.actions) {
+            const file = action.file;
+            if (file.sub_mobs && file.sub_mobs.length > 0) {
+              for (const subMobId of file.sub_mobs) {
+                // Try to find passport by name
+                const passport = file.passport_name
+                  ? db.prepare('SELECT id FROM passports WHERE name = ?').get(file.passport_name) as { id: string } | undefined
+                  : undefined;
+                insertComp.run(
+                  subMobId,
+                  passport?.id || null,
+                  file.component_type === 'passport_source' ? 'passport' : file.component_type,
+                  passport ? null : action.targetPath,
+                );
+              }
+            }
+          }
+        } finally {
+          db.close();
+        }
+      } catch {
+        warnings.push('Could not create mob hierarchy — database may be locked or unavailable.');
+      }
     }
   }
 
