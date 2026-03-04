@@ -10,7 +10,7 @@ import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
 import { formatTable } from './formatters/table.js';
 import { compactRoster, hookRoster, searchRoster } from './roster.js';
-import { importInventory, importEdges, getStats, resolveSkill } from './db.js';
+import { importInventory, importEdges, getStats, resolveSkill, autoDiscoverHierarchy } from './db.js';
 import { inferEdges } from './edges.js';
 import {
   defineMob,
@@ -80,6 +80,15 @@ program
         const edges = await inferEdges(inventory.passports);
         const edgeResult = importEdges(edges);
         console.error(`[whizmob] Edges: ${edgeResult.added} inferred`);
+
+        // Auto-discover sub-mob hierarchy
+        const hierarchy = autoDiscoverHierarchy(edges);
+        if (hierarchy.subMobs > 0) {
+          console.error(`[whizmob] Hierarchy: ${hierarchy.subMobs} sub-mobs discovered across ${hierarchy.parentMobs} mobs`);
+        }
+        if (hierarchy.skippedManual > 0) {
+          console.error(`[whizmob] Hierarchy: ${hierarchy.skippedManual} mobs with manual hierarchy preserved`);
+        }
       }
 
       const output = format === 'table'

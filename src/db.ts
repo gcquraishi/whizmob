@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync, existsSync } from 'node:fs';
 import type { WhizmobInventory, AgentType, LicenseType } from './types.js';
-import { SCHEMA, MIGRATIONS } from './schema.js';
+import { SCHEMA, MIGRATIONS, TABLE_MIGRATIONS } from './schema.js';
 import type { InferredEdge } from './edges.js';
+import { clusterMobs } from './edges.js';
+import { discoverSubMobs } from './cluster.js';
 
 const DB_DIR = join(homedir(), '.whizmob');
 const DEFAULT_DB_PATH = join(DB_DIR, 'whizmob.db');
@@ -401,6 +403,170 @@ export function getStats(): WhizmobStats | null {
       edgeCount,
       lastScan: lastScanRow || null,
     };
+  } finally {
+    db.close();
+  }
+}
+
+export interface AutoDiscoveryResult {
+  parentMobs: number;
+  subMobs: number;
+  skippedManual: number;
+}
+
+/**
+ * Auto-discover sub-mob hierarchy from edges.
+ * Clusters passports into connected components (parent mobs),
+ * then runs heuristics to find sub-groups within each.
+ * Skips mobs that already have manual hierarchy definitions.
+ */
+export function autoDiscoverHierarchy(edges: InferredEdge[]): AutoDiscoveryResult {
+  mkdirSync(DB_DIR, { recursive: true });
+  const db = new Database(resolveDbPath());
+  db.exec(SCHEMA);
+  runMigrations(db);
+  try { db.exec(TABLE_MIGRATIONS); } catch { /* already exists */ }
+
+  try {
+    // Get passport info for clustering and naming
+    const passportRows = db.prepare(
+      'SELECT id, name, type, invocation FROM passports'
+    ).all() as Array<{ id: string; name: string; type: string; invocation: string | null }>;
+
+    const passportNames = new Map<string, string>();
+    const passportTypes = new Map<string, string>();
+    const passportInfo = new Map<string, { id: string; name: string; type: string; invocation: string | null }>();
+
+    for (const row of passportRows) {
+      passportNames.set(row.id, row.name);
+      passportTypes.set(row.id, row.type);
+      passportInfo.set(row.id, row);
+    }
+
+    // Find connected components
+    const discoveredMobs = clusterMobs(edges, passportNames, passportTypes);
+
+    // Check which mobs already have manual hierarchy
+    const existingParents = new Set<string>();
+    try {
+      const rows = db.prepare('SELECT DISTINCT parent_mob_id FROM mob_children').all() as Array<{ parent_mob_id: string }>;
+      for (const row of rows) existingParents.add(row.parent_mob_id);
+    } catch { /* table may not exist */ }
+
+    // Get existing mob IDs to check overlap
+    const existingMobs = new Map<string, { id: string; memberIds: Set<string> }>();
+    try {
+      const mobRows = db.prepare('SELECT id FROM mobs').all() as Array<{ id: string }>;
+      for (const row of mobRows) {
+        const compRows = db.prepare(
+          'SELECT passport_id FROM mob_components WHERE mob_id = ? AND passport_id IS NOT NULL'
+        ).all(row.id) as Array<{ passport_id: string }>;
+        existingMobs.set(row.id, {
+          id: row.id,
+          memberIds: new Set(compRows.map(r => r.passport_id)),
+        });
+      }
+    } catch { /* tables may not exist */ }
+
+    let parentCount = 0;
+    let subMobCount = 0;
+    let skippedManual = 0;
+
+    // Clean up previous auto-discovered hierarchy
+    const cleanupTx = db.transaction(() => {
+      // Delete auto-discovered sub-mob children relationships
+      try {
+        db.exec("DELETE FROM mob_children WHERE child_mob_id LIKE 'auto-%'");
+        // Delete auto-discovered sub-mobs and their components
+        db.exec("DELETE FROM mob_components WHERE mob_id LIKE 'auto-%'");
+        db.exec("DELETE FROM mobs WHERE id LIKE 'auto-%'");
+      } catch { /* tables may not exist */ }
+    });
+    cleanupTx();
+
+    const insertTx = db.transaction(() => {
+      for (const mob of discoveredMobs) {
+        // Check if this discovered mob overlaps with an existing manually-defined mob
+        let manualParentId: string | null = null;
+        const mobMemberSet = new Set(mob.members);
+
+        for (const [existId, existMob] of existingMobs) {
+          // Check overlap: if >50% of discovered members are in the existing mob
+          let overlap = 0;
+          for (const pid of existMob.memberIds) {
+            if (mobMemberSet.has(pid)) overlap++;
+          }
+          if (existMob.memberIds.size > 0 && overlap / existMob.memberIds.size > 0.5) {
+            manualParentId = existId;
+            break;
+          }
+        }
+
+        // If this mob already has manual hierarchy, skip auto-discovery
+        if (manualParentId && existingParents.has(manualParentId)) {
+          skippedManual++;
+          continue;
+        }
+
+        // Run sub-mob discovery on this connected component
+        const autoSubMobs = discoverSubMobs(mob.members, edges, passportInfo);
+        if (autoSubMobs.length === 0) continue;
+
+        // Determine parent mob ID — use existing manual mob or create a discovered one
+        const parentId = manualParentId || mob.id;
+
+        // Create parent mob if it doesn't exist
+        if (!manualParentId) {
+          db.prepare(
+            `INSERT OR IGNORE INTO mobs (id, name, description, author)
+             VALUES (?, ?, ?, ?)`
+          ).run(mob.id, mob.name, `Auto-discovered mob with ${mob.members.length} components`, 'whizmob-auto');
+
+          // Add all members as components of the parent
+          const addComp = db.prepare(
+            `INSERT OR IGNORE INTO mob_components (mob_id, passport_id, component_type, file_path, role)
+             VALUES (?, ?, 'passport', NULL, NULL)`
+          );
+          for (const memberId of mob.members) {
+            const pType = passportTypes.get(memberId) || 'subagent';
+            addComp.run(mob.id, memberId);
+          }
+          parentCount++;
+        }
+
+        // Create sub-mobs and add as children
+        for (let i = 0; i < autoSubMobs.length; i++) {
+          const sub = autoSubMobs[i];
+
+          // Create sub-mob
+          db.prepare(
+            `INSERT OR IGNORE INTO mobs (id, name, description, author)
+             VALUES (?, ?, ?, ?)`
+          ).run(sub.id, sub.name, sub.description, 'whizmob-auto');
+
+          // Add members to sub-mob
+          const addComp = db.prepare(
+            `INSERT OR IGNORE INTO mob_components (mob_id, passport_id, component_type, file_path, role)
+             VALUES (?, ?, 'passport', NULL, NULL)`
+          );
+          for (const memberId of sub.member_ids) {
+            addComp.run(sub.id, memberId);
+          }
+
+          // Add as child of parent
+          db.prepare(
+            `INSERT OR IGNORE INTO mob_children (parent_mob_id, child_mob_id, display_order)
+             VALUES (?, ?, ?)`
+          ).run(parentId, sub.id, i);
+
+          subMobCount++;
+        }
+      }
+    });
+
+    insertTx();
+
+    return { parentMobs: parentCount, subMobs: subMobCount, skippedManual };
   } finally {
     db.close();
   }
