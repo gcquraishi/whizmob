@@ -47,16 +47,17 @@ A power user's agent setup isn't one blob — it's a system of systems. Whizmob 
 - **Tickets**: [[WHIZ-28]]
 - **Key files**: `src/cluster.ts`, `src/db.ts`, `src/index.ts`
 
-### M4: Granular Export — Not Started
+### M4: Granular Export — Complete
 - **Why it matters**: "Just give me your standup workflow" becomes a real command. Instead of exporting 30 skills when someone only wants the daily ops loop, they export a sub-mob. This is what makes hierarchy useful for sharing, not just visualization.
 - **Acceptance criteria**:
-  - [ ] `whizmob export <mob>` exports a sub-mob (just its components) or a parent mob (full tree, deduplicated)
-  - [ ] Manifest includes `hierarchy` field showing the mob tree structure
-  - [ ] Import of a sub-mob bundle works independently — no parent mob required
-  - [ ] Import of a parent mob bundle creates the full hierarchy on the target machine
-  - [ ] Shared components are exported once, referenced from multiple sub-mobs in the manifest
-  - [ ] `whizmob import --list` shows hierarchy when present in the bundle
-  - [ ] `overview.md` generation reflects the hierarchy (grouped by sub-mob)
+  - [x] `whizmob export <mob>` exports a sub-mob (just its components) or a parent mob (full tree, deduplicated)
+  - [x] Manifest includes `hierarchy` field showing the mob tree structure
+  - [x] Import of a sub-mob bundle works independently — no parent mob required
+  - [x] Import of a parent mob bundle creates the full hierarchy on the target machine
+  - [x] Shared components are exported once, referenced from multiple sub-mobs in the manifest
+  - [x] `whizmob import --list` shows hierarchy when present in the bundle
+  - [x] `overview.md` generation reflects the hierarchy (grouped by sub-mob)
+  - [x] Post-build review passed (CRITICAL: 0, HIGH: 0, MEDIUM: 0)
 - **Tickets**: [[WHIZ-28]]
 - **Key files**: `src/export.ts`, `src/import.ts`, `src/index.ts`
 
