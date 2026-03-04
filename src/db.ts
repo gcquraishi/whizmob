@@ -446,17 +446,24 @@ export function autoDiscoverHierarchy(edges: InferredEdge[]): AutoDiscoveryResul
     // Find connected components
     const discoveredMobs = clusterMobs(edges, passportNames, passportTypes);
 
-    // Check which mobs already have manual hierarchy
+    // Check which mobs already have manual hierarchy (exclude auto-discovered parents)
     const existingParents = new Set<string>();
     try {
-      const rows = db.prepare('SELECT DISTINCT parent_mob_id FROM mob_children').all() as Array<{ parent_mob_id: string }>;
+      const rows = db.prepare(`
+        SELECT DISTINCT mc.parent_mob_id
+        FROM mob_children mc
+        JOIN mobs m ON mc.parent_mob_id = m.id
+        WHERE m.author IS NULL OR m.author != 'whizmob-auto'
+      `).all() as Array<{ parent_mob_id: string }>;
       for (const row of rows) existingParents.add(row.parent_mob_id);
     } catch { /* table may not exist */ }
 
-    // Get existing mob IDs to check overlap
+    // Get existing mob IDs to check overlap (exclude auto-discovered mobs)
     const existingMobs = new Map<string, { id: string; memberIds: Set<string> }>();
     try {
-      const mobRows = db.prepare('SELECT id FROM mobs').all() as Array<{ id: string }>;
+      const mobRows = db.prepare(
+        "SELECT id FROM mobs WHERE author IS NULL OR author != 'whizmob-auto'"
+      ).all() as Array<{ id: string }>;
       for (const row of mobRows) {
         const compRows = db.prepare(
           'SELECT passport_id FROM mob_components WHERE mob_id = ? AND passport_id IS NOT NULL'
@@ -474,12 +481,15 @@ export function autoDiscoverHierarchy(edges: InferredEdge[]): AutoDiscoveryResul
 
     // Clean up previous auto-discovered hierarchy
     const cleanupTx = db.transaction(() => {
-      // Delete auto-discovered sub-mob children relationships
       try {
+        // Delete auto-discovered sub-mob children relationships
         db.exec("DELETE FROM mob_children WHERE child_mob_id LIKE 'auto-%'");
         // Delete auto-discovered sub-mobs and their components
         db.exec("DELETE FROM mob_components WHERE mob_id LIKE 'auto-%'");
         db.exec("DELETE FROM mobs WHERE id LIKE 'auto-%'");
+        // Delete auto-created parent mobs (created by autoDiscoverHierarchy, not manual)
+        db.exec("DELETE FROM mob_components WHERE mob_id IN (SELECT id FROM mobs WHERE author = 'whizmob-auto')");
+        db.exec("DELETE FROM mobs WHERE author = 'whizmob-auto'");
       } catch { /* tables may not exist */ }
     });
     cleanupTx();
@@ -491,14 +501,20 @@ export function autoDiscoverHierarchy(edges: InferredEdge[]): AutoDiscoveryResul
         const mobMemberSet = new Set(mob.members);
 
         for (const [existId, existMob] of existingMobs) {
-          // Check overlap: if >50% of discovered members are in the existing mob
+          // Check overlap: if >50% of existing mob's members are in this discovered mob
           let overlap = 0;
           for (const pid of existMob.memberIds) {
             if (mobMemberSet.has(pid)) overlap++;
           }
           if (existMob.memberIds.size > 0 && overlap / existMob.memberIds.size > 0.5) {
-            manualParentId = existId;
-            break;
+            // Prefer mobs that are parents (have hierarchy) over child mobs
+            if (existingParents.has(existId)) {
+              manualParentId = existId;
+              break; // Parent with hierarchy — highest priority match
+            }
+            if (!manualParentId) {
+              manualParentId = existId;
+            }
           }
         }
 
