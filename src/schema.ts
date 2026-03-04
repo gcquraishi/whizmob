@@ -93,6 +93,14 @@ CREATE TABLE IF NOT EXISTS edges (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (source_id, target_id, edge_type, evidence)
 );
+
+CREATE TABLE IF NOT EXISTS mob_children (
+  parent_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  child_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (parent_mob_id, child_mob_id),
+  CHECK (parent_mob_id != child_mob_id)
+);
 `;
 
 /**
@@ -112,4 +120,19 @@ ALTER TABLE passports ADD COLUMN origin TEXT;
 ALTER TABLE passports ADD COLUMN author TEXT;
 ALTER TABLE passports ADD COLUMN license TEXT;
 ALTER TABLE passports ADD COLUMN forked_from TEXT;
+`;
+
+/**
+ * Table-level migrations for tables that may not exist in older databases.
+ * These use CREATE TABLE IF NOT EXISTS so they are idempotent.
+ * Run after SCHEMA + MIGRATIONS to ensure new tables exist in old DBs.
+ */
+export const TABLE_MIGRATIONS = `
+CREATE TABLE IF NOT EXISTS mob_children (
+  parent_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  child_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (parent_mob_id, child_mob_id),
+  CHECK (parent_mob_id != child_mob_id)
+);
 `;

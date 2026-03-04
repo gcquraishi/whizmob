@@ -91,6 +91,14 @@ CREATE TABLE IF NOT EXISTS edges (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (source_id, target_id, edge_type, evidence)
 );
+
+CREATE TABLE IF NOT EXISTS mob_children (
+  parent_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  child_mob_id TEXT NOT NULL REFERENCES mobs(id) ON DELETE CASCADE,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (parent_mob_id, child_mob_id),
+  CHECK (parent_mob_id != child_mob_id)
+);
 `;
 
 // Additive migrations — safe to run multiple times.
