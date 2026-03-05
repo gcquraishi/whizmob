@@ -35,9 +35,15 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-04_
+_Last updated: 2026-03-05_
 
 **Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — full hierarchy pipeline: data model, graph clusters with convex hulls, auto-discovery via invocation/state/hook heuristics, and granular export/import with sub-mob component mapping. 127 tests across 12 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap complete** — all 4 milestones shipped (M1: data model, M2: graph clusters, M3: auto-discovery, M4: granular export).
+
+### Recent Completions (First External User Onboarding — 2026-03-05)
+- **Post-scan guidance** — `whizmob scan` now prints "what's next" suggestions after results. Empty scans show setup instructions with links to Claude Code docs.
+- **better-sqlite3 error handling** — Native module build failures produce actionable error messages (e.g., `xcode-select --install` on macOS) instead of raw stack traces.
+- **Empty-state demo** — `whizmob demo` generates a helpful placeholder page when no data exists, and shows an explanatory message when mobs haven't been discovered yet.
+- **README quick start** — Added sample scan output so users know what to expect before running. Documented native build tool prereqs (xcode-select, build-essential).
 
 ### Recent Completions (Mob Hierarchy Roadmap — 2026-03-04)
 - **M1: Mob Hierarchy** — `mob_children` table, `addChild`/`removeChild` with cycle detection, `getAllComponents` rollup, CLI commands, export walks full tree. CEO OS dog-food: 5 sub-mobs, 31 components.
