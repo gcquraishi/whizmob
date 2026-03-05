@@ -32,6 +32,7 @@ const TEMPLATIZED_SKILL = join(TEST_DIR, 'templatized-skill.md');
 
 process.env.WHIZMOB_DB_PATH = TEST_DB_PATH;
 process.env.WHIZMOB_PROFILES_DIR = join(TEST_DIR, 'import-profiles');
+process.env.WHIZMOB_SAFE_ROOT = TEST_DIR;
 
 import { exportMob } from '../src/export.js';
 import { planImport, executeImport, loadImportProfile, loadFullProfile, saveImportProfile } from '../src/import.js';
@@ -95,6 +96,7 @@ function setup(): void {
 function teardown(): void {
   delete process.env.WHIZMOB_DB_PATH;
   delete process.env.WHIZMOB_PROFILES_DIR;
+  delete process.env.WHIZMOB_SAFE_ROOT;
   rmSync(TEST_DIR, { recursive: true, force: true });
 }
 

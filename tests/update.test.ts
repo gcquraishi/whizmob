@@ -66,11 +66,13 @@ describe('update engine', () => {
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true });
     process.env.WHIZMOB_PROFILES_DIR = PROFILES_DIR;
+    process.env.WHIZMOB_SAFE_ROOT = TEST_DIR;
   });
 
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true });
     delete process.env.WHIZMOB_PROFILES_DIR;
+    delete process.env.WHIZMOB_SAFE_ROOT;
   });
 
   it('detects unchanged files', () => {

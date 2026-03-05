@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
@@ -224,6 +224,32 @@ function deparameterizePath(paramPath: string, params: Record<string, string>): 
   return expandTilde(result);
 }
 
+/**
+ * Validate that a resolved path is within the user's home directory.
+ * Prevents path traversal attacks from malicious bundle manifests.
+ * Tests can override the safe root via WHIZMOB_SAFE_ROOT env var.
+ */
+function validateTargetPath(targetPath: string): string {
+  const normalized = resolve(targetPath);
+  const safeRoot = process.env.WHIZMOB_SAFE_ROOT || homedir();
+  if (!normalized.startsWith(safeRoot + '/') && normalized !== safeRoot) {
+    throw new Error(`Path traversal blocked: "${targetPath}" resolves to "${normalized}" which is outside the home directory.`);
+  }
+  return normalized;
+}
+
+/**
+ * Validate that a bundle_path doesn't escape the bundle directory.
+ */
+function validateBundlePath(bundleRoot: string, bundlePath: string): string {
+  const full = resolve(join(bundleRoot, bundlePath));
+  const normalizedRoot = resolve(bundleRoot);
+  if (!full.startsWith(normalizedRoot + '/') && full !== normalizedRoot) {
+    throw new Error(`Path traversal blocked: bundle_path "${bundlePath}" escapes the bundle directory.`);
+  }
+  return full;
+}
+
 function checkDependency(dep: { type: string; name: string }): boolean {
   if (dep.type === 'mcp_server') {
     // Check if MCP config references this server
@@ -280,7 +306,14 @@ export function planImport(
     // Documentation files (overview.md) are bundle-level docs, not installable
     if (file.component_type === 'documentation') continue;
 
-    const targetPath = deparameterizePath(file.original_path, resolvedParams);
+    const rawTargetPath = deparameterizePath(file.original_path, resolvedParams);
+    let targetPath: string;
+    try {
+      targetPath = validateTargetPath(rawTargetPath);
+    } catch (e) {
+      warnings.push((e as Error).message);
+      continue;
+    }
     const conflict = existsSync(targetPath);
     const needsSecrets = file.secrets_stripped;
     const isBootstrapped = file.memory_bootstrapped;
@@ -416,7 +449,14 @@ export function executeImport(
       continue;
     }
 
-    const sourcePath = join(bundlePath, action.file.bundle_path);
+    let sourcePath: string;
+    try {
+      sourcePath = validateBundlePath(bundlePath, action.file.bundle_path);
+    } catch (e) {
+      warnings.push((e as Error).message);
+      skipped++;
+      continue;
+    }
     if (!existsSync(sourcePath)) {
       warnings.push(`Bundle file missing: ${action.file.bundle_path} — skipped.`);
       skipped++;

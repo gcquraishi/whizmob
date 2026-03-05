@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { Command } from 'commander';
 import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
@@ -275,10 +275,15 @@ program
   .description('Launch the Whizmob web dashboard')
   .option('-p, --port <port>', 'Port to run the dashboard on', '3333')
   .action((opts) => {
+    const port = parseInt(opts.port, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.error(`[whizmob] Invalid port: ${opts.port}. Must be a number between 1 and 65535.`);
+      process.exit(1);
+    }
     const dashboardDir = join(__dirname, '..', 'dashboard');
-    console.log(`Starting Whizmob Dashboard on http://localhost:${opts.port}...`);
+    console.log(`Starting Whizmob Dashboard on http://localhost:${port}...`);
     try {
-      execSync(`npm run dev -- -p ${opts.port}`, {
+      spawnSync('npm', ['run', 'dev', '--', '-p', String(port)], {
         cwd: dashboardDir,
         stdio: 'inherit',
       });
@@ -300,7 +305,7 @@ program
 
       if (opts.open) {
         const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-        execSync(`${openCmd} "${result.path}"`);
+        spawnSync(openCmd, [result.path], { stdio: 'inherit' });
       } else {
         console.log(`\nOpen in browser: open "${result.path}"`);
       }

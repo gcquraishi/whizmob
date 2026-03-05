@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
 
 interface PlanAction {
@@ -45,7 +46,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'bundlePath is required' }, { status: 400 });
     }
 
-    if (!existsSync(bundlePath)) {
+    // Restrict bundle paths to ~/.whizmob/exports/ to prevent arbitrary file access
+    const safeBundleRoot = join(homedir(), '.whizmob', 'exports');
+    const resolvedBundlePath = resolve(bundlePath);
+    if (!resolvedBundlePath.startsWith(safeBundleRoot + '/') && resolvedBundlePath !== safeBundleRoot) {
+      return NextResponse.json({ error: 'bundlePath must be within ~/.whizmob/exports/' }, { status: 400 });
+    }
+
+    if (!existsSync(resolvedBundlePath)) {
       return NextResponse.json({ error: `Bundle not found: ${bundlePath}` }, { status: 404 });
     }
 
