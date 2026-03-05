@@ -530,4 +530,111 @@ describe('export / import pipeline', () => {
     const result = exportMob('Export Test', { dryRun: true });
     assert.equal(result.manifest.hierarchy, undefined, 'Flat mob should not have hierarchy');
   });
+
+  // ── Path traversal rejection tests ──────────────────────────────────────
+
+  test('planImport rejects original_path with path traversal', () => {
+    const maliciousBundle = join(TEST_DIR, 'malicious-bundle');
+    mkdirSync(join(maliciousBundle, 'files'), { recursive: true });
+    writeFileSync(join(maliciousBundle, 'files', 'backdoor.md'), 'malicious content', 'utf-8');
+    const manifest = {
+      version: '1.0',
+      bundle_version: 1,
+      mob: { id: 'evil-mob', name: 'Evil', description: '', author: null },
+      exported_at: new Date().toISOString(),
+      exported_from: 'attacker',
+      files: [{
+        bundle_path: 'files/backdoor.md',
+        original_path: '{{HOME}}/../../../etc/crontab',
+        component_type: 'passport_source',
+        role: null,
+        passport_name: 'backdoor',
+        secrets_stripped: false,
+        memory_bootstrapped: false,
+      }],
+      dependencies: [],
+      parameters: {},
+      content_parameters: {},
+      changelog: [],
+    };
+    writeFileSync(join(maliciousBundle, 'manifest.json'), JSON.stringify(manifest), 'utf-8');
+
+    const plan = planImport(maliciousBundle);
+    // Path traversal should produce a warning and skip the file
+    assert.equal(plan.actions.length, 0, 'Traversal path should be skipped');
+    assert.ok(plan.warnings.some(w => w.includes('Path traversal blocked')), 'Should warn about path traversal');
+  });
+
+  test('executeImport rejects bundle_path that escapes bundle directory', () => {
+    const escapeBundle = join(TEST_DIR, 'escape-bundle');
+    mkdirSync(join(escapeBundle, 'files'), { recursive: true });
+    writeFileSync(join(escapeBundle, 'files', 'legit.md'), 'legit content', 'utf-8');
+    const targetPath = join(TEST_DIR, 'legit-target.md');
+    const manifest = {
+      version: '1.0',
+      bundle_version: 1,
+      mob: { id: 'escape-mob', name: 'Escape', description: '', author: null },
+      exported_at: new Date().toISOString(),
+      exported_from: 'attacker',
+      files: [{
+        bundle_path: '../../etc/passwd',
+        original_path: targetPath,
+        component_type: 'passport_source',
+        role: null,
+        passport_name: 'escape',
+        secrets_stripped: false,
+        memory_bootstrapped: false,
+      }],
+      dependencies: [],
+      parameters: {},
+      content_parameters: {},
+      changelog: [],
+    };
+    writeFileSync(join(escapeBundle, 'manifest.json'), JSON.stringify(manifest), 'utf-8');
+
+    const plan = planImport(escapeBundle);
+    // The target path is valid (inside TEST_DIR), so planImport accepts it
+    assert.equal(plan.actions.length, 1);
+
+    const result = executeImport(escapeBundle, plan, { force: true });
+    // But executeImport should reject the escaped bundle_path
+    assert.equal(result.installed, 0, 'Should not install file with escaped bundle_path');
+    assert.ok(result.warnings.some(w => w.includes('Path traversal blocked') || w.includes('Bundle file missing')),
+      'Should warn about escaped bundle_path');
+  });
+
+  test('valid paths within safe root are accepted', () => {
+    const validBundle = join(TEST_DIR, 'valid-bundle');
+    mkdirSync(join(validBundle, 'files'), { recursive: true });
+    writeFileSync(join(validBundle, 'files', 'good.md'), 'good content', 'utf-8');
+    const targetPath = join(TEST_DIR, 'valid-install', 'good.md');
+    const manifest = {
+      version: '1.0',
+      bundle_version: 1,
+      mob: { id: 'good-mob', name: 'Good', description: '', author: null },
+      exported_at: new Date().toISOString(),
+      exported_from: 'test',
+      files: [{
+        bundle_path: 'files/good.md',
+        original_path: targetPath,
+        component_type: 'passport_source',
+        role: null,
+        passport_name: 'good',
+        secrets_stripped: false,
+        memory_bootstrapped: false,
+      }],
+      dependencies: [],
+      parameters: {},
+      content_parameters: {},
+      changelog: [],
+    };
+    writeFileSync(join(validBundle, 'manifest.json'), JSON.stringify(manifest), 'utf-8');
+
+    const plan = planImport(validBundle);
+    assert.equal(plan.actions.length, 1, 'Valid path should be accepted');
+    assert.equal(plan.warnings.filter(w => w.includes('traversal')).length, 0, 'No traversal warnings');
+
+    const result = executeImport(validBundle, plan, { force: true });
+    assert.equal(result.installed, 1, 'Valid file should install');
+  });
 });

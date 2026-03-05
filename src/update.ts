@@ -5,6 +5,7 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import type { ExportManifest, ExportFileEntry } from './export.js';
 import { loadFullProfile, saveImportProfile, resolveBundlePath } from './import.js';
+import { validateTargetPath } from './paths.js';
 
 const DEFAULT_PARAMS: Record<string, string> = {
   '{{HOME}}': homedir(),
@@ -26,19 +27,6 @@ function deparameterizePath(paramPath: string, params: Record<string, string>): 
     }
   }
   return expandTilde(result);
-}
-
-/**
- * Validate that a resolved path is within the user's home directory.
- * Tests can override the safe root via WHIZMOB_SAFE_ROOT env var.
- */
-function validateTargetPath(targetPath: string): string {
-  const normalized = resolve(targetPath);
-  const safeRoot = process.env.WHIZMOB_SAFE_ROOT || homedir();
-  if (!normalized.startsWith(safeRoot + '/') && normalized !== safeRoot) {
-    throw new Error(`Path traversal blocked: "${targetPath}" resolves outside the home directory.`);
-  }
-  return normalized;
 }
 
 function hashContent(content: string): string {
@@ -240,6 +228,16 @@ export function executeUpdate(
 
   for (const action of plan.actions) {
     const bundleFilePath = join(bundlePath, action.file.bundle_path);
+
+    // Re-validate target path even though planUpdate already checked —
+    // executeUpdate may be called with a manually-constructed plan.
+    try {
+      validateTargetPath(action.targetPath);
+    } catch (e) {
+      warnings.push((e as Error).message);
+      skipped++;
+      continue;
+    }
 
     if (action.classification === 'upstream-only') {
       // Safe to auto-apply

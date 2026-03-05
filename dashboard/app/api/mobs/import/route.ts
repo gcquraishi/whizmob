@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!existsSync(resolvedBundlePath)) {
-      return NextResponse.json({ error: `Bundle not found: ${bundlePath}` }, { status: 404 });
+      return NextResponse.json({ error: `Bundle not found: ${resolvedBundlePath}` }, { status: 404 });
     }
 
     // Dynamically import the CLI import module
