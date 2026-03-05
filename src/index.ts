@@ -101,8 +101,49 @@ program
       } else {
         console.log(output);
       }
+
+      // Post-scan guidance
+      const total = inventory.passports.length;
+      console.error('');
+      if (total === 0) {
+        console.error('[whizmob] No agents, skills, or integrations found.');
+        console.error('');
+        console.error('  Whizmob scans ~/.claude/, ~/.cursor/, and ~/.codex/ for AI tool configs.');
+        console.error('  To get started, try one of these:');
+        console.error('');
+        console.error('    • Install Claude Code: https://docs.anthropic.com/en/docs/claude-code');
+        console.error('    • Create a skill:      mkdir -p ~/.claude/skills/my-skill && echo "# My Skill" > ~/.claude/skills/my-skill/SKILL.md');
+        console.error('    • Create an agent:     echo "# My Agent\\nPurpose: Help with code review" > ~/.claude/agents/reviewer.md');
+        console.error('');
+        console.error('  Then run `whizmob scan` again.');
+      } else {
+        console.error(`[whizmob] Found ${total} component${total !== 1 ? 's' : ''} across ${Object.keys(inventory.summary.by_platform).length} platform${Object.keys(inventory.summary.by_platform).length !== 1 ? 's' : ''}.`);
+        console.error('');
+        console.error('  What\'s next:');
+        console.error('    whizmob demo --open    Open an interactive mob inspector in your browser');
+        console.error('    whizmob dashboard      Launch the full dashboard at localhost:3333');
+        console.error('    whizmob stats          Quick inventory summary');
+        console.error('    whizmob roster -s <q>  Search your agents by name or purpose');
+      }
     } catch (err) {
-      console.error(`[whizmob] Scan failed: ${(err as Error).message}`);
+      const msg = (err as Error).message || String(err);
+      // Detect better-sqlite3 native module build failure
+      if (msg.includes('better-sqlite3') || msg.includes('NODE_MODULE_VERSION') || msg.includes('was compiled against a different')) {
+        console.error('[whizmob] Native module error: better-sqlite3 failed to load.');
+        console.error('');
+        console.error('  This usually means native build tools are missing. Try:');
+        console.error('');
+        if (process.platform === 'darwin') {
+          console.error('    xcode-select --install    # Install macOS command-line tools');
+        } else {
+          console.error('    sudo apt install build-essential python3    # Linux');
+        }
+        console.error('    npm rebuild better-sqlite3');
+        console.error('');
+        console.error(`  Full error: ${msg}`);
+        process.exit(1);
+      }
+      console.error(`[whizmob] Scan failed: ${msg}`);
       process.exit(1);
     }
   });

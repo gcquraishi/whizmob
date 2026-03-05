@@ -488,7 +488,7 @@ function render() {
   const app = document.getElementById('app');
 
   if (MOBS.length === 0) {
-    app.innerHTML = '<div class="empty"><div><h2>No mobs discovered</h2><p>Run a scan to discover your agent systems.</p><code>npx whizmob scan</code></div></div>';
+    app.innerHTML = '<div class="empty"><div><h2>No mobs discovered yet</h2><p>Whizmob found your components but no connections between them.<br>Mobs emerge when agents reference each other — through skill invocations, shared state, or file path references.</p><p style="margin-top:12px;font-size:13px;color:#9ca3af">As you build more agents and skills that work together, run <code>whizmob scan</code> again and mobs will appear here.</p></div></div>';
     app.style.height = 'calc(100vh - 48px)';
     return;
   }
@@ -866,6 +866,31 @@ render();
 export function generateDemo(outputPath?: string): { path: string; mobCount: number; memberCount: number } {
   const mobs = getDiscoveredMobs();
   const stats = getStats();
+
+  if (stats.total === 0) {
+    // No data at all — generate a helpful placeholder page
+    const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whizmob — No Data Yet</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f9fafb;color:#111827}
+.box{text-align:center;max-width:480px;padding:40px}h1{font-size:20px;margin-bottom:8px}p{font-size:14px;color:#6b7280;line-height:1.6}
+code{display:inline-block;margin-top:16px;padding:8px 16px;background:#f3f4f6;border-radius:8px;font-family:monospace;font-size:13px}
+a{color:#6366f1;text-decoration:none}a:hover{text-decoration:underline}</style></head>
+<body><div class="box"><h1>No scan data yet</h1>
+<p>Run a scan first to discover your AI agents, skills, and integrations.</p>
+<code>npx whizmob scan</code>
+<p style="margin-top:24px">Then generate the demo again:</p>
+<code>npx whizmob demo --open</code>
+<p style="margin-top:24px;font-size:12px;color:#9ca3af">Learn more at <a href="https://github.com/gcquraishi/whizmob">github.com/gcquraishi/whizmob</a></p>
+</div></body></html>`;
+
+    const outDir = join(homedir(), '.whizmob');
+    mkdirSync(outDir, { recursive: true });
+    const outPath = outputPath || join(outDir, 'demo.html');
+    writeFileSync(outPath, html, 'utf-8');
+    return { path: outPath, mobCount: 0, memberCount: 0 };
+  }
+
   const html = generateDemoHtml(mobs, stats);
 
   const outDir = join(homedir(), '.whizmob');

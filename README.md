@@ -7,11 +7,30 @@ Whizmob scans your AI tool configs (Claude Code, Cursor, Codex), discovers which
 ## Quick start
 
 ```bash
-npx whizmob scan
-npx whizmob dashboard
+npx whizmob scan          # Discover your agents (30 seconds)
+npx whizmob demo --open   # See them as an interactive graph in your browser
 ```
 
-Open `http://localhost:3333` and see your agent systems laid out as interactive force-directed graphs. Click nodes to inspect components, see how they connect, and understand what you've built.
+That's it. No accounts, no API keys, no config.
+
+### Sample output
+
+```
+[whizmob] DB updated: 42 total, +42 added, -0 removed
+[whizmob] New: code-reviewer, test-runner, deploy-agent, standup, roadmap, ...
+[whizmob] Edges: 67 inferred
+[whizmob] Hierarchy: 3 sub-mobs discovered across 1 mobs
+
+[whizmob] Found 42 components across 2 platforms.
+
+  What's next:
+    whizmob demo --open    Open an interactive mob inspector in your browser
+    whizmob dashboard      Launch the full dashboard at localhost:3333
+    whizmob stats          Quick inventory summary
+    whizmob roster -s <q>  Search your agents by name or purpose
+```
+
+Want the full dashboard instead? Run `npx whizmob dashboard` and open `http://localhost:3333`.
 
 ## What it discovers
 
@@ -137,6 +156,8 @@ whizmob roster --hook
 
 - Node.js 20+
 - At least one of: Claude Code, Cursor, or Codex installed
+- **macOS**: Xcode command-line tools (`xcode-select --install`) — needed to compile the native SQLite module
+- **Linux**: `build-essential` and `python3` packages
 
 ## License
 
