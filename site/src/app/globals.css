@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-bg: #0a0a0a;
-  --color-fg: #e5e5e5;
-  --color-muted: #737373;
-  --color-accent: #22d3ee;
-  --color-surface: #171717;
-  --color-border: #262626;
+  --color-bg: #ffffff;
+  --color-fg: #1a1a1a;
+  --color-muted: #6b7280;
+  --color-accent: #003153;
+  --color-surface: #f5f7fa;
+  --color-border: #d1d5db;
 
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", "Menlo", "Courier New", monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -43,4 +43,72 @@ body {
 
 .terminal .output {
   color: var(--color-muted);
+}
+
+/* Expandable command list */
+.command-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.command-item:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.command-item summary {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.command-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.command-item summary::before {
+  content: "+";
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.command-item[open] summary::before {
+  content: "\2212";
+  color: var(--color-accent);
+}
+
+.command-item summary:hover {
+  color: var(--color-fg);
+}
+
+.command-item summary:hover::before {
+  color: var(--color-accent);
+}
+
+.command-name {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.command-desc {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.command-detail {
+  padding: 0 0 1.25rem 2rem;
 }
