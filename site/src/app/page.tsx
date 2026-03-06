@@ -457,7 +457,12 @@ export default function Home() {
             npm
           </a>
         </div>
-        <p>MIT License</p>
+        <a
+            href="https://github.com/gcquraishi/whizmob/blob/main/LICENSE"
+            className="hover:text-[var(--color-fg)] transition-colors"
+          >
+            MIT License
+          </a>
       </footer>
     </main>
   );
