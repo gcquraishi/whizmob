@@ -1,8 +1,8 @@
 # Whizmob
 
 ## Identity
-- **Domain**: None (npm package: `npx whizmob scan`)
-- **Hosting**: None (local-first CLI + dashboard)
+- **Domain**: whizmob.dev (landing page)
+- **Hosting**: Vercel (hobby) for site; CLI is local-first
 - **Ticket Prefix**: BIG
 - **Root Config**: See ../CLAUDE.md for shared infrastructure
 
@@ -35,9 +35,14 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-05_
+_Last updated: 2026-03-06_
 
 **Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — full hierarchy pipeline: data model, graph clusters with convex hulls, auto-discovery via invocation/state/hook heuristics, and granular export/import with sub-mob component mapping. 127 tests across 12 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap complete** — all 4 milestones shipped (M1: data model, M2: graph clusters, M3: auto-discovery, M4: granular export).
+
+### Recent Completions (Landing Page Redesign — 2026-03-06)
+- **whizmob.dev live** — DNS configured (Hover A record → Vercel), SSL cert issued. Site deployed at whizmob.dev.
+- **Expandable command reference** — Replaced 8 scrolling sections with a compact accordion. Each command shows name + one-liner; click to expand for terminal examples, tables, and the inspector screenshot. Native `<details>`/`<summary>`, zero JS.
+- **White + prussian blue color scheme** — Switched from dark theme to white background with prussian blue (#003153) accent.
 
 ### Recent Completions (First External User Onboarding — 2026-03-05)
 - **Post-scan guidance** — `whizmob scan` now prints "what's next" suggestions after results. Empty scans show setup instructions with links to Claude Code docs.
