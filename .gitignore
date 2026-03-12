@@ -7,3 +7,4 @@ out/
 .whizmob/
 seed-inventory.json
 dashboard/data/*.db
+.vercel
