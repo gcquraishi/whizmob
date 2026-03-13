@@ -11,7 +11,7 @@ async function deriveSessionToken(password: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  const password = process.env.DEMO_PASSWORD;
+  const password = process.env.DEMO_PASSWORD?.trim();
   if (!password) {
     return NextResponse.json({ error: 'No password configured' }, { status: 500 });
   }

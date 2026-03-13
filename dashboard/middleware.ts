@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   // Only gate access on Vercel
   if (!process.env.VERCEL) return NextResponse.next();
 
-  const password = process.env.DEMO_PASSWORD;
+  const password = process.env.DEMO_PASSWORD?.trim();
   if (!password) return NextResponse.next();
 
   // Allow the login endpoint through
