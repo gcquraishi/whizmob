@@ -5,6 +5,7 @@ import Link from 'next/link';
 import InspectorGraph from '@/components/InspectorGraph';
 import ScanButton from '@/components/ScanButton';
 import { Swords, Inbox, Network, ArrowRight, Zap, FileText, Link2 } from 'lucide-react';
+import { getModeConfig, MODE_COLORS, MODE_ORDER } from '@/lib/modes';
 
 interface MobMember {
   passport_id: string;
@@ -13,6 +14,7 @@ interface MobMember {
   purpose: string;
   invocation: string | null;
   source_file: string;
+  mode: string | null;
   sub_mob_ids?: string[];
 }
 
@@ -62,12 +64,38 @@ function toDisplayPath(filePath: string): string {
   return filePath.replace(/^\/Users\/[^/]+/, '~');
 }
 
+/** Compute mode distribution for a list of members */
+function getModeDistribution(members: MobMember[]): Array<{ mode: string; count: number; hex: string }> {
+  const counts = new Map<string, number>();
+  for (const m of members) {
+    if (m.mode) {
+      const key = m.mode.toLowerCase();
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  if (counts.size === 0) return [];
+  // Sort by MODE_ORDER, then alphabetical for custom modes
+  const ordered = [...counts.entries()].sort((a, b) => {
+    const idxA = (MODE_ORDER as readonly string[]).indexOf(a[0]);
+    const idxB = (MODE_ORDER as readonly string[]).indexOf(b[0]);
+    const posA = idxA >= 0 ? idxA : 100;
+    const posB = idxB >= 0 ? idxB : 100;
+    return posA - posB || a[0].localeCompare(b[0]);
+  });
+  return ordered.map(([mode, count]) => ({
+    mode,
+    count,
+    hex: MODE_COLORS[mode]?.hex ?? '#6b7280',
+  }));
+}
+
 export default function InspectorPage() {
   const [mobs, setMobs] = useState<DiscoveredMob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMobId, setSelectedMobId] = useState<string | null>(null);
   const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
   const [activeSubMob, setActiveSubMob] = useState<string | null>(null);
+  const [modeFilter, setModeFilter] = useState<string | null>(null);
   const detailRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const fetchMobs = useCallback(async () => {
@@ -145,30 +173,49 @@ export default function InspectorPage() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {mobs.map(mob => (
-                <button
-                  key={mob.id}
-                  onClick={() => { setSelectedMobId(mob.id); setHighlightedNode(null); setActiveSubMob(null); }}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors ${
-                    selectedMobId === mob.id
-                      ? 'bg-white border-l-2 border-l-indigo-500'
-                      : 'hover:bg-white border-l-2 border-l-transparent'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-900 truncate">{mob.name}</div>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-400">
-                    <span>{mob.members.length} agents</span>
-                    <span>&middot;</span>
-                    <span>{mob.edges.length} connections</span>
-                    {mob.children && mob.children.length > 0 && (
-                      <>
-                        <span>&middot;</span>
-                        <span>{mob.children.length} sub-mobs</span>
-                      </>
+              {mobs.map(mob => {
+                const modeDist = getModeDistribution(mob.members);
+                const totalWithMode = modeDist.reduce((sum, d) => sum + d.count, 0);
+                return (
+                  <button
+                    key={mob.id}
+                    onClick={() => { setSelectedMobId(mob.id); setHighlightedNode(null); setActiveSubMob(null); setModeFilter(null); }}
+                    className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors ${
+                      selectedMobId === mob.id
+                        ? 'bg-white border-l-2 border-l-indigo-500'
+                        : 'hover:bg-white border-l-2 border-l-transparent'
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-gray-900 truncate">{mob.name}</div>
+                    <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-400">
+                      <span>{mob.members.length} agents</span>
+                      <span>&middot;</span>
+                      <span>{mob.edges.length} connections</span>
+                      {mob.children && mob.children.length > 0 && (
+                        <>
+                          <span>&middot;</span>
+                          <span>{mob.children.length} sub-mobs</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Mode composition bar */}
+                    {modeDist.length > 0 && (
+                      <div className="mt-2 flex h-1.5 rounded-full overflow-hidden bg-gray-100" title={modeDist.map(d => `${d.mode}: ${d.count}`).join(', ')}>
+                        {modeDist.map(d => (
+                          <div
+                            key={d.mode}
+                            className="h-full transition-all"
+                            style={{
+                              width: `${(d.count / totalWithMode) * 100}%`,
+                              backgroundColor: d.hex,
+                            }}
+                          />
+                        ))}
+                      </div>
                     )}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
             <div className="p-3 border-t border-gray-200">
               <Link
@@ -206,18 +253,46 @@ export default function InspectorPage() {
                         ? `${selectedMob.children?.find(c => c.id === activeSubMob)?.name || 'Sub-mob'} Components`
                         : `Components \u00B7 ${selectedMob.members.length}`}
                     </h3>
-                    {activeSubMob && (
-                      <button
-                        onClick={() => setActiveSubMob(null)}
-                        className="text-[11px] text-gray-400 hover:text-gray-600"
-                      >
-                        Show all
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* Mode filter chips */}
+                      {getModeDistribution(selectedMob.members).length > 0 && (
+                        <div className="flex items-center gap-1">
+                          {getModeDistribution(selectedMob.members).map(d => {
+                            const cfg = getModeConfig(d.mode);
+                            if (!cfg) return null;
+                            const isActive = modeFilter === d.mode;
+                            return (
+                              <button
+                                key={d.mode}
+                                onClick={() => setModeFilter(isActive ? null : d.mode)}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                                  isActive
+                                    ? `${cfg.bg} ${cfg.text} ring-1 ring-current`
+                                    : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                }`}
+                                title={`${cfg.label}: ${d.count} agent${d.count !== 1 ? 's' : ''}`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.hex }} />
+                                {d.count}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {(activeSubMob || modeFilter) && (
+                        <button
+                          onClick={() => { setActiveSubMob(null); setModeFilter(null); }}
+                          className="text-[11px] text-gray-400 hover:text-gray-600"
+                        >
+                          Show all
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {selectedMob.members
                       .filter(member => !activeSubMob || member.sub_mob_ids?.includes(activeSubMob))
+                      .filter(member => !modeFilter || (member.mode && member.mode.toLowerCase() === modeFilter))
                       .map(member => {
                       const typeInfo = TYPE_COLORS[member.type] || TYPE_COLORS.project;
                       const isHighlighted = highlightedNode === member.passport_id;
@@ -251,6 +326,18 @@ export default function InspectorPage() {
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${typeInfo.bg} ${typeInfo.text}`}>
                                   {typeInfo.label}
                                 </span>
+                                {(() => {
+                                  const modeCfg = getModeConfig(member.mode);
+                                  if (!modeCfg) return null;
+                                  return (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setModeFilter(modeFilter === member.mode?.toLowerCase() ? null : member.mode?.toLowerCase() ?? null); }}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${modeCfg.bg} ${modeCfg.text} hover:ring-1 hover:ring-current transition-all`}
+                                    >
+                                      {modeCfg.label}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               <p className="mt-1 text-xs text-gray-500 line-clamp-2 leading-relaxed">
                                 {member.purpose}
