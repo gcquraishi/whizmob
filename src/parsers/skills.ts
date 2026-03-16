@@ -54,6 +54,7 @@ export async function parseSkills(skillsDir: string, platform: Platform = 'claud
         status: 'active',
         tags: [],
         source_file: file.replace(process.env.HOME || '~', '~'),
+        mode: typeof fm.mode === 'string' ? fm.mode : null,
         metadata: {},
       });
     } catch (err) {

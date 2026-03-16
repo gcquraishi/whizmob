@@ -76,8 +76,8 @@ export function importInventory(inventory: WhizmobInventory): ScanDiff {
   let updated = 0;
 
   const upsert = db.prepare(`
-    INSERT INTO passports (id, name, type, platform, scope, purpose, model_hint, invocation, status, source_file, metadata_json, origin, author, license, forked_from, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO passports (id, name, type, platform, scope, purpose, model_hint, invocation, status, source_file, metadata_json, origin, author, license, forked_from, mode, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       type = excluded.type,
@@ -93,6 +93,7 @@ export function importInventory(inventory: WhizmobInventory): ScanDiff {
       author = COALESCE(excluded.author, passports.author),
       license = COALESCE(excluded.license, passports.license),
       forked_from = COALESCE(excluded.forked_from, passports.forked_from),
+      mode = COALESCE(excluded.mode, passports.mode),
       updated_at = datetime('now')
   `);
 
@@ -102,7 +103,7 @@ export function importInventory(inventory: WhizmobInventory): ScanDiff {
         p.id, p.name, p.type, p.platform, p.scope, p.purpose,
         p.model_hint || null, p.invocation || null, p.status,
         p.source_file, JSON.stringify(p.metadata || {}),
-        p.origin || null, p.author || null, p.license || null, p.forked_from || null,
+        p.origin || null, p.author || null, p.license || null, p.forked_from || null, p.mode || null,
       );
       if (!existingIds.has(p.id)) {
         addedNames.push(p.name);
@@ -207,6 +208,7 @@ export interface WhizmobStats {
   total: number;
   byType: Record<string, number>;
   byPlatform: Record<string, number>;
+  byMode: Record<string, number>;
   platformCount: number;
   mobCount: number;
   mobComponentCount: number;
@@ -369,6 +371,15 @@ export function getStats(): WhizmobStats | null {
       byPlatform[row.platform] = row.cnt;
     }
 
+    const byMode: Record<string, number> = {};
+    try {
+      for (const row of db.prepare('SELECT mode, COUNT(*) as cnt FROM passports WHERE mode IS NOT NULL GROUP BY mode').all() as { mode: string; cnt: number }[]) {
+        byMode[row.mode] = row.cnt;
+      }
+    } catch {
+      // Column may not exist in older databases
+    }
+
     const total = Object.values(byType).reduce((a, b) => a + b, 0);
     const platformCount = Object.keys(byPlatform).length;
 
@@ -397,6 +408,7 @@ export function getStats(): WhizmobStats | null {
       total,
       byType,
       byPlatform,
+      byMode,
       platformCount,
       mobCount,
       mobComponentCount,

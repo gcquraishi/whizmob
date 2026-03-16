@@ -154,6 +154,7 @@ program
   .option('-s, --search <query>', 'Search agents by name, type, or purpose')
   .option('-t, --type <type>', 'Filter by agent type (subagent, skill, mcp, project, settings)')
   .option('-p, --platform <platform>', 'Filter by platform (claude-code, cursor, codex)')
+  .option('-m, --mode <mode>', 'Filter by cognitive mode (e.g. founder, engineer, operator)')
   .option('--hook', 'Output compact roster for SessionStart hook injection')
   .action((opts) => {
     try {
@@ -163,7 +164,7 @@ program
       } else if (opts.search) {
         console.log(searchRoster(opts.search));
       } else {
-        console.log(compactRoster({ type: opts.type, platform: opts.platform }));
+        console.log(compactRoster({ type: opts.type, platform: opts.platform, mode: opts.mode }));
       }
     } catch (err) {
       console.error(`[whizmob] Roster failed: ${(err as Error).message}`);
@@ -210,6 +211,12 @@ program
       }
       if (stats.edgeCount > 0) {
         console.log(`${stats.edgeCount} edge${stats.edgeCount !== 1 ? 's' : ''} inferred`);
+      }
+
+      const modeEntries = Object.entries(stats.byMode).sort((a, b) => b[1] - a[1]);
+      if (modeEntries.length > 0) {
+        const modeParts = modeEntries.map(([mode, count]) => `${count} ${mode}`);
+        console.log(`Modes: ${modeParts.join(', ')}`);
       }
 
       if (opts.verbose) {

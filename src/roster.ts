@@ -17,6 +17,7 @@ interface PassportRow {
   model_hint: string | null;
   invocation: string | null;
   source_file: string;
+  mode: string | null;
 }
 
 interface MobMembership {
@@ -57,12 +58,12 @@ function openDb(): Database.Database | null {
  * Compact roster for SessionStart hook injection.
  * One line per agent, minimal tokens.
  */
-export function compactRoster(opts?: { type?: string; platform?: string }): string {
+export function compactRoster(opts?: { type?: string; platform?: string; mode?: string }): string {
   const db = openDb();
   if (!db) return '# Whizmob: No agent database found. Run `whizmob scan` first.';
 
   try {
-    let sql = 'SELECT name, type, platform, purpose FROM passports WHERE 1=1';
+    let sql = 'SELECT name, type, platform, purpose, mode FROM passports WHERE 1=1';
     const params: (string | number)[] = [];
 
     if (opts?.type) {
@@ -72,6 +73,10 @@ export function compactRoster(opts?: { type?: string; platform?: string }): stri
     if (opts?.platform) {
       sql += ' AND platform = ?';
       params.push(opts.platform);
+    }
+    if (opts?.mode) {
+      sql += ' AND mode = ?';
+      params.push(opts.mode);
     }
 
     sql += ' ORDER BY type, name';
@@ -120,7 +125,7 @@ export function hookRoster(): string {
 
   try {
     const rows = db.prepare(
-      `SELECT id, name, type, platform, purpose, invocation
+      `SELECT id, name, type, platform, purpose, invocation, mode
        FROM passports
        WHERE type IN ('subagent', 'skill')
        ORDER BY type, name`
@@ -157,8 +162,9 @@ export function hookRoster(): string {
       for (const a of agents) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         const invoke = a.invocation ? ` (${a.invocation})` : '';
+        const modeBadge = a.mode ? ` [${a.mode}]` : '';
         const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
-        lines.push(`  ${a.name}${platform}${invoke} — ${purpose}`);
+        lines.push(`  ${a.name}${platform}${invoke}${modeBadge} — ${purpose}`);
       }
     }
 
@@ -170,8 +176,9 @@ export function hookRoster(): string {
       lines.push('Agents:');
       for (const a of ungroupedSubagents) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
+        const modeBadge = a.mode ? ` [${a.mode}]` : '';
         const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
-        lines.push(`  ${a.name}${platform} — ${purpose}`);
+        lines.push(`  ${a.name}${platform}${modeBadge} — ${purpose}`);
       }
     }
 
@@ -180,8 +187,9 @@ export function hookRoster(): string {
       for (const a of ungroupedSkills) {
         const platform = a.platform !== 'claude-code' ? ` [${a.platform}]` : '';
         const invoke = a.invocation ? ` (${a.invocation})` : '';
+        const modeBadge = a.mode ? ` [${a.mode}]` : '';
         const purpose = a.purpose.length > 60 ? a.purpose.slice(0, 57) + '...' : a.purpose;
-        lines.push(`  ${a.name}${platform}${invoke} — ${purpose}`);
+        lines.push(`  ${a.name}${platform}${invoke}${modeBadge} — ${purpose}`);
       }
     }
 
@@ -206,7 +214,7 @@ export function searchRoster(query: string): string {
     const escaped = query.replace(/\|/g, '||').replace(/%/g, '|%').replace(/_/g, '|_');
     const term = `%${escaped}%`;
     const rows = db.prepare(
-      `SELECT id, name, type, platform, scope, purpose, model_hint, invocation, source_file
+      `SELECT id, name, type, platform, scope, purpose, model_hint, invocation, source_file, mode
        FROM passports
        WHERE name LIKE ? ESCAPE '|' OR purpose LIKE ? ESCAPE '|' OR type LIKE ? ESCAPE '|' OR id LIKE ? ESCAPE '|'
        ORDER BY
@@ -225,6 +233,7 @@ export function searchRoster(query: string): string {
       lines.push(`- **Platform**: ${a.platform}`);
       lines.push(`- **Scope**: ${a.scope}`);
       lines.push(`- **Purpose**: ${a.purpose}`);
+      if (a.mode) lines.push(`- **Mode**: ${a.mode}`);
       if (a.model_hint) lines.push(`- **Model**: ${a.model_hint}`);
       if (a.invocation) lines.push(`- **Invocation**: ${a.invocation}`);
       const mobs = memberships.get(a.id);

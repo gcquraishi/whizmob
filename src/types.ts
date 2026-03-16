@@ -32,6 +32,7 @@ export interface ProtoPassport {
   author?: string | null;
   license?: LicenseType | null;
   forked_from?: string | null;
+  mode?: string | null;
   metadata: Record<string, unknown>;
 }
 

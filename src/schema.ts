@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS passports (
   origin TEXT,
   author TEXT,
   license TEXT,
-  forked_from TEXT
+  forked_from TEXT,
+  mode TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -120,6 +121,7 @@ ALTER TABLE passports ADD COLUMN origin TEXT;
 ALTER TABLE passports ADD COLUMN author TEXT;
 ALTER TABLE passports ADD COLUMN license TEXT;
 ALTER TABLE passports ADD COLUMN forked_from TEXT;
+ALTER TABLE passports ADD COLUMN mode TEXT;
 `;
 
 /**
