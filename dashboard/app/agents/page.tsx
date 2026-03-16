@@ -12,6 +12,7 @@ import SprawlReport from '@/components/SprawlReport';
 import DiffModal from '@/components/DiffModal';
 import { computeDedupGroups } from '@/lib/dedup';
 import { Swords, Inbox } from 'lucide-react';
+import { getModeConfig, MODE_ORDER, MODE_COLORS } from '@/lib/modes';
 
 interface Passport {
   id: string;
@@ -23,6 +24,7 @@ interface Passport {
   tags: string[];
   scope: string;
   metadata_json: string;
+  mode: string | null;
 }
 
 interface ScanDiff {
@@ -40,6 +42,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
+  const [modeFilter, setModeFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'sprawl'>('grid');
   const [diff, setDiff] = useState<ScanDiff | null>(null);
   const [lastScan, setLastScan] = useState<{ scanned_at: string; total: number } | null>(null);
@@ -75,6 +78,9 @@ export default function InventoryPage() {
     if (platformFilter) {
       result = result.filter(p => p.platform === platformFilter);
     }
+    if (modeFilter) {
+      result = result.filter(p => p.mode && p.mode.toLowerCase() === modeFilter);
+    }
     if (search) {
       const term = search.toLowerCase();
       result = result.filter(p =>
@@ -83,7 +89,7 @@ export default function InventoryPage() {
       );
     }
     return result;
-  }, [allPassports, typeFilter, platformFilter, search]);
+  }, [allPassports, typeFilter, platformFilter, modeFilter, search]);
 
   const dedupResult = useMemo(() => computeDedupGroups(allPassports), [allPassports]);
 
@@ -106,6 +112,21 @@ export default function InventoryPage() {
   });
   const platforms = Object.keys(platformCounts).sort();
 
+  // Compute mode counts from unfiltered data
+  const modeCounts: Record<string, number> = {};
+  allPassports.forEach((p) => {
+    if (p.mode) {
+      const key = p.mode.toLowerCase();
+      modeCounts[key] = (modeCounts[key] || 0) + 1;
+    }
+  });
+  const modesPresent = Object.keys(modeCounts)
+    .sort((a, b) => {
+      const idxA = (MODE_ORDER as readonly string[]).indexOf(a);
+      const idxB = (MODE_ORDER as readonly string[]).indexOf(b);
+      return (idxA >= 0 ? idxA : 100) - (idxB >= 0 ? idxB : 100);
+    });
+
   // Find most recently active project
   const mostRecentProject = useMemo(() => allPassports
     .filter(p => p.type === 'project')
@@ -118,8 +139,8 @@ export default function InventoryPage() {
       return best;
     }, null), [allPassports]);
 
-  const isEmpty = !loading && allPassports.length === 0 && !search && !typeFilter && !platformFilter;
-  const noResults = !loading && passports.length === 0 && (search || typeFilter || platformFilter);
+  const isEmpty = !loading && allPassports.length === 0 && !search && !typeFilter && !platformFilter && !modeFilter;
+  const noResults = !loading && passports.length === 0 && (search || typeFilter || platformFilter || modeFilter);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -149,6 +170,30 @@ export default function InventoryPage() {
             </div>
             <PlatformFilter value={platformFilter} onChange={setPlatformFilter} platforms={platforms} />
             <TypeFilter value={typeFilter} onChange={setTypeFilter} />
+            {modesPresent.length > 0 && (
+              <div className="flex items-center gap-1">
+                {modesPresent.map(mode => {
+                  const cfg = getModeConfig(mode);
+                  if (!cfg) return null;
+                  const isActive = modeFilter === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => setModeFilter(isActive ? '' : mode)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        isActive
+                          ? `${cfg.bg} ${cfg.text} ring-1 ring-current`
+                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                      }`}
+                      title={`${cfg.label}: ${modeCounts[mode]} agent${modeCounts[mode] !== 1 ? 's' : ''}`}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.hex }} />
+                      {cfg.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <SprawlToggle mode={viewMode} onChange={setViewMode} groupCount={dedupResult.groups.length} />
           </div>
         </div>
@@ -191,7 +236,7 @@ export default function InventoryPage() {
           <p className="text-sm text-gray-500">
             No results found.{' '}
             <button
-              onClick={() => { setSearch(''); setTypeFilter(''); setPlatformFilter(''); }}
+              onClick={() => { setSearch(''); setTypeFilter(''); setPlatformFilter(''); setModeFilter(''); }}
               className="text-blue-600 hover:underline"
             >
               Clear filters
@@ -219,6 +264,7 @@ export default function InventoryPage() {
               model_hint={p.model_hint}
               tags={p.tags}
               scope={p.scope}
+              mode={p.mode}
               showPlatformBadge={platforms.length > 1}
             />
           ))}

@@ -6,6 +6,7 @@ import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink
 import TagPill from '@/components/TagPill';
 import clsx from 'clsx';
 import { PLATFORM_LABELS } from '@/lib/platforms';
+import { getModeConfig } from '@/lib/modes';
 
 interface Passport {
   id: string;
@@ -22,6 +23,7 @@ interface Passport {
   first_seen_at: string;
   updated_at: string;
   tags: string[];
+  mode: string | null;
 }
 
 const typeIcons: Record<string, { icon: typeof Bot; color: string; bg: string; label: string }> = {
@@ -143,6 +145,15 @@ export default function DetailPage() {
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
               {cfg.label}
             </span>
+            {(() => {
+              const modeCfg = getModeConfig(passport.mode);
+              if (!modeCfg) return null;
+              return (
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${modeCfg.bg} ${modeCfg.text}`}>
+                  {modeCfg.label}
+                </span>
+              );
+            })()}
             {passport.model_hint && (
               <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-500">
                 {passport.model_hint}

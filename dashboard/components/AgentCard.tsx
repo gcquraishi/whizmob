@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Bot, Zap, Plug, FolderOpen, Settings } from 'lucide-react';
 import TagPill from './TagPill';
 import { PLATFORM_LABELS, PLATFORM_COLORS } from '@/lib/platforms';
+import { getModeConfig } from '@/lib/modes';
 
 interface AgentCardProps {
   id: string;
@@ -14,6 +15,7 @@ interface AgentCardProps {
   model_hint: string | null;
   tags: string[];
   scope: string;
+  mode: string | null;
   showPlatformBadge?: boolean;
 }
 
@@ -25,9 +27,10 @@ const typeIcons: Record<string, { icon: typeof Bot; color: string; bg: string }>
   settings: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100' },
 };
 
-export default function AgentCard({ id, name, type, platform, purpose, model_hint, tags, scope, showPlatformBadge }: AgentCardProps) {
+export default function AgentCard({ id, name, type, platform, purpose, model_hint, tags, scope, mode, showPlatformBadge }: AgentCardProps) {
   const cfg = typeIcons[type] || typeIcons.subagent;
   const Icon = cfg.icon;
+  const modeCfg = getModeConfig(mode);
 
   return (
     <Link
@@ -51,6 +54,11 @@ export default function AgentCard({ id, name, type, platform, purpose, model_hin
             {showPlatformBadge && platform !== 'claude-code' && (
               <span className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${PLATFORM_COLORS[platform] || 'bg-gray-100 text-gray-500'}`}>
                 {PLATFORM_LABELS[platform] || platform}
+              </span>
+            )}
+            {modeCfg && (
+              <span className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${modeCfg.bg} ${modeCfg.text}`}>
+                {modeCfg.label}
               </span>
             )}
           </div>
