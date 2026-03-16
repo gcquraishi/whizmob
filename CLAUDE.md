@@ -35,9 +35,14 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-06_
+_Last updated: 2026-03-16_
 
-**Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — full hierarchy pipeline: data model, graph clusters with convex hulls, auto-discovery via invocation/state/hook heuristics, and granular export/import with sub-mob component mapping. 127 tests across 12 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap complete** — all 4 milestones shipped (M1: data model, M2: graph clusters, M3: auto-discovery, M4: granular export).
+**Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — full hierarchy pipeline: data model, graph clusters with convex hulls, auto-discovery via invocation/state/hook heuristics, and granular export/import with sub-mob component mapping. 135 tests across 12 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap complete** — all 4 milestones shipped (M1: data model, M2: graph clusters, M3: auto-discovery, M4: granular export).
+
+### Recent Completions (Mode Field — 2026-03-16)
+- **`mode` as first-class field** — Added `mode?: string | null` to ProtoPassport type, `mode TEXT` column to passports schema with additive migration, and frontmatter extraction in `parseSkills()`.
+- **CLI surfacing** — `whizmob roster --mode <mode>` filters by cognitive mode. `whizmob stats` shows mode distribution breakdown. `searchRoster()` displays mode in detailed results. `hookRoster()` shows `[mode]` badge in compact output.
+- **8 new tests** — Schema column, storage/retrieval, filtering, distribution queries, COALESCE upsert, migration idempotency, combined filters, user-defined values.
 
 ### Recent Completions (Landing Page Redesign — 2026-03-06)
 - **whizmob.dev live** — DNS configured (Hover A record → Vercel), SSL cert issued. Site deployed at whizmob.dev.
