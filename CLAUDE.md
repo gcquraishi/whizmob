@@ -35,9 +35,18 @@ Agent inventory and management tool for Claude Code users. Scans the local files
 - `hooks/roster-inject.sh` — SessionStart hook script
 
 ## Current State
-_Last updated: 2026-03-16_
+_Last updated: 2026-03-16 (mode-s2)_
 
 **Published on npm as `whizmob@0.1.3`.** Scanner discovers 108 passports across 3 platforms, infers 129+ edges between components, and auto-discovers mobs via connectivity clustering. **Mob Inspector dashboard** — homepage is now a master-detail inspector with discovered mob list, per-mob force-directed graph, and scroll-linked component detail cards. Inventory moved to `/agents`. **Smart update** — `whizmob update <bundle>` uses content hashing for three-way change classification (upstream-only auto-applies, local-only preserved, both-changed shows diff). `whizmob install` alias for friendlier CLI. **Demo mode** — `whizmob demo` generates a self-contained HTML file with embedded mob data and interactive graph. **Mob hierarchy** — full hierarchy pipeline: data model, graph clusters with convex hulls, auto-discovery via invocation/state/hook heuristics, and granular export/import with sub-mob component mapping. 135 tests across 12 suites. **Mob Inspector roadmap complete** — all 4 milestones shipped. **Mob Hierarchy roadmap complete** — all 4 milestones shipped (M1: data model, M2: graph clusters, M3: auto-discovery, M4: granular export).
+
+### Recent Completions (Mode Dashboard Visualization — 2026-03-16)
+- **Mode badges on passport cards** — Inspector passport detail cards show colored mode badge (founder=blue, engineer=green, reviewer=amber, operator=gray, creative=purple, analyst=teal). Clicking badge filters to that mode.
+- **Mode composition bar on mob cards** — Mob list cards show compact stacked color bar showing mode distribution. Proportional width per mode.
+- **Mode filter chips** — Inspector component header and inventory page both have clickable mode filter chips with dot + count/label. Filters inventory to selected mode.
+- **Passport detail page mode badge** — Detail page header shows mode badge between type and model hint.
+- **Shared mode constants** — `dashboard/lib/modes.ts` with `MODE_COLORS`, `MODE_ORDER`, `getModeConfig()` for consistent rendering across all views.
+- **Dashboard schema synced** — `mode TEXT` column added to dashboard's schema and migration, matching `src/schema.ts`.
+- **Graceful degradation** — No badge, bar segment, or filter chip shown when mode is null.
 
 ### Recent Completions (Mode Field — 2026-03-16)
 - **`mode` as first-class field** — Added `mode?: string | null` to ProtoPassport type, `mode TEXT` column to passports schema with additive migration, and frontmatter extraction in `parseSkills()`.
