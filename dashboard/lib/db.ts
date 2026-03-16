@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS passports (
   origin TEXT,
   author TEXT,
   license TEXT,
-  forked_from TEXT
+  forked_from TEXT,
+  mode TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -109,6 +110,7 @@ ALTER TABLE passports ADD COLUMN origin TEXT;
 ALTER TABLE passports ADD COLUMN author TEXT;
 ALTER TABLE passports ADD COLUMN license TEXT;
 ALTER TABLE passports ADD COLUMN forked_from TEXT;
+ALTER TABLE passports ADD COLUMN mode TEXT;
 `;
 
 function runMigrations(database: Database): void {
@@ -182,6 +184,7 @@ export interface PassportRow {
   first_seen_at: string;
   updated_at: string;
   tags: string[];
+  mode: string | null;
 }
 
 export interface ScanDiff {
@@ -394,6 +397,7 @@ export async function getPassports(filters?: PassportFilters): Promise<PassportR
       first_seen_at: obj.first_seen_at as string,
       updated_at: obj.updated_at as string,
       tags: tagsByPassportId.get(id) ?? [],
+      mode: (obj.mode as string | null) ?? null,
     };
   });
 
@@ -445,6 +449,7 @@ export async function getPassport(id: string): Promise<PassportRow | null> {
     first_seen_at: col('first_seen_at') as string,
     updated_at: col('updated_at') as string,
     tags,
+    mode: (col('mode') as string | null) ?? null,
   };
 }
 
@@ -844,6 +849,7 @@ export interface DiscoveredMob {
     purpose: string;
     invocation: string | null;
     source_file: string;
+    mode: string | null;
     sub_mob_ids?: string[];
   }>;
   edges: Array<{
@@ -941,7 +947,7 @@ export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
     // Fetch passport data for members
     const placeholders = memberIds.map(() => '?').join(', ');
     const passportResult = database.exec(
-      `SELECT id, name, type, purpose, invocation, source_file FROM passports WHERE id IN (${placeholders})`,
+      `SELECT id, name, type, purpose, invocation, source_file, mode FROM passports WHERE id IN (${placeholders})`,
       memberIds
     );
 
@@ -958,6 +964,7 @@ export async function getDiscoveredMobs(): Promise<DiscoveredMob[]> {
           purpose: obj.purpose as string,
           invocation: (obj.invocation as string | null) ?? null,
           source_file: obj.source_file as string,
+          mode: (obj.mode as string | null) ?? null,
         });
       }
     }
