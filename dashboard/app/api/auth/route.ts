@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // Derive a stable session token from the password using SHA-256.
 // Must stay in sync with the identical function in middleware.ts.
 async function deriveSessionToken(password: string): Promise<string> {

@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
       './node_modules/sql.js/dist/sql-wasm.wasm',
       './data/whizmob.db',
     ],
+    '/app/**': [
+      './node_modules/sql.js/dist/sql-wasm.wasm',
+      './data/whizmob.db',
+    ],
   },
 };
 

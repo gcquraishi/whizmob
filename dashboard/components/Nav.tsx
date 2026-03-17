@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Network, LayoutGrid, Upload, ArrowRightLeft, Swords } from 'lucide-react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 
 const links = [
-  { href: '/', label: 'Inspector', Icon: Network },
+  { href: '/app', label: 'Inspector', Icon: Network },
   { href: '/agents', label: 'Inventory', Icon: LayoutGrid },
   { href: '/mobs/import', label: 'Import', Icon: Upload },
   { href: '/translation', label: 'Translate', Icon: ArrowRightLeft, secondary: true },
@@ -14,6 +14,9 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+
+  // Hide nav on the public landing page
+  if (pathname === '/') return null;
 
   return (
     <nav className="bg-white border-b border-gray-200">
@@ -28,9 +31,7 @@ export default function Nav() {
 
         {/* Nav links */}
         {links.map(({ href, label, Icon, secondary }) => {
-          const isActive = href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(href);
+          const isActive = pathname.startsWith(href);
           return (
             <Link
               key={href}

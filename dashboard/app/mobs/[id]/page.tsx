@@ -8,7 +8,7 @@ import {
   FileText, Package, User, Calendar, Download, Check, AlertTriangle,
   Shield, Loader2
 } from 'lucide-react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { toDisplayPath } from '@/lib/paths';
 import TagPill from '@/components/TagPill';
 

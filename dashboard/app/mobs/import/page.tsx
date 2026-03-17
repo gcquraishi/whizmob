@@ -6,7 +6,7 @@ import {
   ArrowLeft, Upload, FileText, AlertTriangle, Check, Shield,
   FolderOpen, Package, Loader2, Play, X
 } from 'lucide-react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { toDisplayPath } from '@/lib/paths';
 
 interface PlanAction {

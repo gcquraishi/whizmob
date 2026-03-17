@@ -4,3 +4,87 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, "JetBrains Mono", monospace;
 }
+
+/* Landing page styles */
+.terminal {
+  background: #f5f7fa;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.terminal .prompt {
+  color: #12497a;
+  user-select: none;
+}
+
+.terminal .output {
+  color: #6b7280;
+}
+
+.command-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-item {
+  border-bottom: 1px solid #d1d5db;
+}
+
+.command-item:first-child {
+  border-top: 1px solid #d1d5db;
+}
+
+.command-item summary {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.command-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.command-item summary::before {
+  content: "+";
+  color: #6b7280;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.command-item[open] summary::before {
+  content: "\2212";
+  color: #12497a;
+}
+
+.command-item summary:hover::before {
+  color: #12497a;
+}
+
+.command-name {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: #12497a;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.command-desc {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.command-detail {
+  padding: 0 0 1.25rem 2rem;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Bot, Zap, Plug, FolderOpen, Settings, FileText, ExternalLink, ChevronDown, ChevronRight, Activity, Clock, HardDrive } from 'lucide-react';
 import TagPill from '@/components/TagPill';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { PLATFORM_LABELS } from '@/lib/platforms';
 import { getModeConfig } from '@/lib/modes';
 

@@ -3,6 +3,8 @@ import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
 
+export const dynamic = 'force-dynamic';
+
 interface PlanAction {
   file: { bundle_path: string; original_path: string; component_type: string; passport_name: string | null; secrets_stripped: boolean; memory_bootstrapped: boolean };
   targetPath: string;

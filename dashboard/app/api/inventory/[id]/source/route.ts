@@ -4,6 +4,8 @@ import { homedir } from 'node:os';
 import { extname, basename, resolve } from 'node:path';
 import { getPassport } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -20,6 +20,9 @@ export async function middleware(request: NextRequest) {
   const password = process.env.DEMO_PASSWORD?.trim();
   if (!password) return NextResponse.next();
 
+  // Allow the public landing page through (exact match only)
+  if (request.nextUrl.pathname === '/') return NextResponse.next();
+
   // Allow the login endpoint through
   if (request.nextUrl.pathname === '/api/auth') return NextResponse.next();
 
@@ -27,7 +30,8 @@ export async function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/translation-test-images') ||
-    request.nextUrl.pathname === '/favicon.ico'
+    request.nextUrl.pathname === '/favicon.ico' ||
+    request.nextUrl.pathname === '/inspector-preview.svg'
   ) {
     return NextResponse.next();
   }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'node:path';
 
+export const dynamic = 'force-dynamic';
+
 interface ExportResultShape {
   bundleDir: string;
   fileCount: number;
