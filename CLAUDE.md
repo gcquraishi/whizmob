@@ -32,7 +32,8 @@ _Last updated: 2026-03-26_
 
 Scanner discovers 108 passports across 3 platforms, infers 129+ edges. Mob Inspector dashboard with force-directed graph, mode badges/filters, and scroll-linked detail cards. Full mob hierarchy with auto-discovery, convex hull visualization, and granular export/import. Smart update engine. Demo mode (`whizmob demo`) generates self-contained HTML.
 
-**Active**: Browser Scanner (M2) — landing page "Scan your machine" button uses File System Access API (Chrome/Edge). Users select `~/.claude/` and see agents as force-directed graph with edge inference and mob clustering, entirely client-side. Unsupported browsers fall back to CLI command.
+### Recent Completions
+- **Zero-Friction Access roadmap complete** (M1+M2): `scan --open` one-command launch, browser-based scanner with File System Access API on landing page (Chrome/Edge, CLI fallback for others)
 
 ### Known Issues
 - **Duplicate file-path components** — `addComponents` allows duplicates when `passport_id` is NULL (SQLite UNIQUE treats NULL != NULL). Fix: covering partial index or non-NULL enforcement.
@@ -53,7 +54,7 @@ npm run build && npm test && npm publish
 - **Exclusions**: test images, `tsconfig.tsbuildinfo`, `package-lock.json`, `dashboard/` excluded via `files` in `package.json`
 
 ## Roadmap
-**Completed**: Mob Inspector (M1-M4), Mob Hierarchy (M1-M4), Mode field + dashboard visualization, Landing page redesign, npm publish (v0.1.0-v0.1.3), Constellation versioning (M2), CEO OS templatization, Public launch + history scrub.
+**Completed**: Mob Inspector (M1-M4), Mob Hierarchy (M1-M4), Mode field + dashboard visualization, Landing page redesign, npm publish (v0.1.0-v0.1.3), Constellation versioning (M2), CEO OS templatization, Public launch + history scrub, Zero-Friction Access (M1-M2).
 
 ### Immediate
 - **Dog-food** — CEO OS bundle ready: `npx whizmob import ceo-operating-system --param '{{OWNER_NAME}}=George' ...`
