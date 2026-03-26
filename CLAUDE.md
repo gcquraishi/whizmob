@@ -32,7 +32,7 @@ _Last updated: 2026-03-26_
 
 Scanner discovers 108 passports across 3 platforms, infers 129+ edges. Mob Inspector dashboard with force-directed graph, mode badges/filters, and scroll-linked detail cards. Full mob hierarchy with auto-discovery, convex hull visualization, and granular export/import. Smart update engine. Demo mode (`whizmob demo`) generates self-contained HTML.
 
-**Active**: One-command launch (`npx whizmob scan --open`) — scans, starts dashboard, opens browser. Landing page hero uses single command CTA.
+**Active**: Browser Scanner (M2) — landing page "Scan your machine" button uses File System Access API (Chrome/Edge). Users select `~/.claude/` and see agents as force-directed graph with edge inference and mob clustering, entirely client-side. Unsupported browsers fall back to CLI command.
 
 ### Known Issues
 - **Duplicate file-path components** — `addComponents` allows duplicates when `passport_id` is NULL (SQLite UNIQUE treats NULL != NULL). Fix: covering partial index or non-NULL enforcement.
