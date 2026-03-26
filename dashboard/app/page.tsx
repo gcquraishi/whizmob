@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import BrowserScanner from '../components/BrowserScanner';
 
 export const metadata: Metadata = {
   title: "whizmob — see what AI agent systems you've actually built",
@@ -28,20 +29,8 @@ export default function HomePage() {
           shows you how they connect.
         </p>
 
-        <div className="terminal">
-          <div>
-            <span className="prompt">$ </span>npx whizmob scan --open
-          </div>
-          <div className="output mt-1">
-            [whizmob] DB updated: 42 total, +42 added, -0 removed
-          </div>
-          <div className="output">
-            [whizmob] Edges: 67 inferred
-          </div>
-          <div className="output">
-            [whizmob] Opening http://localhost:3333/app
-          </div>
-        </div>
+        {/* Browser Scanner: interactive scan button or CLI fallback */}
+        <BrowserScanner />
 
         <div className="flex items-center gap-4 mt-8">
           <a
