@@ -26,11 +26,13 @@ Agent inventory and management tool for Claude Code users. Scans `~/.claude/` to
 - **Shared schema**: `src/schema.ts` is the single source of truth for all SQLite tables
 
 ## Current State
-_Last updated: 2026-03-16_
+_Last updated: 2026-03-26_
 
 **Published**: `whizmob@0.1.3` on npm. 135 tests across 12 suites.
 
 Scanner discovers 108 passports across 3 platforms, infers 129+ edges. Mob Inspector dashboard with force-directed graph, mode badges/filters, and scroll-linked detail cards. Full mob hierarchy with auto-discovery, convex hull visualization, and granular export/import. Smart update engine. Demo mode (`whizmob demo`) generates self-contained HTML.
+
+**Active**: One-command launch (`npx whizmob scan --open`) — scans, starts dashboard, opens browser. Landing page hero uses single command CTA.
 
 ### Known Issues
 - **Duplicate file-path components** — `addComponents` allows duplicates when `passport_id` is NULL (SQLite UNIQUE treats NULL != NULL). Fix: covering partial index or non-NULL enforcement.
