@@ -4,7 +4,8 @@ import { writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { execSync, spawnSync } from 'node:child_process';
+import { execSync, spawnSync, spawn } from 'node:child_process';
+import { createConnection } from 'node:net';
 import { Command } from 'commander';
 import { scan } from './scanner.js';
 import { formatJson } from './formatters/json.js';
@@ -36,6 +37,39 @@ import { CATEGORY_LABELS, type ComponentType, type OutputFormat, type AgentType 
 
 const VALID_COMPONENT_TYPES: ComponentType[] = ['passport', 'hook', 'memory_schema', 'claude_md', 'config'];
 
+/** Check if a TCP port is already in use */
+function isPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ port, host: '127.0.0.1' });
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => {
+      resolve(false);
+    });
+  });
+}
+
+/** Wait for a port to become available, polling every 500ms up to timeoutMs */
+function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const check = () => {
+      isPortInUse(port).then((inUse) => {
+        if (inUse) {
+          resolve(true);
+        } else if (Date.now() - start >= timeoutMs) {
+          resolve(false);
+        } else {
+          setTimeout(check, 500);
+        }
+      });
+    };
+    check();
+  });
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -56,6 +90,8 @@ program
   .option('--claude-dir <path>', 'Claude config directory', join(homedir(), '.claude'))
   .option('--codex-dir <path>', 'Codex config directory', join(homedir(), '.codex'))
   .option('--cursor-dir <path>', 'Cursor config directory', join(homedir(), '.cursor'))
+  .option('--open', 'After scanning, launch the dashboard and open it in your browser')
+  .option('--port <port>', 'Port for the dashboard (used with --open)', '3333')
   .action(async (opts) => {
     try {
       const format: OutputFormat = opts.format === 'table' ? 'table' : 'json';
@@ -116,14 +152,50 @@ program
         console.error('    • Create an agent:     echo "# My Agent\\nPurpose: Help with code review" > ~/.claude/agents/reviewer.md');
         console.error('');
         console.error('  Then run `whizmob scan` again.');
-      } else {
+      } else if (!opts.open) {
         console.error(`[whizmob] Found ${total} component${total !== 1 ? 's' : ''} across ${Object.keys(inventory.summary.by_platform).length} platform${Object.keys(inventory.summary.by_platform).length !== 1 ? 's' : ''}.`);
         console.error('');
         console.error('  What\'s next:');
+        console.error('    whizmob scan --open    Scan and open the dashboard in your browser');
         console.error('    whizmob demo --open    Open an interactive mob inspector in your browser');
-        console.error('    whizmob dashboard      Launch the full dashboard at localhost:3333');
         console.error('    whizmob stats          Quick inventory summary');
         console.error('    whizmob roster -s <q>  Search your agents by name or purpose');
+      }
+
+      // --open: launch dashboard and open browser
+      if (opts.open && total > 0) {
+        const port = parseInt(opts.port, 10);
+        if (isNaN(port) || port < 1 || port > 65535) {
+          console.error(`[whizmob] Invalid port: ${opts.port}. Must be a number between 1 and 65535.`);
+          process.exit(1);
+        }
+
+        const dashboardDir = join(__dirname, '..', 'dashboard');
+        const url = `http://localhost:${port}/app`;
+
+        const portInUse = await isPortInUse(port);
+        if (portInUse) {
+          console.error(`[whizmob] Dashboard already running on port ${port}.`);
+        } else {
+          console.error(`[whizmob] Starting dashboard on http://localhost:${port}...`);
+          const child = spawn('npm', ['run', 'dev', '--', '-p', String(port)], {
+            cwd: dashboardDir,
+            stdio: 'ignore',
+            detached: true,
+          });
+          child.unref();
+
+          // Wait for the server to become ready (up to 15 seconds)
+          const ready = await waitForPort(port, 15000);
+          if (!ready) {
+            console.error('[whizmob] Dashboard failed to start within 15 seconds.');
+            process.exit(1);
+          }
+        }
+
+        console.error(`[whizmob] Opening ${url}`);
+        const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+        spawnSync(openCmd, [url], { stdio: 'ignore' });
       }
     } catch (err) {
       const msg = (err as Error).message || String(err);

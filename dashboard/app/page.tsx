@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -29,39 +28,25 @@ export default function HomePage() {
           shows you how they connect.
         </p>
 
-        <div className="terminal mb-4">
+        <div className="terminal">
           <div>
-            <span className="prompt">$ </span>npx whizmob scan
+            <span className="prompt">$ </span>npx whizmob scan --open
           </div>
           <div className="output mt-1">
             [whizmob] DB updated: 42 total, +42 added, -0 removed
           </div>
           <div className="output">
-            [whizmob] New: code-reviewer, test-runner, deploy-agent, standup,
-            roadmap, ...
+            [whizmob] Edges: 67 inferred
           </div>
-          <div className="output">[whizmob] Edges: 67 inferred</div>
-        </div>
-        <div className="terminal">
-          <div>
-            <span className="prompt">$ </span>npx whizmob demo --open
-          </div>
-          <div className="output mt-1">
-            Opens an interactive graph of your agents in the browser.
+          <div className="output">
+            [whizmob] Opening http://localhost:3333/app
           </div>
         </div>
 
         <div className="flex items-center gap-4 mt-8">
-          <Link
-            href="/app"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a1a] text-white text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
-          >
-            Open Inspector
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </Link>
           <a
             href="https://github.com/gcquraishi/whizmob"
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#d1d5db] text-sm font-medium rounded-lg text-[#6b7280] hover:text-[#1a1a1a] hover:border-[#1a1a1a] transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a1a] text-white text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
           >
             GitHub
           </a>
@@ -85,21 +70,24 @@ export default function HomePage() {
           {/* scan */}
           <details className="command-item">
             <summary>
-              <code className="command-name">scan</code>
+              <code className="command-name">scan --open</code>
               <span className="command-desc">
-                Discover agents, skills, and MCP servers across all platforms
+                Discover agents and open the dashboard in one command
               </span>
             </summary>
             <div className="command-detail">
               <div className="terminal mb-4">
                 <div>
-                  <span className="prompt">$ </span>npx whizmob scan
+                  <span className="prompt">$ </span>npx whizmob scan --open
                 </div>
                 <div className="output mt-1">
                   [whizmob] DB updated: 42 total, +42 added, -0 removed
                 </div>
                 <div className="output">
                   [whizmob] Edges: 67 inferred
+                </div>
+                <div className="output">
+                  [whizmob] Opening http://localhost:3333/app
                 </div>
               </div>
               <p className="text-sm text-[#6b7280] mb-3">
@@ -222,7 +210,7 @@ export default function HomePage() {
           {/* roster */}
           <details className="command-item">
             <summary>
-              <code className="command-name">roster -s &quot;query&quot;</code>
+              <code className="command-name">roster -s &quot;deploy&quot;</code>
               <span className="command-desc">
                 Search agents by name or purpose
               </span>
